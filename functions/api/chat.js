@@ -56,19 +56,36 @@ Tono: cercano, profesional, chileno neutro (sin modismos exagerados). Respuestas
     const leadContact = emailMatch?.[0] || phoneMatch?.[0] || null;
 
     // Guarda o actualiza la conversación en Supabase (no bloquea la respuesta si falla)
-    if (context.env.SUPABASE_URL && context.env.SUPABASE_SERVICE_KEY && sessionId) {
-      try {
-        await fetch(
-          `${context.env.SUPABASE_URL}/rest/v1/chat_sessions?on_conflict=session_id`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: context.env.SUPABASE_SERVICE_KEY,
-              Prefer: "resolution=merge-duplicates"
-            },
-            body: JSON.stringify({
-              session_id: sessionId,
-              messages: updatedMessages,
-              lead_contact: leadContact,
-              updated_at: new
+    let debugInfo = null;
+if (context.env.SUPABASE_URL && context.env.SUPABASE_SERVICE_KEY && sessionId) {
+  try {
+    const sbRes = await fetch(
+      `${context.env.SUPABASE_URL}/rest/v1/chat_sessions?on_conflict=session_id`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: context.env.SUPABASE_SERVICE_KEY,
+          Prefer: "resolution=merge-duplicates"
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          messages: updatedMessages,
+          lead_contact: leadContact,
+          updated_at: new Date().toISOString()
+        })
+      }
+    );
+    if (!sbRes.ok) {
+      debugInfo = `Supabase status ${sbRes.status}: ${await sbRes.text()}`;
+    }
+  } catch (dbErr) {
+    debugInfo = "Supabase fetch error: " + dbErr.message;
+  }
+} else {
+  debugInfo = "Faltan variables: URL=" + !!context.env.SUPABASE_URL + " KEY=" + !!context.env.SUPABASE_SERVICE_KEY + " sessionId=" + !!sessionId;
+}
+
+return new Response(JSON.stringify({ reply, debugInfo }), {
+  headers: { "Content-Type": "application/json" }
+});

@@ -30,17 +30,18 @@
   .hero-content{position:relative;z-10}
 
   /* ATP CHAT WIDGET */
-  #atp-chat-btn {
-    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-    width: 56px; height: 56px; border-radius: 50%; border: none;
-    background: #2563eb; color: white; font-size: 24px; cursor: pointer;
-    box-shadow: 0 6px 20px rgba(37,99,235,0.4); display: flex; align-items: center; justify-content: center;
-  }
-  #atp-chat-btn::after {
-    content: ''; position: absolute; top: 2px; right: 2px;
-    width: 12px; height: 12px; border-radius: 50%; background: #ef4444;
-    border: 2px solid #0d0e12;
-  }
+#atp-chat-btn {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  width: 56px; height: 56px; border-radius: 16px; border: none;
+  background: #17181c; color: white; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center;
+}
+#atp-chat-btn::after {
+  content: ''; position: absolute; top: -3px; right: -3px;
+  width: 13px; height: 13px; border-radius: 50%; background: #ef4444;
+  border: 2px solid #fafafa;
+}
   #atp-chat-panel {
     position: fixed; bottom: 96px; right: 24px; z-index: 9999;
     width: 370px; max-width: 90vw; height: 560px; max-height: 75vh;
@@ -630,7 +631,27 @@ new DotField(container, {
 </script>
 
 <!-- ATP CHAT WIDGET -->
-<button id="atp-chat-btn">💬</button>
+<button id="atp-chat-btn">
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 5.5C4 4.7 4.7 4 5.5 4h13c.8 0 1.5.7 1.5 1.5v10c0 .8-.7 1.5-1.5 1.5H9l-4 3.5v-3.5H5.5C4.7 17 4 16.3 4 15.5v-10z"/>
+    <line x1="8" y1="9" x2="16" y2="9"/>
+    <line x1="8" y1="12.5" x2="13" y2="12.5"/>
+  </svg>
+</button>
+<div id="atp-chat-panel">
+  <div id="atp-chat-header">
+    <div id="atp-chat-avatar">👩‍💻</div>
+    <div>
+      <div id="atp-chat-title">Dominga</div>
+      <div id="atp-chat-subtitle">El equipo también puede ayudar</div>
+    </div>
+    <button id="atp-chat-close">✕</button>
+  </div>
+  <div id="atp-chat-messages"></div>
+  <div id="atp-chat-input-wrap">
+    <div id="atp-chat-input-row">
+      <input id="atp-chat-input" type="text" placeholder="Haz una pregunta..." />
+      <button id="atp-chat-send">➤</button>
 <div id="atp-chat-panel">
   <div id="atp-chat-header">
     <div id="atp-chat-avatar">👩‍💻</div>

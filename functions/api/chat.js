@@ -1,11 +1,11 @@
 export async function onRequestPost(context) {
   try {
-    const { messages } = await context.request.json();
+    const { messages, sessionId } = await context.request.json();
 
-    const systemPrompt = `Eres "Atiende", el asistente virtual de Atiéndeme la Pyme, una empresa chilena que crea agentes de IA (chatbots y asistentes de voz) para automatizar atención al cliente y agendamiento de citas en pymes (psicólogos, peluquerías, clínicas dentales, talleres, etc).
+    const systemPrompt = `Eres Dominga, la asistente virtual de Atiéndeme la Pyme, una empresa chilena que crea agentes de IA (chatbots y asistentes de voz) para automatizar atención al cliente y agendamiento de citas en pymes (psicólogos, peluquerías, clínicas dentales, talleres, etc).
 
 Tu objetivo:
-1. Ser tú mismo la demo en vivo de lo que vende la empresa: mostrar cómo responde un agente bien entrenado.
+1. Ser tú misma la demo en vivo de lo que vende la empresa: mostrar cómo responde un agente bien entrenado.
 2. Resolver dudas usando SOLO la información de abajo.
 3. Calificar al lead: preguntar rubro del negocio y si maneja agendamiento de citas.
 4. Si muestra interés, pedir nombre y contacto (email o WhatsApp) para agendar una consulta gratuita.
@@ -45,16 +45,30 @@ Tono: cercano, profesional, chileno neutro (sin modismos exagerados). Respuestas
     }
 
     const textBlock = data.content.find((b) => b.type === "text");
+    const reply = textBlock ? textBlock.text : "";
 
-    return new Response(
-      JSON.stringify({ reply: textBlock ? textBlock.text : "" }),
-      { headers: { "Content-Type": "application/json" } }
-    );
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-}
+    const updatedMessages = [...messages, { role: "assistant", content: reply }];
 
+    // Extrae un email o teléfono si aparece en la conversación, para marcar el lead
+    const fullText = updatedMessages.map((m) => m.content).join(" ");
+    const emailMatch = fullText.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+    const phoneMatch = fullText.match(/(\+?56)?\s?9\s?\d{4}\s?\d{4}/);
+    const leadContact = emailMatch?.[0] || phoneMatch?.[0] || null;
+
+    // Guarda o actualiza la conversación en Supabase (no bloquea la respuesta si falla)
+    if (context.env.SUPABASE_URL && context.env.SUPABASE_SERVICE_KEY && sessionId) {
+      try {
+        await fetch(
+          `${context.env.SUPABASE_URL}/rest/v1/chat_sessions?on_conflict=session_id`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: context.env.SUPABASE_SERVICE_KEY,
+              Prefer: "resolution=merge-duplicates"
+            },
+            body: JSON.stringify({
+              session_id: sessionId,
+              messages: updatedMessages,
+              lead_contact: leadContact,
+              updated_at: new

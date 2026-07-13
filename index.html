@@ -678,8 +678,13 @@ new DotField(container, {
   const atpInput = document.getElementById('atp-chat-input');
   const atpSend = document.getElementById('atp-chat-send');
 
-  let history = [];
-  let opened = false;
+let history = [];
+let opened = false;
+let sessionId = localStorage.getItem('atp_session_id');
+if (!sessionId) {
+  sessionId = crypto.randomUUID();
+  localStorage.setItem('atp_session_id', sessionId);
+}
 
   atpBtn.addEventListener('click', () => {
     atpPanel.classList.add('open');
@@ -719,7 +724,7 @@ setTimeout(() => {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
+        body: JSON.stringify({ messages: history, sessionId: sessionId })
       });
       const data = await res.json();
       loadingDiv.remove();

@@ -58,4 +58,3 @@ Tono: cercano, profesional, chileno neutro (sin modismos exagerados). Respuestas
   }
 }
 
-Agrega función chat con Claude API

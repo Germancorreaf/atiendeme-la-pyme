@@ -734,8 +734,9 @@ setTimeout(() => {
         return;
       }
 
-      addBubble(data.reply, 'bot');
-      history.push({ role: 'assistant', content: data.reply });
+      if (data.debugInfo) {
+  addBubble('🔧 DEBUG: ' + data.debugInfo, 'bot');
+}
     } catch (e) {
       loadingDiv.remove();
       addBubble('No pude conectarme. Revisa tu conexión e intenta de nuevo.', 'bot');

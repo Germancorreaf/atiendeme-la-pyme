@@ -1,3 +1,9 @@
 name = "atiendeme-la-pyme"
 type = "javascript"
 compatibility_date = "2024-01-01"
+
+[[env.production.bindings]]
+binding = "WORKLOAD_OIDC_TOKEN"
+type = "workload"
+service_account = "atiendeme-la-pyme@crack-map-502417-i7.iam.gserviceaccount.com"
+workload_identity_provider = "projects/658233084064/locations/global/workloadIdentityPools/pyme/providers/cloudflare-provider"

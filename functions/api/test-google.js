@@ -29,6 +29,7 @@ export async function onRequestGet(context) {
         requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
         subject_token: oidcToken,
         subject_token_type: "urn:ietf:params:oauth:token-type:id_token"
+        scope: "https://www.googleapis.com/auth/calendar"
       })
     });
 

@@ -24,12 +24,13 @@ export async function onRequestGet(context) {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        audience: `//iam.googleapis.com/${provider}`,
-        requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
-        subject_token: oidcToken,
-        subject_token_type: "urn:ietf:params:oauth:token-type:id_token"
-        scope: "https://www.googleapis.com/auth/calendar"
+  grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+  audience: `//iam.googleapis.com/${provider}`,
+  requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
+  subject_token: oidcToken,
+  subject_token_type: "urn:ietf:params:oauth:token-type:id_token",
+  scope: "https://www.googleapis.com/auth/calendar" 
+})
       })
     });
 

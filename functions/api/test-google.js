@@ -11,7 +11,7 @@ export async function onRequestGet(context) {
     }
 
     // Obtener el token OIDC de Cloudflare
-    const oidcToken = context.env.WORKLOAD_OIDC_TOKEN;
+    const oidcToken = await context.env.WORKLOAD_OIDC_TOKEN;
     if (!oidcToken) {
       return new Response(
         JSON.stringify({ error: "No OIDC token available" }),

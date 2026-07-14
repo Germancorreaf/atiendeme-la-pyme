@@ -49,43 +49,34 @@ Tono: cercano, profesional, chileno neutro (sin modismos exagerados). Respuestas
 
     const updatedMessages = [...messages, { role: "assistant", content: reply }];
 
-    // Extrae un email o teléfono si aparece en la conversación, para marcar el lead
     const fullText = updatedMessages.map((m) => m.content).join(" ");
     const emailMatch = fullText.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
     const phoneMatch = fullText.match(/(\+?56)?\s?9\s?\d{4}\s?\d{4}/);
     const leadContact = emailMatch?.[0] || phoneMatch?.[0] || null;
 
-    // Guarda o actualiza la conversación en Supabase (no bloquea la respuesta si falla)
     let debugInfo = null;
-if (context.env.SUPABASE_URL && context.env.SUPABASE_SERVICE_KEY && sessionId) {
-  try {
-    const sbRes = await fetch(
-      `${context.env.SUPABASE_URL}/rest/v1/chat_sessions?on_conflict=session_id`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: context.env.SUPABASE_SERVICE_KEY,
-          Prefer: "resolution=merge-duplicates"
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          messages: updatedMessages,
-          lead_contact: leadContact,
-          updated_at: new Date().toISOString()
-        })
-      }
-    );
-    if (!sbRes.ok) {
-      debugInfo = `Supabase status ${sbRes.status}: ${await sbRes.text()}`;
-    }
-  } catch (dbErr) {
-    debugInfo = "Supabase fetch error: " + dbErr.message;
-  }
-} else {
-  debugInfo = "Faltan variables: URL=" + !!context.env.SUPABASE_URL + " KEY=" + !!context.env.SUPABASE_SERVICE_KEY + " sessionId=" + !!sessionId;
-}
 
-return new Response(JSON.stringify({ reply, debugInfo }), {
-  headers: { "Content-Type": "application/json" }
-});
+    if (context.env.SUPABASE_URL && context.env.SUPABASE_SERVICE_KEY && sessionId) {
+      try {
+        const sbRes = await fetch(
+          `${context.env.SUPABASE_URL}/rest/v1/chat_sessions?on_conflict=session_id`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: context.env.SUPABASE_SERVICE_KEY,
+              Prefer: "resolution=merge-duplicates"
+            },
+            body: JSON.stringify({
+              session_id: sessionId,
+              messages: updatedMessages,
+              lead_contact: leadContact,
+              updated_at: new Date().toISOString()
+            })
+          }
+        );
+        if (!sbRes.ok) {
+          debugInfo = `Supabase status ${sbRes.status}: ${await sbRes.text()}`;
+        }
+      } catch (dbErr) {
+        debugInfo =

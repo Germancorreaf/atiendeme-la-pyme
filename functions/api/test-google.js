@@ -1,15 +1,18 @@
 export async function onRequestGet(context) {
   try {
-    // 1. Validar que las variables existen
-    if (!context.env.GOOGLE_PROJECT_ID || !context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER) {
+    // Extraer project_id del GOOGLE_WORKLOAD_IDENTITY_PROVIDER
+    const provider = context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER;
+    const projectMatch = provider.match(/projects\/(\d+)/);
+    const projectId = projectMatch ? projectMatch[1] : null;
+
+    if (!projectId || !context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !provider) {
       return new Response(
-        JSON.stringify({ error: "Missing Google environment variables" }),
+        JSON.stringify({ error: "Missing required environment variables", projectId, email: !!context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL, provider: !!provider }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // 2. Obtener el token OIDC de Cloudflare
-    const oidcToken = await context.env.WORKLOAD_OIDC_TOKEN;
+    const oidcToken = context.env.WORKLOAD_OIDC_TOKEN;
     if (!oidcToken) {
       return new Response(
         JSON.stringify({ error: "No OIDC token available" }),
@@ -17,34 +20,28 @@ export async function onRequestGet(context) {
       );
     }
 
-    // 3. Intercambiar token OIDC por credenciales de Google
-    // AQUÍ SE AGREGA EL 'scope' QUE FALTABA
     const stsResponse = await fetch("https://sts.googleapis.com/v1/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        audience: `//iam.googleapis.com/${context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER}`,
+        audience: `//iam.googleapis.com/${provider}`,
         requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
         subject_token: oidcToken,
-        subject_token_type: "urn:ietf:params:oauth:token-type:id_token",
-        service_account: context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        scope: "https://www.googleapis.com/auth/calendar.readonly" 
+        subject_token_type: "urn:ietf:params:oauth:token-type:id_token"
       })
     });
 
     const stsData = await stsResponse.json();
-    
     if (!stsResponse.ok) {
       return new Response(
-        JSON.stringify({ error: "STS exchange failed", details: stsData }),
+        JSON.stringify({ error: "STS token exchange failed", details: stsData }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
     const accessToken = stsData.access_token;
 
-    // 4. Intentar listar calendarios
     const calendarResponse = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
       method: "GET",
       headers: {
@@ -72,7 +69,7 @@ export async function onRequestGet(context) {
     );
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err.message, stack: err.stack }),
+      JSON.stringify({ error: err.message }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

@@ -1,25 +1,6 @@
-
-
-
 export async function onRequestGet(context) {
   try {
-    console.log("Env keys available:", Object.keys(context.env));
-    console.log("GOOGLE_PROJECT_ID:", context.env.GOOGLE_PROJECT_ID);
-    console.log("GOOGLE_SERVICE_ACCOUNT_EMAIL:", context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
-    console.log("GOOGLE_WORKLOAD_IDENTITY_PROVIDER:", context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER);
-
-    if (!context.env.GOOGLE_PROJECT_ID || !context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER) {
-      return new Response(
-        JSON.stringify({ error: "Missing Google environment variables", debug: { 
-          has_project_id: !!context.env.GOOGLE_PROJECT_ID,
-          has_email: !!context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-          has_provider: !!context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER
-        }}),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    // Verificar que las variables existan
+    // 1. Validar que las variables existen
     if (!context.env.GOOGLE_PROJECT_ID || !context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER) {
       return new Response(
         JSON.stringify({ error: "Missing Google environment variables" }),
@@ -27,7 +8,7 @@ export async function onRequestGet(context) {
       );
     }
 
-    // Obtener el token OIDC de Cloudflare
+    // 2. Obtener el token OIDC de Cloudflare
     const oidcToken = await context.env.WORKLOAD_OIDC_TOKEN;
     if (!oidcToken) {
       return new Response(
@@ -36,9 +17,8 @@ export async function onRequestGet(context) {
       );
     }
 
-    console.log("OIDC token obtenido");
-
-    // Intercambiar token OIDC por credenciales de Google
+    // 3. Intercambiar token OIDC por credenciales de Google
+    // AQUÍ SE AGREGA EL 'scope' QUE FALTABA
     const stsResponse = await fetch("https://sts.googleapis.com/v1/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -48,7 +28,8 @@ export async function onRequestGet(context) {
         requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
         subject_token: oidcToken,
         subject_token_type: "urn:ietf:params:oauth:token-type:id_token",
-        service_account: context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+        service_account: context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        scope: "https://www.googleapis.com/auth/calendar.readonly" 
       })
     });
 
@@ -61,11 +42,9 @@ export async function onRequestGet(context) {
       );
     }
 
-    console.log("Access token obtenido");
-
     const accessToken = stsData.access_token;
 
-    // Intentar listar calendarios para validar que funciona
+    // 4. Intentar listar calendarios
     const calendarResponse = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
       method: "GET",
       headers: {

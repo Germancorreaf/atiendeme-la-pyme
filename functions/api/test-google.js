@@ -1,6 +1,23 @@
+
+
+
 export async function onRequestGet(context) {
   try {
-    console.log("Test iniciado...");
+    console.log("Env keys available:", Object.keys(context.env));
+    console.log("GOOGLE_PROJECT_ID:", context.env.GOOGLE_PROJECT_ID);
+    console.log("GOOGLE_SERVICE_ACCOUNT_EMAIL:", context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+    console.log("GOOGLE_WORKLOAD_IDENTITY_PROVIDER:", context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER);
+
+    if (!context.env.GOOGLE_PROJECT_ID || !context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER) {
+      return new Response(
+        JSON.stringify({ error: "Missing Google environment variables", debug: { 
+          has_project_id: !!context.env.GOOGLE_PROJECT_ID,
+          has_email: !!context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+          has_provider: !!context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER
+        }}),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Verificar que las variables existan
     if (!context.env.GOOGLE_PROJECT_ID || !context.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !context.env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER) {

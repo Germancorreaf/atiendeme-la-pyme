@@ -52,14 +52,14 @@ Tono: cercano, profesional, chileno neutro (sin modismos exagerados). Respuestas
     const fullText = updatedMessages.map((m) => m.content).join(" ");
     const emailMatch = fullText.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
     const phoneMatch = fullText.match(/(\+?56)?\s?9\s?\d{4}\s?\d{4}/);
-    const leadContact = emailMatch?.[0] || phoneMatch?.[0] || null;
+    const leadContact = emailMatch ? emailMatch[0] : (phoneMatch ? phoneMatch[0] : null);
 
     let debugInfo = null;
 
     if (context.env.SUPABASE_URL && context.env.SUPABASE_SERVICE_KEY && sessionId) {
       try {
         const sbRes = await fetch(
-          `${context.env.SUPABASE_URL}/rest/v1/chat_sessions?on_conflict=session_id`,
+          context.env.SUPABASE_URL + "/rest/v1/chat_sessions?on_conflict=session_id",
           {
             method: "POST",
             headers: {
@@ -76,7 +76,23 @@ Tono: cercano, profesional, chileno neutro (sin modismos exagerados). Respuestas
           }
         );
         if (!sbRes.ok) {
-          debugInfo = `Supabase status ${sbRes.status}: ${await sbRes.text()}`;
+          const errText = await sbRes.text();
+          debugInfo = "Supabase status " + sbRes.status + ": " + errText;
         }
       } catch (dbErr) {
-        debugInfo =
+        debugInfo = "Supabase fetch error: " + dbErr.message;
+      }
+    } else {
+      debugInfo = "Faltan variables. URL=" + Boolean(context.env.SUPABASE_URL) + " KEY=" + Boolean(context.env.SUPABASE_SERVICE_KEY) + " sessionId=" + Boolean(sessionId);
+    }
+
+    return new Response(JSON.stringify({ reply: reply, debugInfo: debugInfo }), {
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}

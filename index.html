@@ -697,17 +697,31 @@ new DotField(container, {
       const botReply = data.reply ?? data.message ?? data.response ?? data.text ?? data.answer;
 
       if (botReply) {
-        // Check if reply is a scheduling JSON
+        // Check if reply contains scheduling JSON
         let scheduleData = null;
+        let displayText = botReply;
+        
+        // Try to parse as pure JSON first
         try {
           scheduleData = JSON.parse(botReply);
         } catch (e) {
-          // Not JSON, treat as normal message
+          // If pure JSON fails, try to extract JSON from text
+          const jsonMatch = botReply.match(/\{[\s\S]*"action"\s*:\s*"schedule"[\s\S]*\}/);
+          if (jsonMatch) {
+            try {
+              scheduleData = JSON.parse(jsonMatch[0]);
+              // Remove JSON from display text
+              displayText = botReply.replace(jsonMatch[0], '').trim();
+            } catch (parseErr) {
+              // Could not parse extracted JSON
+            }
+          }
         }
 
         if (scheduleData && scheduleData.action === 'schedule') {
-          // Handle scheduling
+          // Handle scheduling - show processing message
           addBubble('Procesando tu cita...', 'bot');
+          
           try {
             const scheduleRes = await fetch('/api/schedule', {
               method: 'POST',
@@ -724,6 +738,7 @@ new DotField(container, {
             const scheduleResult = await scheduleRes.json();
 
             if (scheduleRes.ok && scheduleResult.success) {
+              // Show success message
               addBubble(`✅ ${scheduleResult.message}\n\nTe enviaremos un correo de confirmación a ${scheduleData.email}`, 'bot');
               history.push({ role: 'assistant', content: `Cita agendada exitosamente para ${scheduleData.date} a las ${scheduleData.time}` });
             } else {
@@ -734,9 +749,11 @@ new DotField(container, {
             console.error('Scheduling error:', scheduleErr);
           }
         } else {
-          // Normal chat response
-          addBubble(botReply, 'bot');
-          history.push({ role: 'assistant', content: botReply });
+          // Normal chat response - show the display text (without JSON)
+          if (displayText) {
+            addBubble(displayText, 'bot');
+            history.push({ role: 'assistant', content: displayText });
+          }
         }
       } else {
         addBubble('No recibí una respuesta válida del servidor. Revisa la consola para más detalles.', 'bot');

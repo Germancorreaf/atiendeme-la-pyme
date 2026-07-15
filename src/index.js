@@ -1,5 +1,5 @@
-import chatHandler from './api/chat.js';
-import scheduleHandler from './api/schedule.js';
+import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.js';
+import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 
 const HTML_CONTENT = `<!DOCTYPE html>
 <html lang="es">
@@ -787,31 +787,39 @@ new DotField(container, {
 `;
 
 export default {
-    async fetch(request, env, ctx) {
+    async fetch(request, env) {
         const url = new URL(request.url);
         const pathname = url.pathname;
 
-        // API Routes - Pasar contexto correcto a los handlers
-        if (pathname === '/api/chat' && request.method === 'POST') {
-            return await chatHandler.onRequestPost({ request, env });
-        }
-        
-        if (pathname === '/api/chat' && request.method === 'GET') {
-            return await chatHandler.onRequestGet({ request, env });
-        }
+        try {
+            // API Routes
+            if (pathname === '/api/chat' && request.method === 'POST') {
+                return await chatPost({ request, env });
+            }
+            
+            if (pathname === '/api/chat' && request.method === 'GET') {
+                return await chatGet({ request, env });
+            }
 
-        if (pathname === '/api/schedule' && request.method === 'POST') {
-            return await scheduleHandler.onRequestPost({ request, env });
-        }
+            if (pathname === '/api/schedule' && request.method === 'POST') {
+                return await schedulePost({ request, env });
+            }
 
-        if (pathname === '/api/schedule' && request.method === 'GET') {
-            return await scheduleHandler.onRequestGet({ request, env });
-        }
+            if (pathname === '/api/schedule' && request.method === 'GET') {
+                return await scheduleGet({ request, env });
+            }
 
-        // Serve HTML for all other requests
-        return new Response(HTML_CONTENT, {
-            status: 200,
-            headers: { 'Content-Type': 'text/html; charset=utf-8' }
-        });
+            // Serve HTML for all other requests
+            return new Response(HTML_CONTENT, {
+                status: 200,
+                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+            });
+        } catch (err) {
+            console.error('Worker error:', err);
+            return new Response(JSON.stringify({ error: err.message }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
     }
 };

@@ -7,3 +7,8 @@ binding = "WORKLOAD_OIDC_TOKEN"
 type = "workload"
 service_account = "atiendeme-la-pyme@crack-map-502417-i7.iam.gserviceaccount.com"
 workload_identity_provider = "projects/658233084064/locations/global/workloadIdentityPools/pyme/providers/cloudflare-provider"
+
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "71b78676d0a74b47bac411a8782e5184"
+preview_id = "71b78676d0a74b47bac411a8782e5184"

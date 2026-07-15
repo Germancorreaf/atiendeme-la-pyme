@@ -1,3 +1,6 @@
+# WIF configured - redeployment required
+name = "atiendeme-la-pyme"
+
 name = "atiendeme-la-pyme"
 type = "javascript"
 compatibility_date = "2024-01-01"

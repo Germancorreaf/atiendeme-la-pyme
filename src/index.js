@@ -791,22 +791,24 @@ export default {
         const url = new URL(request.url);
         const pathname = url.pathname;
 
+        // API Routes - Pasar contexto correcto a los handlers
         if (pathname === '/api/chat' && request.method === 'POST') {
-            return chatHandler.onRequestPost({ request, env, ...ctx });
+            return await chatHandler.onRequestPost({ request, env });
         }
         
         if (pathname === '/api/chat' && request.method === 'GET') {
-            return chatHandler.onRequestGet({ request, env, ...ctx });
+            return await chatHandler.onRequestGet({ request, env });
         }
 
         if (pathname === '/api/schedule' && request.method === 'POST') {
-            return scheduleHandler.onRequestPost({ request, env, ...ctx });
+            return await scheduleHandler.onRequestPost({ request, env });
         }
 
         if (pathname === '/api/schedule' && request.method === 'GET') {
-            return scheduleHandler.onRequestGet({ request, env, ...ctx });
+            return await scheduleHandler.onRequestGet({ request, env });
         }
 
+        // Serve HTML for all other requests
         return new Response(HTML_CONTENT, {
             status: 200,
             headers: { 'Content-Type': 'text/html; charset=utf-8' }

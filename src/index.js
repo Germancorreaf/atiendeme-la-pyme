@@ -29,7 +29,7 @@ const LANDING_PAGE = `<!DOCTYPE html>
 </head>
 <body>
     <div class="container">
-        <h1>🤖 Atiéndeme la Pyme</h1>
+        <h1>Atiéndeme la Pyme</h1>
         <p>Automatiza el agendamiento de citas con IA. Prueba a la derecha →</p>
     </div>
 
@@ -75,12 +75,11 @@ const LANDING_PAGE = `<!DOCTYPE html>
                 const reply = data.reply || data.message || '';
 
                 if (reply) {
-                    // Check for scheduling JSON
                     let scheduleData = null;
                     try {
                         scheduleData = JSON.parse(reply);
                     } catch (e) {
-                        const jsonMatch = reply.match(/\{[\s\S]*"action"\s*:\s*"schedule"[\s\S]*\}/);
+                        const jsonMatch = reply.match(/\\{[\\s\\S]*"action"\\s*:\\s*"schedule"[\\s\\S]*\\}/);
                         if (jsonMatch) {
                             try {
                                 scheduleData = JSON.parse(jsonMatch[0]);
@@ -106,12 +105,13 @@ const LANDING_PAGE = `<!DOCTYPE html>
 
                             const schedResult = await schedRes.json();
                             if (schedRes.ok && schedResult.success) {
-                                addMessage(`✅ ${schedResult.message}\\n\\nTe enviaremos un correo a ${scheduleData.email}`, false);
+                                const msg = '[OK] ' + schedResult.message + ' Te enviaremos un correo a ' + scheduleData.email;
+                                addMessage(msg, false);
                             } else {
-                                addMessage('❌ Error al agendar: ' + (schedResult.error || 'Desconocido'), false);
+                                addMessage('[ERROR] No pude agendar: ' + (schedResult.error || 'Desconocido'), false);
                             }
                         } catch (err) {
-                            addMessage('❌ Error al procesar la cita', false);
+                            addMessage('[ERROR] Error al procesar la cita', false);
                         }
                     } else {
                         addMessage(reply, false);
@@ -123,8 +123,7 @@ const LANDING_PAGE = `<!DOCTYPE html>
             }
         }
 
-        // Greeting
-        setTimeout(() => addMessage('¡Hola! Soy Dominga. ¿En qué puedo ayudarte?', false), 500);
+        setTimeout(() => addMessage('Hola! Soy Dominga. Que puedo ayudarte?', false), 500);
     </script>
 </body>
 </html>`;
@@ -134,7 +133,6 @@ export default {
         const url = new URL(request.url);
         const pathname = url.pathname;
 
-        // API Routes
         if (pathname === '/api/chat' && request.method === 'POST') {
             return chatHandler.onRequestPost({ request, env, ...ctx });
         }
@@ -151,7 +149,6 @@ export default {
             return scheduleHandler.onRequestGet({ request, env, ...ctx });
         }
 
-        // Serve landing page
         if (pathname === '/' || pathname === '') {
             return new Response(LANDING_PAGE, {
                 status: 200,
@@ -159,7 +156,6 @@ export default {
             });
         }
 
-        // 404
         return new Response('Not found', { status: 404 });
     }
 };

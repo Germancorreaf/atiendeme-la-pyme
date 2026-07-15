@@ -694,14 +694,50 @@ new DotField(container, {
         return;
       }
 
-      // Ajusta este campo según lo que devuelva tu backend real.
-      // Soporta varios nombres comunes: reply, message, response, text, answer
-      const botReply =
-        data.reply ?? data.message ?? data.response ?? data.text ?? data.answer;
+      const botReply = data.reply ?? data.message ?? data.response ?? data.text ?? data.answer;
 
       if (botReply) {
-        addBubble(botReply, 'bot');
-        history.push({ role: 'assistant', content: botReply });
+        // Check if reply is a scheduling JSON
+        let scheduleData = null;
+        try {
+          scheduleData = JSON.parse(botReply);
+        } catch (e) {
+          // Not JSON, treat as normal message
+        }
+
+        if (scheduleData && scheduleData.action === 'schedule') {
+          // Handle scheduling
+          addBubble('Procesando tu cita...', 'bot');
+          try {
+            const scheduleRes = await fetch('/api/schedule', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                date: scheduleData.date,
+                time: scheduleData.time,
+                name: scheduleData.name,
+                email: scheduleData.email,
+                sessionId: sessionId
+              })
+            });
+
+            const scheduleResult = await scheduleRes.json();
+
+            if (scheduleRes.ok && scheduleResult.success) {
+              addBubble(`✅ ${scheduleResult.message}\n\nTe enviaremos un correo de confirmación a ${scheduleData.email}`, 'bot');
+              history.push({ role: 'assistant', content: `Cita agendada exitosamente para ${scheduleData.date} a las ${scheduleData.time}` });
+            } else {
+              addBubble(`❌ No pude agendar la cita: ${scheduleResult.error || 'Error desconocido'}`, 'bot');
+            }
+          } catch (scheduleErr) {
+            addBubble('❌ Error al procesar tu cita. Intenta de nuevo.', 'bot');
+            console.error('Scheduling error:', scheduleErr);
+          }
+        } else {
+          // Normal chat response
+          addBubble(botReply, 'bot');
+          history.push({ role: 'assistant', content: botReply });
+        }
       } else {
         addBubble('No recibí una respuesta válida del servidor. Revisa la consola para más detalles.', 'bot');
         console.warn('Respuesta de /api/chat sin campo reconocido:', data);

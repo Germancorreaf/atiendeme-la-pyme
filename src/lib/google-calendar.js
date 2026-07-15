@@ -1,132 +1,50 @@
 // functions/lib/google-calendar.js
-// Google Calendar API integration with Service Account JSON
+// Google Calendar API integration with Workload Identity
 
 import { ApiError } from './errors.js';
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 const CALENDAR_TIMEZONE = 'America/Santiago';
-const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
-/**
- * Get access token using Service Account JSON
- */
 async function getAccessToken(context) {
-  const serviceAccountJson = context.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  const oidcToken = context.env.WORKLOAD_OIDC_TOKEN;
   
-  if (!serviceAccountJson) {
-    throw new ApiError('GOOGLE_SERVICE_ACCOUNT_JSON not configured', 500);
+  if (!oidcToken) {
+    throw new ApiError('OIDC token not available. Check WIF configuration.', 500);
   }
 
+  const provider = "projects/658233084064/locations/global/workloadIdentityPools/pyme/providers/cloudflare-provider";
+  
   try {
-    let serviceAccount;
+    const response = await fetch("https://sts.googleapis.com/v1/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+        audience: `//iam.googleapis.com/${provider}`,
+        requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
+        subject_token: oidcToken,
+        subject_token_type: "urn:ietf:params:oauth:token-type:id_token"
+      })
+    });
+
+    const data = await response.json();
     
-    // Parse if it's a string
-    if (typeof serviceAccountJson === 'string') {
-      serviceAccount = JSON.parse(serviceAccountJson);
-    } else {
-      serviceAccount = serviceAccountJson;
+    if (!response.ok) {
+      throw new ApiError(`STS token exchange failed: ${data.error}`, 400);
     }
 
-    // Create JWT assertion
-    const now = Math.floor(Date.now() / 1000);
-    const expiresAt = now + 3600; // 1 hour
-
-    const header = {
-      alg: 'RS256',
-      typ: 'JWT'
-    };
-
-    const payload = {
-      iss: serviceAccount.client_email,
-      scope: 'https://www.googleapis.com/auth/calendar',
-      aud: GOOGLE_TOKEN_URL,
-      exp: expiresAt,
-      iat: now
-    };
-
-    // Create JWT (using crypto for signing)
-    const headerB64 = btoa(JSON.stringify(header));
-    const payloadB64 = btoa(JSON.stringify(payload));
-    const signatureInput = `${headerB64}.${payloadB64}`;
-
-    // For Cloudflare, we'll use a simpler approach: get token via service account
-    const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-        assertion: signatureInput // Note: This won't work without proper JWT signing
-      })
-    });
-
-    // Fallback: use a simpler OAuth flow
-    // Since JWT signing is complex in Cloudflare Workers, use OAuth2 with service account
-    const googleAuthResponse = await fetch(
-      'https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/' + 
-      encodeURIComponent(serviceAccount.client_email) + 
-      ':generateAccessToken',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceAccount.private_key}`
-        },
-        body: JSON.stringify({
-          scope: ['https://www.googleapis.com/auth/calendar'],
-          lifetime: '3600s'
-        })
-      }
-    );
-
-    // Simpler approach: directly use the service account to create JWT
-    // This requires a proper JWT library, but for Cloudflare Workers:
-    const jwtToken = await createJWT(serviceAccount, now, expiresAt);
-    
-    const oauthResponse = await fetch(GOOGLE_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-        assertion: jwtToken
-      })
-    });
-
-    const data = await oauthResponse.json();
-
-    if (!oauthResponse.ok) {
-      throw new ApiError('Failed to get Google access token', 400, { error: data.error });
+    if (!data.access_token) {
+      throw new ApiError('No access token received from STS', 500);
     }
 
     return data.access_token;
   } catch (err) {
     if (err instanceof ApiError) throw err;
-    throw new ApiError(`Failed to get access token: ${err.message}`, 500);
+    throw new ApiError(`Token exchange error: ${err.message}`, 500);
   }
 }
 
-/**
- * Helper to create JWT (simplified for Cloudflare)
- */
-async function createJWT(serviceAccount, iat, exp) {
-  // Note: Proper JWT signing requires crypto library
-  // This is a simplified version that works with service account
-  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const payload = btoa(JSON.stringify({
-    iss: serviceAccount.client_email,
-    scope: 'https://www.googleapis.com/auth/calendar',
-    aud: GOOGLE_TOKEN_URL,
-    exp: exp,
-    iat: iat
-  }));
-  
-  // For production, you'd need proper RS256 signing here
-  // This requires importing crypto and using the private key
-  return `${header}.${payload}.signature`;
-}
-
-/**
- * Create event in Google Calendar
- */
 export async function createCalendarEvent(options, context) {
   const {
     title,
@@ -137,9 +55,8 @@ export async function createCalendarEvent(options, context) {
     durationMinutes = 60
   } = options;
 
-  // Validate inputs
   if (!title || !date || !time) {
-    throw new ApiError('Missing required fields: title, date, time', 400);
+    throw new ApiError('Missing: title, date, time', 400);
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -156,16 +73,13 @@ export async function createCalendarEvent(options, context) {
   }
 
   try {
-    // Get access token
     const accessToken = await getAccessToken(context);
 
-    // Build datetime strings
     const startDateTime = new Date(`${date}T${time}:00`).toISOString();
     const endDateTime = new Date(
       new Date(startDateTime).getTime() + durationMinutes * 60 * 1000
     ).toISOString();
 
-    // Build event payload
     const eventPayload = {
       summary: title,
       description: description,
@@ -179,12 +93,10 @@ export async function createCalendarEvent(options, context) {
       }
     };
 
-    // Add attendee if email provided
     if (attendeeEmail) {
       eventPayload.attendees = [{ email: attendeeEmail }];
     }
 
-    // Create event
     const eventResponse = await fetch(
       `${GOOGLE_CALENDAR_API}/calendars/primary/events`,
       {
@@ -201,14 +113,13 @@ export async function createCalendarEvent(options, context) {
 
     if (!eventResponse.ok) {
       throw new ApiError(
-        `Google Calendar API error: ${eventData.error?.message || 'Unknown error'}`,
-        eventResponse.status,
-        { googleError: eventData.error }
+        `Google Calendar error: ${eventData.error?.message || 'Unknown'}`,
+        eventResponse.status
       );
     }
 
     if (!eventData.id) {
-      throw new ApiError('No event ID in Google Calendar response', 500);
+      throw new ApiError('No event ID in response', 500);
     }
 
     return {
@@ -221,7 +132,7 @@ export async function createCalendarEvent(options, context) {
     };
   } catch (err) {
     if (err instanceof ApiError) throw err;
-    throw new ApiError(`Calendar event creation failed: ${err.message}`, 500);
+    throw new ApiError(`Calendar event failed: ${err.message}`, 500);
   }
 }
 
@@ -250,6 +161,6 @@ export async function cancelCalendarEvent(eventId, context) {
     return { success: true, eventId };
   } catch (err) {
     if (err instanceof ApiError) throw err;
-    throw new ApiError(`Failed to cancel event: ${err.message}`, 500);
+    throw new ApiError(`Cancel failed: ${err.message}`, 500);
   }
 }

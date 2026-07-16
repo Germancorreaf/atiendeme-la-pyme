@@ -14,39 +14,50 @@ import {
 import { callClaude } from '../lib/anthropic.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 
-// Función para calcular fechas
-function calculateDate(dayReference) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function getTodayInfo() {
+  // Fecha actual en zona horaria de Chile
+  const now = new Date();
+  const chileFormatter = new Intl.DateTimeFormat('es-CL', {
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'long'
+  });
   
-  let targetDate = new Date(today);
+  const parts = chileFormatter.formatToParts(now);
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  const weekday = parts.find(p => p.type === 'weekday').value;
   
-  const ref = dayReference.toLowerCase();
+  const todayISO = `${year}-${month}-${day}`;
   
-  if (ref.includes('hoy') || ref.includes('today')) {
-    // Hoy
-  } else if (ref.includes('mañana') || ref.includes('tomorrow') || ref.includes('manana')) {
-    targetDate.setDate(targetDate.getDate() + 1);
-  } else if (ref.includes('pasado mañana') || ref.includes('day after tomorrow')) {
-    targetDate.setDate(targetDate.getDate() + 2);
-  } else if (ref.includes('próxima semana') || ref.includes('next week')) {
-    targetDate.setDate(targetDate.getDate() + 7);
-  } else if (ref.includes('lunes') || ref.includes('monday')) {
-    const day = targetDate.getDay();
-    let daysToAdd = 1 - day;
-    if (daysToAdd <= 0) daysToAdd += 7;
-    targetDate.setDate(targetDate.getDate() + daysToAdd);
-  } else if (ref.includes('martes') || ref.includes('tuesday')) {
-    const day = targetDate.getDay();
-    let daysToAdd = 2 - day;
-    if (daysToAdd <= 0) daysToAdd += 7;
-    targetDate.setDate(targetDate.getDate() + daysToAdd);
-  }
-  
-  return targetDate.toISOString().split('T')[0];
+  // Calcular mañana
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowFormatter = new Intl.DateTimeFormat('es-CL', {
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const tParts = tomorrowFormatter.formatToParts(tomorrow);
+  const tYear = tParts.find(p => p.type === 'year').value;
+  const tMonth = tParts.find(p => p.type === 'month').value;
+  const tDay = tParts.find(p => p.type === 'day').value;
+  const tomorrowISO = `${tYear}-${tMonth}-${tDay}`;
+
+  return { todayISO, tomorrowISO, weekday };
 }
 
-const SYSTEM_PROMPT = `Eres Dominga, la asistente virtual de Atiéndeme la Pyme, una empresa chilena que crea agentes de IA (chatbots y asistentes de voz) para automatizar atención al cliente y agendamiento de citas en pymes.
+function buildSystemPrompt() {
+  const { todayISO, tomorrowISO, weekday } = getTodayInfo();
+
+  return `Eres Dominga, la asistente virtual de Atiéndeme la Pyme, una empresa chilena que crea agentes de IA (chatbots y asistentes de voz) para automatizar atención al cliente y agendamiento de citas en pymes.
+
+FECHA ACTUAL: Hoy es ${weekday}, ${todayISO} (formato YYYY-MM-DD). Mañana es ${tomorrowISO}.
+IMPORTANTE: SIEMPRE usa estas fechas reales como referencia. NUNCA inventes o asumas otra fecha.
 
 Tu personalidad: casual, amigable, conversacional (como hablar con una amiga). Acento chileno neutro. Nunca formal ni robótico.
 
@@ -59,23 +70,24 @@ Tu objetivo:
 AGENDAMIENTO (cuando mencione "quiero agendar", "reservar", "agendar cita", "quiero una cita", "agenda una cita", etc):
 - SÉ CASUAL: "Dale, vamos a agendarla fácil. ¿Cuál es tu nombre?" 
 - SUGIERE HORARIOS según lo que dicen:
-  * Si dicen "mañana" → Sugiere: "¿Te viene bien mañana en la tarde? Te propongo las 15:00 o 16:00"
+  * Si dicen "mañana" → la fecha es ${tomorrowISO}. Sugiere: "¿Te viene bien mañana en la tarde? Te propongo las 15:00 o 16:00"
+  * Si dicen "hoy" → la fecha es ${todayISO}
   * Si dicen "próxima semana" → Sugiere: "Bacán, ¿qué tal el lunes o martes? Tengo 14:00, 15:00 o 16:00"
   * Si dicen "tarde" → Sugiere: "Perfecto, tarde está bien. ¿14:00, 15:00 o 16:00?"
-  * Si dicen "mañana en la mañana" → Sugiere: "Oye, ¿10:00 u 11:00 te viene?"
+  * Si dicen "mañana en la mañana" → la fecha es ${tomorrowISO}. Sugiere: "Oye, ¿10:00 u 11:00 te viene?"
   * Si NO dicen cuándo → Pregunta casual: "¿Cuándo te vendría mejor? ¿Mañana, la próxima semana?"
 
 FLUJO NATURAL:
 1. El usuario ya proporcionó nombre, email y horario
-2. Confirma: "Dale German, te agendo para mañana a las 10:00 en cbartschm@gmail.com. Listo!"
+2. Confirma: "Dale German, te agendo para mañana (${tomorrowISO}) a las 10:00 en cbartschm@gmail.com. Listo!"
 3. Devuelve JSON puro (SIN NADA MÁS, SIN EXPLICACIONES)
 
 JSON FINAL (SOLO cuando todo está confirmado - DEVUELVE SOLO ESTO, NADA MÁS):
 {"action": "schedule", "name": "nombre del cliente", "email": "cliente@email.com", "date": "YYYY-MM-DD", "time": "HH:MM"}
 
 IMPORTANTE: 
-- La fecha debe ser en formato YYYY-MM-DD (ejemplo: 2026-07-17 para mañana si hoy es 2026-07-16)
-- Si dicen "mañana", la fecha es HOY + 1 día
+- USA SIEMPRE las fechas reales indicadas arriba (hoy=${todayISO}, mañana=${tomorrowISO})
+- NUNCA inventes fechas de otros años o meses
 - Cuando devuelvas JSON de agendamiento, SOLO devuelve el JSON. Nada de "¡Listo!" o explicaciones. Solo el JSON puro.
 
 Información del servicio:
@@ -87,6 +99,7 @@ Información del servicio:
 - Seguridad: encriptación empresarial
 
 Tono: amigable, casual, conversacional. 2-3 frases cortas. Nunca formal. Suena como una persona real. Si no sabes algo, deriva a contacto@atiendemelapyme.cl.`;
+}
 
 function extractLeadContact(messages) {
   const fullText = messages
@@ -212,35 +225,13 @@ export async function onRequestPost(context) {
 
     const limitedMessages = limitHistory(validMessages, 20);
 
-    const reply = await callClaude(limitedMessages, SYSTEM_PROMPT, context, {
+    // Construir system prompt CON LA FECHA ACTUAL REAL
+    const systemPrompt = buildSystemPrompt();
+
+    const reply = await callClaude(limitedMessages, systemPrompt, context, {
       model: 'claude-sonnet-4-5-20250929',
       maxTokens: 1024
     });
-
-    // Si la respuesta contiene JSON de agendamiento, corregir la fecha
-    let processedReply = reply;
-    try {
-      const jsonMatch = reply.match(/\{[\s\S]*"action"\s*:\s*"schedule"[\s\S]*\}/);
-      if (jsonMatch) {
-        const scheduleData = JSON.parse(jsonMatch[0]);
-        
-        // Recalcular fecha si dice "mañana"
-        if (scheduleData.date === 'mañana' || scheduleData.date === 'tomorrow') {
-          const today = new Date();
-          today.setDate(today.getDate() + 1);
-          scheduleData.date = today.toISOString().split('T')[0];
-        }
-        
-        // Recalcular si contiene referencias de días
-        if (scheduleData.date && !scheduleData.date.match(/\d{4}-\d{2}-\d{2}/)) {
-          scheduleData.date = calculateDate(scheduleData.date);
-        }
-        
-        processedReply = JSON.stringify(scheduleData);
-      }
-    } catch (parseErr) {
-      // Si no es JSON válido, usar la respuesta original
-    }
 
     const updatedMessages = [
       ...limitedMessages,
@@ -256,7 +247,7 @@ export async function onRequestPost(context) {
     );
 
     return sendSuccess({
-      reply: processedReply,
+      reply,
       leadDetected: !!leadContact
     });
   } catch (err) {

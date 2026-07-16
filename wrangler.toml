@@ -7,3 +7,7 @@ keep_vars = true
 binding = "RATE_LIMIT_KV"
 id = "71b78676d0a74b47bac411a8782e5184"
 preview_id = "71b78676d0a74b47bac411a8782e5184"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

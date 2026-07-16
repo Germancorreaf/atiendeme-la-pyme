@@ -1,4 +1,5 @@
 import { createCalendarEvent } from '../lib/google-calendar.js';
+import { sendConfirmationEmail } from '../lib/email.js';
 import { ApiError, sendError, sendSuccess, parseJSON } from '../lib/errors.js';
 import { checkRateLimit } from '../lib/rateLimit.js';
 
@@ -9,10 +10,7 @@ async function checkAvailability(date, time, env) {
   }
 
   try {
-    // Query: buscar citas que coincidan con fecha Y hora
     const url = `${env.SUPABASE_URL}/rest/v1/scheduled_appointments?appointment_date=eq.${date}&appointment_time=eq.${time}&select=*`;
-    
-    console.log(`Checking availability: ${url}`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -24,11 +22,9 @@ async function checkAvailability(date, time, env) {
     });
 
     const responseText = await response.text();
-    console.log(`Availability check response [${response.status}]: ${responseText}`);
 
     if (!response.ok) {
       console.error(`Availability check failed: ${response.status} - ${responseText}`);
-      // Si falla la query, asumimos disponible (no bloqueamos)
       return { available: true };
     }
 
@@ -41,11 +37,6 @@ async function checkAvailability(date, time, env) {
     }
 
     const isAvailable = Array.isArray(data) && data.length === 0;
-    
-    console.log(`Availability for ${date} ${time}: ${isAvailable ? 'AVAILABLE' : 'BOOKED'}`);
-    if (!isAvailable && data.length > 0) {
-      console.log(`Conflicting appointment:`, data[0]);
-    }
 
     return {
       available: isAvailable,
@@ -73,8 +64,6 @@ async function saveAppointment(eventId, name, email, date, time, calendarLink, e
       calendar_link: calendarLink
     };
 
-    console.log('Saving appointment:', payload);
-
     const response = await fetch(
       `${env.SUPABASE_URL}/rest/v1/scheduled_appointments`,
       {
@@ -89,7 +78,6 @@ async function saveAppointment(eventId, name, email, date, time, calendarLink, e
     );
 
     const responseText = await response.text();
-    console.log(`Appointment save response [${response.status}]: ${responseText}`);
 
     if (!response.ok) {
       console.error(`Appointment save failed [${response.status}]: ${responseText}`);
@@ -108,32 +96,25 @@ export async function onRequestPost(context) {
     const body = await parseJSON(context.request);
     const { date, time, name, email, sessionId } = body;
 
-    console.log('Schedule request:', { date, time, name, email, sessionId });
-
-    // Validar campos requeridos
     if (!date || !time || !name || !email) {
       throw new ApiError('Faltan campos: date, time, name, email', 400);
     }
 
-    // Validar formato de fecha (YYYY-MM-DD)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new ApiError('Formato de fecha inválido. Usa YYYY-MM-DD', 400);
     }
 
-    // Validar formato de hora (HH:MM)
     if (!/^\d{2}:\d{2}$/.test(time)) {
       throw new ApiError('Formato de hora inválido. Usa HH:MM', 400);
     }
 
-    // Validar email
     if (!/[\w.+-]+@[\w-]+\.[\w.-]+/.test(email)) {
       throw new ApiError('Email inválido', 400);
     }
 
-    // Rate limiting por email
     const rlCheck = await checkRateLimit(email, context.env.RATE_LIMIT_KV, {
       maxRequests: 5,
-      windowSeconds: 3600 // 1 hora
+      windowSeconds: 3600
     });
 
     if (!rlCheck.allowed) {
@@ -143,21 +124,15 @@ export async function onRequestPost(context) {
       );
     }
 
-    // VERIFICAR DISPONIBILIDAD
-    console.log(`Checking availability for ${date} at ${time}`);
     const availability = await checkAvailability(date, time, context.env);
 
     if (!availability.available) {
-      console.log(`CONFLICT: Time slot is booked`);
       throw new ApiError(
         `La cita para ${date} a las ${time} ya está agendada. Por favor elige otro horario.`,
         409
       );
     }
 
-    console.log(`Time slot is available, proceeding with Google Calendar`);
-
-    // CREAR EVENTO EN GOOGLE CALENDAR
     const eventResult = await createCalendarEvent(
       {
         title: `Cita - ${name}`,
@@ -169,9 +144,6 @@ export async function onRequestPost(context) {
       context
     );
 
-    console.log('Google Calendar event created:', eventResult.eventId);
-
-    // GUARDAR EN SUPABASE
     await saveAppointment(
       eventResult.eventId,
       name,
@@ -182,10 +154,27 @@ export async function onRequestPost(context) {
       context.env
     );
 
+    // ENVIAR EMAIL DE CONFIRMACIÓN
+    const emailResult = await sendConfirmationEmail(
+      {
+        clientName: name,
+        clientEmail: email,
+        date,
+        time,
+        calendarLink: eventResult.htmlLink
+      },
+      context.env
+    );
+
+    if (emailResult && !emailResult.success) {
+      console.error('Failed to send confirmation email:', emailResult.error);
+    }
+
     return sendSuccess({
       success: true,
       eventId: eventResult.eventId,
       message: eventResult.message,
+      emailSent: emailResult?.success || false,
       details: {
         date,
         time,

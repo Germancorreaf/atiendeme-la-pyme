@@ -14,6 +14,38 @@ import {
 import { callClaude } from '../lib/anthropic.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 
+// Función para calcular fechas
+function calculateDate(dayReference) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  let targetDate = new Date(today);
+  
+  const ref = dayReference.toLowerCase();
+  
+  if (ref.includes('hoy') || ref.includes('today')) {
+    // Hoy
+  } else if (ref.includes('mañana') || ref.includes('tomorrow') || ref.includes('manana')) {
+    targetDate.setDate(targetDate.getDate() + 1);
+  } else if (ref.includes('pasado mañana') || ref.includes('day after tomorrow')) {
+    targetDate.setDate(targetDate.getDate() + 2);
+  } else if (ref.includes('próxima semana') || ref.includes('next week')) {
+    targetDate.setDate(targetDate.getDate() + 7);
+  } else if (ref.includes('lunes') || ref.includes('monday')) {
+    const day = targetDate.getDay();
+    let daysToAdd = 1 - day;
+    if (daysToAdd <= 0) daysToAdd += 7;
+    targetDate.setDate(targetDate.getDate() + daysToAdd);
+  } else if (ref.includes('martes') || ref.includes('tuesday')) {
+    const day = targetDate.getDay();
+    let daysToAdd = 2 - day;
+    if (daysToAdd <= 0) daysToAdd += 7;
+    targetDate.setDate(targetDate.getDate() + daysToAdd);
+  }
+  
+  return targetDate.toISOString().split('T')[0];
+}
+
 const SYSTEM_PROMPT = `Eres Dominga, la asistente virtual de Atiéndeme la Pyme, una empresa chilena que crea agentes de IA (chatbots y asistentes de voz) para automatizar atención al cliente y agendamiento de citas en pymes.
 
 Tu personalidad: casual, amigable, conversacional (como hablar con una amiga). Acento chileno neutro. Nunca formal ni robótico.
@@ -24,7 +56,7 @@ Tu objetivo:
 3. Califica leads: pregunta qué tipo de negocio tienen y si necesitan agendar citas.
 4. Si quieren agendar: hazlo súper fácil.
 
-AGENDAMIENTO (cuando mencione "quiero agendar", "reservar", "agendar cita", "quiero una cita", etc):
+AGENDAMIENTO (cuando mencione "quiero agendar", "reservar", "agendar cita", "quiero una cita", "agenda una cita", etc):
 - SÉ CASUAL: "Dale, vamos a agendarla fácil. ¿Cuál es tu nombre?" 
 - SUGIERE HORARIOS según lo que dicen:
   * Si dicen "mañana" → Sugiere: "¿Te viene bien mañana en la tarde? Te propongo las 15:00 o 16:00"
@@ -34,15 +66,17 @@ AGENDAMIENTO (cuando mencione "quiero agendar", "reservar", "agendar cita", "qui
   * Si NO dicen cuándo → Pregunta casual: "¿Cuándo te vendría mejor? ¿Mañana, la próxima semana?"
 
 FLUJO NATURAL:
-1. "¡Bacán! Dime tu nombre" 
-2. "¿Y tu correo?"
-3. Sugiere fecha/hora o pregunta: "¿Cuándo te vendría bien?"
-4. Una vez confirmado: devuelve JSON puro (SIN NADA MÁS, SIN EXPLICACIONES)
+1. El usuario ya proporcionó nombre, email y horario
+2. Confirma: "Dale German, te agendo para mañana a las 10:00 en cbartschm@gmail.com. Listo!"
+3. Devuelve JSON puro (SIN NADA MÁS, SIN EXPLICACIONES)
 
-JSON FINAL (cuando todo está confirmado - DEVUELVE SOLO ESTO, NADA MÁS):
+JSON FINAL (SOLO cuando todo está confirmado - DEVUELVE SOLO ESTO, NADA MÁS):
 {"action": "schedule", "name": "nombre del cliente", "email": "cliente@email.com", "date": "YYYY-MM-DD", "time": "HH:MM"}
 
-IMPORTANTE: Cuando devuelvas JSON de agendamiento, SOLO devuelve el JSON. Nada de "¡Listo!" o explicaciones. Solo el JSON puro.
+IMPORTANTE: 
+- La fecha debe ser en formato YYYY-MM-DD (ejemplo: 2026-07-17 para mañana si hoy es 2026-07-16)
+- Si dicen "mañana", la fecha es HOY + 1 día
+- Cuando devuelvas JSON de agendamiento, SOLO devuelve el JSON. Nada de "¡Listo!" o explicaciones. Solo el JSON puro.
 
 Información del servicio:
 - Implementación única: $199.990 CLP (setup, entrenamiento, integración calendario, WhatsApp/Instagram/Llamadas, capacitación, 30 días soporte)
@@ -183,6 +217,31 @@ export async function onRequestPost(context) {
       maxTokens: 1024
     });
 
+    // Si la respuesta contiene JSON de agendamiento, corregir la fecha
+    let processedReply = reply;
+    try {
+      const jsonMatch = reply.match(/\{[\s\S]*"action"\s*:\s*"schedule"[\s\S]*\}/);
+      if (jsonMatch) {
+        const scheduleData = JSON.parse(jsonMatch[0]);
+        
+        // Recalcular fecha si dice "mañana"
+        if (scheduleData.date === 'mañana' || scheduleData.date === 'tomorrow') {
+          const today = new Date();
+          today.setDate(today.getDate() + 1);
+          scheduleData.date = today.toISOString().split('T')[0];
+        }
+        
+        // Recalcular si contiene referencias de días
+        if (scheduleData.date && !scheduleData.date.match(/\d{4}-\d{2}-\d{2}/)) {
+          scheduleData.date = calculateDate(scheduleData.date);
+        }
+        
+        processedReply = JSON.stringify(scheduleData);
+      }
+    } catch (parseErr) {
+      // Si no es JSON válido, usar la respuesta original
+    }
+
     const updatedMessages = [
       ...limitedMessages,
       { role: 'assistant', content: reply }
@@ -197,7 +256,7 @@ export async function onRequestPost(context) {
     );
 
     return sendSuccess({
-      reply,
+      reply: processedReply,
       leadDetected: !!leadContact
     });
   } catch (err) {

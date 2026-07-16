@@ -1,7 +1,6 @@
 import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.js';
 import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.js';
-import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 import { processReminders } from './lib/reminder-cron.js';
 
 const HTML_CONTENT = `<!DOCTYPE html>

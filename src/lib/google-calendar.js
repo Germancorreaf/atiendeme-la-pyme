@@ -1,166 +1,100 @@
-// functions/lib/google-calendar.js
-// Google Calendar API integration with Workload Identity
+// src/lib/google-calendar.js
+// Google Calendar API usando OAuth2 con Refresh Token
 
 import { ApiError } from './errors.js';
 
-const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
+const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 const CALENDAR_TIMEZONE = 'America/Santiago';
+const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
-async function getAccessToken(context) {
-  const oidcToken = context.env.WORKLOAD_OIDC_TOKEN;
-  
-  if (!oidcToken) {
-    throw new ApiError('OIDC token not available. Check WIF configuration.', 500);
+async function getAccessToken(env) {
+  const clientId = env.GOOGLE_CLIENT_ID;
+  const clientSecret = env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = env.GOOGLE_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new ApiError('Faltan variables: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN', 500);
   }
 
-  const provider = "projects/658233084064/locations/global/workloadIdentityPools/pyme/providers/cloudflare-provider";
-  
-  try {
-    const response = await fetch("https://sts.googleapis.com/v1/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        audience: `//iam.googleapis.com/${provider}`,
-        requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
-        subject_token: oidcToken,
-        subject_token_type: "urn:ietf:params:oauth:token-type:id_token"
-      })
-    });
+  const response = await fetch(TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken
+    })
+  });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new ApiError(`STS token exchange failed: ${data.error}`, 400);
-    }
+  const data = await response.json();
 
-    if (!data.access_token) {
-      throw new ApiError('No access token received from STS', 500);
-    }
-
-    return data.access_token;
-  } catch (err) {
-    if (err instanceof ApiError) throw err;
-    throw new ApiError(`Token exchange error: ${err.message}`, 500);
+  if (!response.ok || !data.access_token) {
+    throw new ApiError(`Error obteniendo token: ${data.error}`, 500);
   }
+
+  return data.access_token;
 }
 
 export async function createCalendarEvent(options, context) {
-  const {
-    title,
-    date,
-    time,
-    attendeeEmail = null,
-    description = 'Cita agendada vía Dominga',
-    durationMinutes = 60
-  } = options;
+  const { title, date, time, attendeeEmail = null, description = 'Cita agendada via Dominga', durationMinutes = 60 } = options;
 
-  if (!title || !date || !time) {
-    throw new ApiError('Missing: title, date, time', 400);
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new ApiError('Invalid date format. Expected YYYY-MM-DD', 400);
-  }
-
-  if (!/^\d{2}:\d{2}$/.test(time)) {
-    throw new ApiError('Invalid time format. Expected HH:MM', 400);
-  }
-
-  const [hours, minutes] = time.split(':').map(Number);
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-    throw new ApiError('Invalid time values', 400);
-  }
+  if (!title || !date || !time) throw new ApiError('Faltan: title, date, time', 400);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new ApiError('Fecha invalida. Usa YYYY-MM-DD', 400);
+  if (!/^\d{2}:\d{2}$/.test(time)) throw new ApiError('Hora invalida. Usa HH:MM', 400);
 
   try {
-    const accessToken = await getAccessToken(context);
+    const accessToken = await getAccessToken(context.env);
 
-    const startDateTime = new Date(`${date}T${time}:00`).toISOString();
-    const endDateTime = new Date(
-      new Date(startDateTime).getTime() + durationMinutes * 60 * 1000
-    ).toISOString();
+    const startDateTime = `${date}T${time}:00`;
+    const endDateTime = new Date(new Date(startDateTime).getTime() + durationMinutes * 60 * 1000).toISOString().slice(0, 19);
 
     const eventPayload = {
       summary: title,
-      description: description,
-      start: {
-        dateTime: startDateTime,
-        timeZone: CALENDAR_TIMEZONE
-      },
-      end: {
-        dateTime: endDateTime,
-        timeZone: CALENDAR_TIMEZONE
-      }
+      description,
+      start: { dateTime: startDateTime, timeZone: CALENDAR_TIMEZONE },
+      end: { dateTime: endDateTime, timeZone: CALENDAR_TIMEZONE }
     };
 
-    if (attendeeEmail) {
-      eventPayload.attendees = [{ email: attendeeEmail }];
-    }
+    if (attendeeEmail) eventPayload.attendees = [{ email: attendeeEmail }];
 
-    const eventResponse = await fetch(
-      `${GOOGLE_CALENDAR_API}/calendars/primary/events`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify(eventPayload)
-      }
-    );
+    const res = await fetch(`${CALENDAR_API}/calendars/primary/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(eventPayload)
+    });
 
-    const eventData = await eventResponse.json();
+    const data = await res.json();
 
-    if (!eventResponse.ok) {
-      throw new ApiError(
-        `Google Calendar error: ${eventData.error?.message || 'Unknown'}`,
-        eventResponse.status
-      );
-    }
-
-    if (!eventData.id) {
-      throw new ApiError('No event ID in response', 500);
-    }
+    if (!res.ok) throw new ApiError(`Google Calendar: ${data.error?.message || 'Error desconocido'}`, res.status);
 
     return {
       success: true,
-      eventId: eventData.id,
-      title: eventData.summary,
-      dateTime: startDateTime,
-      htmlLink: eventData.htmlLink,
-      message: `✅ Cita agendada para ${date} a las ${time}`
+      eventId: data.id,
+      htmlLink: data.htmlLink,
+      message: `Cita agendada para ${date} a las ${time}`
     };
   } catch (err) {
     if (err instanceof ApiError) throw err;
-    throw new ApiError(`Calendar event failed: ${err.message}`, 500);
+    throw new ApiError(`Error: ${err.message}`, 500);
   }
 }
 
 export async function cancelCalendarEvent(eventId, context) {
-  if (!eventId) {
-    throw new ApiError('Event ID required', 400);
-  }
-
+  if (!eventId) throw new ApiError('Se requiere eventId', 400);
   try {
-    const accessToken = await getAccessToken(context);
-
-    const response = await fetch(
-      `${GOOGLE_CALENDAR_API}/calendars/primary/events/${eventId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      }
-    );
-
-    if (!response.ok && response.status !== 204) {
-      throw new ApiError('Failed to cancel event', response.status);
-    }
-
+    const accessToken = await getAccessToken(context.env);
+    const res = await fetch(`${CALENDAR_API}/calendars/primary/events/${eventId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!res.ok && res.status !== 204) throw new ApiError('Error cancelando evento', res.status);
     return { success: true, eventId };
   } catch (err) {
     if (err instanceof ApiError) throw err;
-    throw new ApiError(`Cancel failed: ${err.message}`, 500);
+    throw new ApiError(`Error: ${err.message}`, 500);
   }
 }

@@ -126,8 +126,3 @@ export async function onRequestGet(context) {
     timestamp: new Date().toISOString()
   });
 }
-
-export default {
-  onRequestPost,
-  onRequestGet
-};

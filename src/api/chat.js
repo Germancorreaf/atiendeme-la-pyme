@@ -217,9 +217,3 @@ export async function onRequestGet(context) {
     timestamp: new Date().toISOString()
   });
 }
-
-// Export for use in index.js
-export default {
-  onRequestPost,
-  onRequestGet
-};

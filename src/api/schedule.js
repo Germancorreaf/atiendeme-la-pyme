@@ -9,24 +9,43 @@ async function checkAvailability(date, time, env) {
   }
 
   try {
-    const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/scheduled_appointments?appointment_date=eq.${date}&appointment_time=eq.${time}`,
-      {
-        method: 'GET',
-        headers: {
-          'apikey': env.SUPABASE_SERVICE_KEY,
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`
-        }
+    // Query: buscar citas que coincidan con fecha Y hora
+    const url = `${env.SUPABASE_URL}/rest/v1/scheduled_appointments?appointment_date=eq.${date}&appointment_time=eq.${time}&select=*`;
+    
+    console.log(`Checking availability: ${url}`);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json'
       }
-    );
+    });
+
+    const responseText = await response.text();
+    console.log(`Availability check response [${response.status}]: ${responseText}`);
 
     if (!response.ok) {
-      console.error(`Availability check failed: ${response.status}`);
+      console.error(`Availability check failed: ${response.status} - ${responseText}`);
+      // Si falla la query, asumimos disponible (no bloqueamos)
       return { available: true };
     }
 
-    const data = await response.json();
-    const isAvailable = data.length === 0;
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse availability response:', responseText);
+      return { available: true };
+    }
+
+    const isAvailable = Array.isArray(data) && data.length === 0;
+    
+    console.log(`Availability for ${date} ${time}: ${isAvailable ? 'AVAILABLE' : 'BOOKED'}`);
+    if (!isAvailable && data.length > 0) {
+      console.log(`Conflicting appointment:`, data[0]);
+    }
 
     return {
       available: isAvailable,
@@ -45,6 +64,17 @@ async function saveAppointment(eventId, name, email, date, time, calendarLink, e
   }
 
   try {
+    const payload = {
+      event_id: eventId,
+      client_name: name,
+      client_email: email,
+      appointment_date: date,
+      appointment_time: time,
+      calendar_link: calendarLink
+    };
+
+    console.log('Saving appointment:', payload);
+
     const response = await fetch(
       `${env.SUPABASE_URL}/rest/v1/scheduled_appointments`,
       {
@@ -54,20 +84,15 @@ async function saveAppointment(eventId, name, email, date, time, calendarLink, e
           'apikey': env.SUPABASE_SERVICE_KEY,
           'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`
         },
-        body: JSON.stringify({
-          event_id: eventId,
-          client_name: name,
-          client_email: email,
-          appointment_date: date,
-          appointment_time: time,
-          calendar_link: calendarLink
-        })
+        body: JSON.stringify(payload)
       }
     );
 
+    const responseText = await response.text();
+    console.log(`Appointment save response [${response.status}]: ${responseText}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Appointment save failed [${response.status}]: ${errorText.substring(0, 200)}`);
+      console.error(`Appointment save failed [${response.status}]: ${responseText}`);
       return null;
     }
 
@@ -82,6 +107,8 @@ export async function onRequestPost(context) {
   try {
     const body = await parseJSON(context.request);
     const { date, time, name, email, sessionId } = body;
+
+    console.log('Schedule request:', { date, time, name, email, sessionId });
 
     // Validar campos requeridos
     if (!date || !time || !name || !email) {
@@ -117,14 +144,18 @@ export async function onRequestPost(context) {
     }
 
     // VERIFICAR DISPONIBILIDAD
+    console.log(`Checking availability for ${date} at ${time}`);
     const availability = await checkAvailability(date, time, context.env);
 
     if (!availability.available) {
+      console.log(`CONFLICT: Time slot is booked`);
       throw new ApiError(
         `La cita para ${date} a las ${time} ya está agendada. Por favor elige otro horario.`,
         409
       );
     }
+
+    console.log(`Time slot is available, proceeding with Google Calendar`);
 
     // CREAR EVENTO EN GOOGLE CALENDAR
     const eventResult = await createCalendarEvent(
@@ -137,6 +168,8 @@ export async function onRequestPost(context) {
       },
       context
     );
+
+    console.log('Google Calendar event created:', eventResult.eventId);
 
     // GUARDAR EN SUPABASE
     await saveAppointment(
@@ -164,6 +197,7 @@ export async function onRequestPost(context) {
 
   } catch (err) {
     const apiErr = err instanceof ApiError ? err : new ApiError(err.message, 500);
+    console.error('Schedule error:', apiErr);
     return sendError(apiErr, context.request.url);
   }
 }

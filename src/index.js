@@ -2,7 +2,8 @@ import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.j
 import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 import { processReminders } from './lib/reminder-cron.js';
 
-const HTML_CONTENT = `<!DOCTYPE html>
+const HTML_CONTENT = `
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -702,19 +703,19 @@ const chans = [
   {name:'Correo', color:'#F59E0B', y:195},
   {name:'Calendario', color:getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), y:250},
 ];
-let svg = `<svg width="420" height="280" viewBox="0 0 420 280" style="max-width:100%;height:auto;">`;
+let svg = \`<svg width="420" height="280" viewBox="0 0 420 280" style="max-width:100%;height:auto;">\`;
 chans.forEach((c,i)=>{
-  svg += `<path d="M 78 140 C 170 140, 190 ${c.y+14}, 268 ${c.y+14}" stroke="${c.color}" stroke-width="1.5" fill="none" opacity="0.75" stroke-dasharray="6 6" style="animation:flowdash 1.6s linear infinite"/>`;
+  svg += \`<path d="M 78 140 C 170 140, 190 \${c.y+14}, 268 \${c.y+14}" stroke="\${c.color}" stroke-width="1.5" fill="none" opacity="0.75" stroke-dasharray="6 6" style="animation:flowdash 1.6s linear infinite"/>\`;
 });
-svg += `<rect x="30" y="116" width="48" height="48" rx="12" fill="#131419" stroke="rgba(236,232,223,0.18)"/>`;
-svg += `<path d="M46 150 L54 135 L62 150" stroke="#ECE8DF" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
-svg += `<circle cx="54" cy="146.5" r="2.2" fill="#ECE8DF"/>`;
+svg += \`<rect x="30" y="116" width="48" height="48" rx="12" fill="#131419" stroke="rgba(236,232,223,0.18)"/>\`;
+svg += \`<path d="M46 150 L54 135 L62 150" stroke="#ECE8DF" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>\`;
+svg += \`<circle cx="54" cy="146.5" r="2.2" fill="#ECE8DF"/>\`;
 chans.forEach((c,i)=>{
-  svg += `<g><rect x="268" y="${c.y}" width="132" height="30" rx="8" fill="#131419" stroke="rgba(236,232,223,0.1)"/>`;
-  svg += `<circle cx="284" cy="${c.y+15}" r="4" fill="${c.color}" style="transform-origin:284px ${c.y+15}px;animation:nodepulse 2.4s ease-in-out ${i*0.35}s infinite"/>`;
-  svg += `<text x="298" y="${c.y+19.5}" fill="#c9c6bd" font-size="12" font-family="Inter,sans-serif">${c.name}</text></g>`;
+  svg += \`<g><rect x="268" y="\${c.y}" width="132" height="30" rx="8" fill="#131419" stroke="rgba(236,232,223,0.1)"/>\`;
+  svg += \`<circle cx="284" cy="\${c.y+15}" r="4" fill="\${c.color}" style="transform-origin:284px \${c.y+15}px;animation:nodepulse 2.4s ease-in-out \${i*0.35}s infinite"/>\`;
+  svg += \`<text x="298" y="\${c.y+19.5}" fill="#c9c6bd" font-size="12" font-family="Inter,sans-serif">\${c.name}</text></g>\`;
 });
-svg += `</svg>`;
+svg += \`</svg>\`;
 document.getElementById('diagramHost').innerHTML = svg;
 
 /* ---------- conversaciones por tab ---------- */
@@ -740,9 +741,9 @@ const convos = [
 ];
 const convoBody = document.getElementById('convoBody');
 function renderConvo(i){
-  convoBody.innerHTML = convos[i].map((m,idx)=>`
-    <div class="convo-msg-row ${m.who==='b'?'b':''}"><div class="convo-bubble" style="--delay:${idx*60}ms">${m.text}</div></div>
-  `).join('');
+  convoBody.innerHTML = convos[i].map((m,idx)=>\`
+    <div class="convo-msg-row \${m.who==='b'?'b':''}"><div class="convo-bubble" style="--delay:\${idx*60}ms">\${m.text}</div></div>
+  \`).join('');
 }
 document.getElementById('tabRow').addEventListener('click', (e)=>{
   const btn = e.target.closest('.tab-btn');
@@ -835,7 +836,9 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
     atpPanel.classList.add('open');
     if (!opened) {
       opened = true;
-      addBubble('¡Hola! Qué gusto saludarte, soy Dominga.\n\nSé que soy un bot, pero en Atiéndeme la Pyme justamente nos dedicamos a que la tecnología no se note tan robótica ni aburrida.', 'bot');
+      addBubble('¡Hola! Qué gusto saludarte, soy Dominga.
+
+Sé que soy un bot, pero en Atiéndeme la Pyme justamente nos dedicamos a que la tecnología no se note tan robótica ni aburrida.', 'bot');
       setTimeout(() => {
         addBubble('Cuéntame un poco, ¿qué tienes en mente para tu negocio o en qué te puedo ayudar hoy?', 'bot');
       }, 700);
@@ -935,10 +938,12 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
             if (scheduleRes.ok && scheduleResult.success) {
               // Show success message
-              addBubble(`✅ ${scheduleResult.message}\n\nTe enviaremos un correo de confirmación a ${scheduleData.email}`, 'bot');
-              history.push({ role: 'assistant', content: `Cita agendada exitosamente para ${scheduleData.date} a las ${scheduleData.time}` });
+              addBubble(\`✅ \${scheduleResult.message}
+
+Te enviaremos un correo de confirmación a \${scheduleData.email}\`, 'bot');
+              history.push({ role: 'assistant', content: \`Cita agendada exitosamente para \${scheduleData.date} a las \${scheduleData.time}\` });
             } else {
-              addBubble(`❌ No pude agendar la cita: ${scheduleResult.error || 'Error desconocido'}`, 'bot');
+              addBubble(\`❌ No pude agendar la cita: \${scheduleResult.error || 'Error desconocido'}\`, 'bot');
             }
           } catch (scheduleErr) {
             addBubble('❌ Error al procesar tu cita. Intenta de nuevo.', 'bot');

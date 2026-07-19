@@ -1,5 +1,5 @@
 // src/lib/email.js
-// Envío de emails usando Resend API - CON COLORES FIJOS PARA GMAIL
+// Envío de emails usando Resend API - CON VML PARA GMAIL
 
 const RESEND_API = 'https://api.resend.com/emails';
 
@@ -50,96 +50,99 @@ export async function sendConfirmationEmail(options, env) {
   .wrap{width:100% !important;}
   .px{padding-left:20px !important;padding-right:20px !important;}
 }
-body { background-color: #111111 !important; }
 </style>
 </head>
 <body style="margin:0;padding:0;background-color:#111111;">
 <span style="display:none;font-size:1px;color:#111111;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">Tu cita quedó agendada ✓ Aquí van la fecha, la hora y el link de Google Meet para conectarnos.</span>
 
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#111111 !important;">
-<tr><td align="center" style="padding:32px 12px;background-color:#111111;">
+<!--[if mso]>
+<v:background xmlns:v="urn:schemas-microsoft-com:vml" fill="t" color="#111111"/>
+<![endif]-->
 
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="wrap" style="width:600px;max-width:600px;background-color:#111111;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#111111;">
+<tr><td align="center" style="padding:32px 12px;background:#111111;">
+
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="wrap" style="width:600px;max-width:600px;">
 
     <!-- HEADER -->
-    <tr><td style="border:2px solid #EDEDE8;background-color:#161616;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#161616;">
+    <tr><td style="border:2px solid #EDEDE8;background:#161616;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
-          <td class="px" style="padding:18px 28px;font-family:'Courier New',Courier,monospace;font-size:13px;font-weight:bold;letter-spacing:2px;color:#EDEDE8;background-color:#161616;">ATIÉNDEME_LA_PYME<span style="color:#E8A33D;">_</span></td>
-          <td align="right" style="padding:18px 28px;font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:1px;color:#E8A33D;background-color:#161616;">[CITA CONFIRMADA ✓]</td>
+          <td class="px" style="padding:18px 28px;font-family:'Courier New',Courier,monospace;font-size:13px;font-weight:bold;letter-spacing:2px;color:#EDEDE8;background:#161616;">ATIÉNDEME_LA_PYME<span style="color:#E8A33D;">_</span></td>
+          <td align="right" style="padding:18px 28px;font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:1px;color:#E8A33D;background:#161616;">[CITA CONFIRMADA ✓]</td>
         </tr>
       </table>
     </td></tr>
 
     <!-- spacer -->
-    <tr><td style="height:12px;line-height:12px;font-size:1px;background-color:#111111;">&nbsp;</td></tr>
+    <tr><td style="height:12px;line-height:12px;font-size:1px;background:#111111;">&nbsp;</td></tr>
 
     <!-- BODY CARD -->
-    <tr><td style="border:2px solid #EDEDE8;background-color:#161616;">
+    <tr><td style="border:2px solid #EDEDE8;background:#161616;">
 
       <!-- barra de estado -->
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#161616;">
-        <tr><td style="background-color:#E8A33D;height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
-        <tr><td class="px" style="padding:34px 32px 0 32px;background-color:#161616;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr><td style="background:#E8A33D;height:6px;line-height:6px;font-size:1px;">&nbsp;</td></tr>
+        <tr><td class="px" style="padding:34px 32px 0 32px;background:#161616;">
 
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#161616;">
-            <tr><td style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:2px;color:#8A8A82;background-color:#161616;">// CONFIRMACIÓN DE REUNIÓN</td></tr>
-            <tr><td style="height:14px;line-height:14px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
-            <tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:32px;mso-line-height-rule:exactly;font-weight:bold;color:#EDEDE8;text-transform:uppercase;letter-spacing:-0.5px;background-color:#161616;">Todo listo: tu reunión quedó agendada 🚀</td></tr>
-            <tr><td style="height:22px;line-height:22px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr><td style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:2px;color:#8A8A82;background:#161616;">// CONFIRMACIÓN DE REUNIÓN</td></tr>
+            <tr><td style="height:14px;line-height:14px;font-size:1px;background:#161616;">&nbsp;</td></tr>
+            <tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:32px;mso-line-height-rule:exactly;font-weight:bold;color:#EDEDE8;text-transform:uppercase;letter-spacing:-0.5px;background:#161616;">Todo listo: tu reunión quedó agendada 🚀</td></tr>
+            <tr><td style="height:22px;line-height:22px;font-size:1px;background:#161616;">&nbsp;</td></tr>
 
-            <tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#C9C9C0;background-color:#161616;">
+            <tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#C9C9C0;background:#161616;">
               Hola, <strong style="color:#EDEDE8;">${clientName}</strong>:<br><br>
               ¿Cómo estás? Por aquí <strong style="color:#E8A33D;">Dominga</strong>. Te escribo para confirmarte que tu cita quedó agendada correctamente en nuestro calendario.<br><br>
               Ya está todo coordinado para encontrarnos el <strong style="color:#EDEDE8;">${dateFormatted}</strong> a las <strong style="color:#EDEDE8;">${time}</strong>. En esta sesión de <strong style="color:#EDEDE8;">20 minutos</strong> revisaremos tu caso en vivo y veremos exactamente cómo implementar un asistente que venda, atienda y agende citas por ti las 24/7, logrando que tu negocio crezca sin que tengas que gastar en contratar más personal. 💻
             </td></tr>
 
-            <tr><td style="height:28px;line-height:28px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+            <tr><td style="height:28px;line-height:28px;font-size:1px;background:#161616;">&nbsp;</td></tr>
 
             <!-- DETALLES -->
-            <tr><td style="border:2px solid #EDEDE8;background-color:#0F0F0F;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#0F0F0F;">
-                <tr><td colspan="2" style="padding:14px 20px;border-bottom:1px solid #333330;font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:2px;color:#E8A33D;background-color:#0F0F0F;">📆 DETALLES PARA CONECTARNOS</td></tr>
-                <tr style="background-color:#0F0F0F;">
-                  <td width="140" style="padding:14px 0 14px 20px;font-family:'Courier New',Courier,monospace;font-size:12px;color:#8A8A82;border-bottom:1px solid #333330;background-color:#0F0F0F;">FECHA_Y_HORA</td>
-                  <td style="padding:14px 20px 14px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#EDEDE8;border-bottom:1px solid #333330;background-color:#0F0F0F;"><strong>${dateFormatted}</strong> a las <strong>${time}</strong> en punto</td>
+            <tr><td style="border:2px solid #EDEDE8;background:#0F0F0F;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr><td colspan="2" style="padding:14px 20px;border-bottom:1px solid #333330;font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:2px;color:#E8A33D;background:#0F0F0F;">📆 DETALLES PARA CONECTARNOS</td></tr>
+                <tr>
+                  <td width="140" style="padding:14px 0 14px 20px;font-family:'Courier New',Courier,monospace;font-size:12px;color:#8A8A82;border-bottom:1px solid #333330;background:#0F0F0F;">FECHA_Y_HORA</td>
+                  <td style="padding:14px 20px 14px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#EDEDE8;border-bottom:1px solid #333330;background:#0F0F0F;"><strong>${dateFormatted}</strong> a las <strong>${time}</strong> en punto</td>
                 </tr>
-                <tr style="background-color:#0F0F0F;">
-                  <td width="140" style="padding:14px 0 14px 20px;font-family:'Courier New',Courier,monospace;font-size:12px;color:#8A8A82;background-color:#0F0F0F;">DURACIÓN</td>
-                  <td style="padding:14px 20px 14px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#EDEDE8;background-color:#0F0F0F;">20 minutos · demo en vivo de tu caso</td>
+                <tr>
+                  <td width="140" style="padding:14px 0 14px 20px;font-family:'Courier New',Courier,monospace;font-size:12px;color:#8A8A82;background:#0F0F0F;">DURACIÓN</td>
+                  <td style="padding:14px 20px 14px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#EDEDE8;background:#0F0F0F;">20 minutos · demo en vivo de tu caso</td>
                 </tr>
               </table>
             </td></tr>
 
-            <tr><td style="height:24px;line-height:24px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+            <tr><td style="height:24px;line-height:24px;font-size:1px;background:#161616;">&nbsp;</td></tr>
 
             <!-- BOTÓN -->
-            <tr><td align="center" style="background-color:#161616;">
+            <tr><td align="center" style="background:#161616;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr><td bgcolor="#E8A33D" style="border:2px solid #E8A33D;background-color:#E8A33D;">
-                  <a href="${calendarLink}" style="display:block;padding:15px 38px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#111111;text-decoration:none;white-space:nowrap;background-color:#E8A33D;">Unirse a Google Meet →</a>
+                <tr><td bgcolor="#E8A33D" style="border:2px solid #E8A33D;">
+                  <a href="${calendarLink}" style="display:block;padding:15px 38px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#111111;text-decoration:none;white-space:nowrap;">Unirse a Google Meet →</a>
                 </td></tr>
               </table>
             </td></tr>
-            <tr><td align="center" style="padding-top:10px;font-family:'Courier New',Courier,monospace;font-size:11px;color:#8A8A82;background-color:#161616;">Si el botón no funciona, copia este enlace: <a href="${calendarLink}" style="color:#E8A33D;text-decoration:underline;">${calendarLink}</a></td></tr>
+            <tr><td align="center" style="padding-top:10px;font-family:'Courier New',Courier,monospace;font-size:11px;color:#8A8A82;background:#161616;">Si el botón no funciona, copia este enlace: <a href="${calendarLink}" style="color:#E8A33D;text-decoration:underline;">${calendarLink}</a></td></tr>
 
-            <tr><td style="height:28px;line-height:28px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+            <tr><td style="height:28px;line-height:28px;font-size:1px;background:#161616;">&nbsp;</td></tr>
 
             <!-- NOTA -->
-            <tr><td style="border-left:4px solid #E8A33D;background-color:#0F0F0F;padding:16px 20px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:21px;mso-line-height-rule:exactly;color:#C9C9C0;">
+            <tr><td style="border-left:4px solid #E8A33D;background:#0F0F0F;padding:16px 20px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:21px;mso-line-height-rule:exactly;color:#C9C9C0;">
               <strong style="color:#EDEDE8;">Nota:</strong> Te enviamos una invitación directa a tu correo para que quede guardada en tu agenda. Si te surge cualquier imprevisto y necesitas reagendar, avísanos con un poquito de anticipación respondiendo este correo o desde el evento del calendario.
             </td></tr>
 
-            <tr><td style="height:26px;line-height:26px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+            <tr><td style="height:26px;line-height:26px;font-size:1px;background:#161616;">&nbsp;</td></tr>
 
-            <tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#C9C9C0;background-color:#161616;">
+            <tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#C9C9C0;background:#161616;">
               ¡Nos vemos pronto! Que tengas un excelente día. 😊<br><br>
               Un abrazo,<br><br>
               <strong style="color:#EDEDE8;">Dominga</strong><br>
               <span style="font-family:'Courier New',Courier,monospace;font-size:12px;color:#E8A33D;">Asistente Virtual de Atiéndeme la Pyme</span>
             </td></tr>
 
-            <tr><td style="height:34px;line-height:34px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+            <tr><td style="height:34px;line-height:34px;font-size:1px;background:#161616;">&nbsp;</td></tr>
           </table>
 
         </td></tr>
@@ -147,16 +150,14 @@ body { background-color: #111111 !important; }
     </td></tr>
 
     <!-- spacer -->
-    <tr><td style="height:12px;line-height:12px;font-size:1px;background-color:#111111;">&nbsp;</td></tr>
+    <tr><td style="height:12px;line-height:12px;font-size:1px;background:#111111;">&nbsp;</td></tr>
 
     <!-- FOOTER -->
-    <tr><td style="border:2px solid #333330;background-color:#111111;padding:20px 28px;" class="px">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#111111;">
-        <tr><td style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:18px;mso-line-height-rule:exactly;color:#8A8A82;background-color:#111111;">
+    <tr><td style="border:2px solid #333330;background:#111111;padding:20px 28px;" class="px">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr><td style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:18px;mso-line-height-rule:exactly;color:#8A8A82;background:#111111;">
           <span style="color:#4F9D8C;">●</span> SYS.OK — © 2026 Atiéndeme la Pyme · Santiago, Chile<br>
-          <a href="mailto:contacto@atiendemelapyme.cl" style="color:#8A8A82;text-decoration:underline;">contacto@atiendemelapyme.cl</a> · <a href="https://wa.me/56900000000" style="color:#8A8A82;text-decoration:underline;">WhatsApp</a><br><br>
-          Recibiste este correo porque agendaste una reunión con nosotros.<br>
-          ¿No quieres recibir más correos? <a href="#unsubscribe" style="color:#8A8A82;text-decoration:underline;">Cancelar suscripción</a>
+          Recibiste este correo porque agendaste una reunión con nosotros.
         </td></tr>
       </table>
     </td></tr>

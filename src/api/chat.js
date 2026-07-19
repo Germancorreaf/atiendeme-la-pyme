@@ -149,7 +149,6 @@ async function saveChatSession(sessionId, messages, leadContact, context) {
           session_id: sessionId,
           messages: messages,
           lead_contact: leadContact?.contact || null,
-          lead_type: leadContact?.type || null,
           message_count: messages.length,
           updated_at: new Date().toISOString()
         })

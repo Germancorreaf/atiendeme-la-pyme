@@ -1,5 +1,5 @@
 // src/lib/email.js
-// Email OSCURO FORZADO EN MOBILE Y DESKTOP
+// Email CLARO con detalles brutalistas - FUNCIONA EN MOBILE Y DESKTOP
 
 const RESEND_API = 'https://api.resend.com/emails';
 
@@ -27,145 +27,138 @@ export async function sendConfirmationEmail(options, env) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
-<meta name="supported-color-schemes" content="dark">
-<title>Confirmación de tu reunión — Atiéndeme la Pyme</title>
-<!--[if mso]>
-<style>table,td{font-family:'Courier New',Courier,monospace !important;}</style>
-<![endif]-->
+<title>Cita confirmada</title>
 <style>
-:root {
-  color-scheme: dark;
-}
-@media (prefers-color-scheme: dark) {
-  body { background-color: #111111 !important; color: #EDEDE8 !important; }
-  table { background-color: #161616 !important; }
-  td { background-color: #161616 !important; color: #EDEDE8 !important; }
-  a { color: #E8A33D !important; }
-}
-@media only screen and (max-width:620px){
-  .wrap{width:100% !important;}
-  .px{padding-left:20px !important;padding-right:20px !important;}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; margin: 0; padding: 0; }
+.wrapper { background: #f5f5f5; padding: 20px; }
+.container { max-width: 600px; margin: 0 auto; background: white; border: 2px solid #2d2d2d; }
+.header { background: #2d2d2d; padding: 30px; border-bottom: 4px solid #E8A33D; }
+.header h1 { margin: 0; color: white; font-size: 20px; font-family: 'Courier New', monospace; letter-spacing: 2px; font-weight: bold; }
+.header .tag { font-size: 11px; color: #E8A33D; font-family: 'Courier New', monospace; margin-top: 8px; }
+.content { padding: 40px 30px; }
+.greeting { font-size: 15px; margin-bottom: 20px; }
+.greeting strong { color: #E8A33D; }
+.title { font-size: 22px; font-weight: bold; color: #2d2d2d; text-transform: uppercase; margin: 30px 0 20px 0; border-bottom: 2px solid #E8A33D; padding-bottom: 10px; font-family: 'Courier New', monospace; }
+.details { border: 2px solid #2d2d2d; background: #fafafa; margin: 20px 0; }
+.detail-header { background: #2d2d2d; color: #E8A33D; padding: 12px 20px; font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 2px; border-bottom: 1px solid #E8A33D; }
+.detail-row { display: flex; padding: 14px 20px; border-bottom: 1px solid #ddd; }
+.detail-row:last-child { border-bottom: none; }
+.detail-label { font-family: 'Courier New', monospace; font-size: 12px; color: #666; width: 140px; font-weight: 600; }
+.detail-value { flex: 1; color: #2d2d2d; font-weight: 600; }
+.button { display: inline-block; background: #E8A33D; color: white; padding: 12px 30px; text-decoration: none; font-weight: bold; border: 2px solid #E8A33D; margin: 25px 0; font-size: 13px; letter-spacing: 1px; }
+.button:hover { background: #d97706; border-color: #d97706; }
+.button-center { text-align: center; }
+.fallback { font-family: 'Courier New', monospace; font-size: 11px; color: #666; text-align: center; margin: 15px 0; word-break: break-all; }
+.fallback a { color: #E8A33D; text-decoration: underline; }
+.note { border-left: 4px solid #E8A33D; background: #fafafa; padding: 15px 20px; margin: 25px 0; font-size: 13px; line-height: 1.6; color: #555; }
+.note strong { color: #2d2d2d; }
+.section { margin-top: 30px; }
+.section p { color: #555; line-height: 1.8; margin: 12px 0; }
+.section ul { color: #555; margin: 15px 0; padding-left: 20px; }
+.section li { margin: 8px 0; }
+.footer { background: #f5f5f5; padding: 30px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #999; }
+.footer a { color: #E8A33D; text-decoration: none; }
+.signature { margin-top: 20px; font-family: 'Courier New', monospace; font-size: 11px; color: #666; }
+@media (max-width: 620px) {
+  .content { padding: 20px 15px; }
+  .detail-row { flex-direction: column; }
+  .detail-label { width: 100%; margin-bottom: 4px; }
 }
 </style>
 </head>
-<body bgcolor="#111111" style="margin:0;padding:0;background-color:#111111;">
-<span style="display:none;font-size:1px;color:#111111;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">Tu cita quedó agendada ✓</span>
+<body>
 
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#111111" style="background-color:#111111;">
-<tr><td align="center" style="padding:32px 12px;background-color:#111111;">
+<div class="wrapper">
+<div class="container">
 
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="wrap" style="width:600px;max-width:600px;">
+  <div class="header">
+    <h1>ATIÉNDEME_LA_PYME<span style="color:#E8A33D;">_</span></h1>
+    <div class="tag">[CITA CONFIRMADA ✓]</div>
+  </div>
 
-    <!-- HEADER -->
-    <tr><td bgcolor="#161616" style="border:2px solid #EDEDE8;background-color:#161616;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-        <tr bgcolor="#161616">
-          <td class="px" style="padding:18px 28px;font-family:'Courier New',Courier,monospace;font-size:13px;font-weight:bold;letter-spacing:2px;color:#EDEDE8;background-color:#161616;">ATIÉNDEME_LA_PYME<span style="color:#E8A33D;">_</span></td>
-          <td align="right" style="padding:18px 28px;font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:1px;color:#E8A33D;background-color:#161616;">[CITA CONFIRMADA ✓]</td>
-        </tr>
-      </table>
-    </td></tr>
+  <div class="content">
+    
+    <div class="greeting">
+      Hola, <strong>${clientName}</strong>:<br>
+      ¿Cómo estás? Por aquí <strong>Dominga</strong>. 
+    </div>
 
-    <!-- spacer -->
-    <tr><td style="height:12px;line-height:12px;font-size:1px;background-color:#111111;">&nbsp;</td></tr>
+    <p style="color: #555; line-height: 1.8;">
+      Te escribo para confirmarte que tu cita quedó agendada correctamente en nuestro calendario.
+    </p>
 
-    <!-- BODY CARD -->
-    <tr><td bgcolor="#161616" style="border:2px solid #EDEDE8;background-color:#161616;">
+    <div class="title">// DETALLES DE LA REUNIÓN</div>
+    
+    <div class="details">
+      <div class="detail-header">📆 CUÁNDO Y DÓNDE</div>
+      <div class="detail-row">
+        <div class="detail-label">FECHA_Y_HORA</div>
+        <div class="detail-value">${dateFormatted} a las ${time}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">DURACIÓN</div>
+        <div class="detail-value">20 minutos · demo en vivo de tu caso</div>
+      </div>
+    </div>
 
-      <!-- barra de estado -->
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-        <tr><td bgcolor="#E8A33D" style="height:6px;line-height:6px;font-size:1px;background-color:#E8A33D;">&nbsp;</td></tr>
-        <tr bgcolor="#161616"><td class="px" style="padding:34px 32px 0 32px;background-color:#161616;">
+    <div class="button-center">
+      <a href="${calendarLink}" class="button">Unirse a Google Meet →</a>
+    </div>
 
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-            <tr><td style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:2px;color:#8A8A82;background-color:#161616;">// CONFIRMACIÓN DE REUNIÓN</td></tr>
-            <tr><td style="height:14px;line-height:14px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
-            <tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:32px;mso-line-height-rule:exactly;font-weight:bold;color:#EDEDE8;text-transform:uppercase;letter-spacing:-0.5px;background-color:#161616;">Todo listo: tu reunión quedó agendada 🚀</td></tr>
-            <tr><td style="height:22px;line-height:22px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+    <div class="fallback">
+      Si el botón no funciona, copia este enlace:<br>
+      <a href="${calendarLink}">${calendarLink}</a>
+    </div>
 
-            <tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#C9C9C0;background-color:#161616;">
-              Hola, <strong style="color:#EDEDE8;">${clientName}</strong>:<br><br>
-              ¿Cómo estás? Por aquí <strong style="color:#E8A33D;">Dominga</strong>. Te escribo para confirmarte que tu cita quedó agendada correctamente en nuestro calendario.<br><br>
-              Ya está todo coordinado para encontrarnos el <strong style="color:#EDEDE8;">${dateFormatted}</strong> a las <strong style="color:#EDEDE8;">${time}</strong>. En esta sesión de <strong style="color:#EDEDE8;">20 minutos</strong> revisaremos tu caso en vivo y veremos exactamente cómo implementar un asistente que venda, atienda y agende citas por ti las 24/7, logrando que tu negocio crezca sin que tengas que gastar en contratar más personal. 💻
-            </td></tr>
+    <div class="note">
+      <strong>Nota:</strong> También recibirás una invitación directa en tu calendario. Si necesitas cambiar la hora, responde este correo.
+    </div>
 
-            <tr><td style="height:28px;line-height:28px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+    <div class="section">
+      <div class="title">// QUÉ HAREMOS EN LA REUNIÓN</div>
+      <p>
+        En esta sesión revisaremos tu caso en vivo y veremos exactamente cómo implementar un asistente que venda, atienda y agende citas por ti <strong>24/7</strong>, logrando que tu negocio crezca sin que tengas que gastar en contratar más personal.
+      </p>
+      <p>
+        Veremos las posibilidades específicas para tu negocio y cómo empezar.
+      </p>
+    </div>
 
-            <!-- DETALLES -->
-            <tr><td bgcolor="#0F0F0F" style="border:2px solid #EDEDE8;background-color:#0F0F0F;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                <tr bgcolor="#0F0F0F"><td colspan="2" style="padding:14px 20px;border-bottom:1px solid #333330;font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:2px;color:#E8A33D;background-color:#0F0F0F;">📆 DETALLES PARA CONECTARNOS</td></tr>
-                <tr bgcolor="#0F0F0F">
-                  <td width="140" style="padding:14px 0 14px 20px;font-family:'Courier New',Courier,monospace;font-size:12px;color:#8A8A82;border-bottom:1px solid #333330;background-color:#0F0F0F;">FECHA_Y_HORA</td>
-                  <td style="padding:14px 20px 14px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#EDEDE8;border-bottom:1px solid #333330;background-color:#0F0F0F;"><strong>${dateFormatted}</strong> a las <strong>${time}</strong> en punto</td>
-                </tr>
-                <tr bgcolor="#0F0F0F">
-                  <td width="140" style="padding:14px 0 14px 20px;font-family:'Courier New',Courier,monospace;font-size:12px;color:#8A8A82;background-color:#0F0F0F;">DURACIÓN</td>
-                  <td style="padding:14px 20px 14px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#EDEDE8;background-color:#0F0F0F;">20 minutos · demo en vivo de tu caso</td>
-                </tr>
-              </table>
-            </td></tr>
+    <div class="section">
+      <div class="title">// ANTES DE LA REUNIÓN</div>
+      <ul>
+        <li>Revisa la invitación en tu calendario</li>
+        <li>Asegúrate de tener buena conexión a internet</li>
+        <li>Si surge algo, avísame y reagendamos</li>
+      </ul>
+    </div>
 
-            <tr><td style="height:24px;line-height:24px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+    <p style="color: #555; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd;">
+      ¡Nos vemos pronto! Que tengas un excelente día. 😊<br><br>
+      <strong>Dominga</strong><br>
+      <span class="signature">Asistente Virtual de Atiéndeme la Pyme</span>
+    </p>
 
-            <!-- BOTÓN -->
-            <tr><td align="center" style="background-color:#161616;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr><td bgcolor="#E8A33D" style="border:2px solid #E8A33D;background-color:#E8A33D;">
-                  <a href="${calendarLink}" style="display:block;padding:15px 38px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#111111;text-decoration:none;white-space:nowrap;">Unirse a Google Meet →</a>
-                </td></tr>
-              </table>
-            </td></tr>
-            <tr><td align="center" style="padding-top:10px;font-family:'Courier New',Courier,monospace;font-size:11px;color:#8A8A82;background-color:#161616;">Si el botón no funciona, copia este enlace: <a href="${calendarLink}" style="color:#E8A33D;text-decoration:underline;">${calendarLink}</a></td></tr>
+  </div>
 
-            <tr><td style="height:28px;line-height:28px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
+  <div class="footer">
+    <strong>Atiéndeme la Pyme</strong><br>
+    Santiago, Chile<br><br>
+    <a href="mailto:contacto@atiendemelapyme.cl">Contáctanos</a> · 
+    <a href="https://atiendemelapyme.cl">Visita nuestro sitio</a><br><br>
+    <span style="color: #ccc;">Recibiste este correo porque agendaste una reunión con nosotros.</span>
+  </div>
 
-            <!-- NOTA -->
-            <tr><td bgcolor="#0F0F0F" style="border-left:4px solid #E8A33D;background-color:#0F0F0F;padding:16px 20px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:21px;mso-line-height-rule:exactly;color:#C9C9C0;">
-              <strong style="color:#EDEDE8;">Nota:</strong> Te enviamos una invitación directa a tu correo para que quede guardada en tu agenda. Si te surge cualquier imprevisto y necesitas reagendar, avísanos con un poquito de anticipación respondiendo este correo o desde el evento del calendario.
-            </td></tr>
+</div>
+</div>
 
-            <tr><td style="height:26px;line-height:26px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
-
-            <tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#C9C9C0;background-color:#161616;">
-              ¡Nos vemos pronto! Que tengas un excelente día. 😊<br><br>
-              Un abrazo,<br><br>
-              <strong style="color:#EDEDE8;">Dominga</strong><br>
-              <span style="font-family:'Courier New',Courier,monospace;font-size:12px;color:#E8A33D;">Asistente Virtual de Atiéndeme la Pyme</span>
-            </td></tr>
-
-            <tr><td style="height:34px;line-height:34px;font-size:1px;background-color:#161616;">&nbsp;</td></tr>
-          </table>
-
-        </td></tr>
-      </table>
-    </td></tr>
-
-    <!-- spacer -->
-    <tr><td style="height:12px;line-height:12px;font-size:1px;background-color:#111111;">&nbsp;</td></tr>
-
-    <!-- FOOTER -->
-    <tr><td bgcolor="#111111" style="border:2px solid #333330;background-color:#111111;padding:20px 28px;" class="px">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-        <tr><td style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:18px;mso-line-height-rule:exactly;color:#8A8A82;background-color:#111111;">
-          <span style="color:#4F9D8C;">●</span> SYS.OK — © 2026 Atiéndeme la Pyme · Santiago, Chile<br>
-          Recibiste este correo porque agendaste una reunión con nosotros.
-        </td></tr>
-      </table>
-    </td></tr>
-
-  </table>
-
-</td></tr>
-</table>
 </body>
 </html>`;
 
   const payload = {
     from: fromEmail,
     to: clientEmail,
-    subject: `Cita confirmada para ${dateFormatted}`,
+    subject: `Cita confirmada - ${dateFormatted}`,
     html: htmlContent
   };
 
@@ -206,49 +199,27 @@ export async function sendReminderEmail(options, env) {
 <head>
   <meta charset="UTF-8">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
-    .container { max-width: 500px; margin: 40px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-    .header { background: linear-gradient(135deg, #E8A33D 0%, #d97706 100%); color: white; padding: 30px; text-align: center; }
-    .header h1 { margin: 0; font-size: 22px; }
+    body { font-family: Arial, sans-serif; color: #333; background: #f5f5f5; }
+    .container { max-width: 500px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: #E8A33D; color: white; padding: 20px; text-align: center; }
     .content { padding: 30px; }
-    .detail-box { background: #fef3e2; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #E8A33D; }
-    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; }
-    .detail-label { color: #666; font-size: 14px; }
-    .detail-value { color: #333; font-weight: 600; font-size: 14px; }
-    .button { display: inline-block; background: #E8A33D; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; margin-top: 20px; font-weight: 600; }
+    .button { display: inline-block; background: #E8A33D; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 15px; }
     .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>⏰ Recordatorio de Cita</h1>
-    </div>
-    <div class="content">
-      <p>Hola <strong>${clientName}</strong>,</p>
-      <p>Te recordamos que tienes una cita <strong>mañana</strong>:</p>
-      
-      <div class="detail-box">
-        <div class="detail-row">
-          <span class="detail-label">📅 Fecha</span>
-          <span class="detail-value">${dateFormatted}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">🕐 Hora</span>
-          <span class="detail-value">${time}</span>
-        </div>
-      </div>
-
-      ${calendarLink ? `<a href="${calendarLink}" class="button">Ver en Google Calendar</a>` : ''}
-      
-      <p style="margin-top: 30px; color: #666; font-size: 14px;">
-        Si necesitas reagendar, responde a este correo.
-      </p>
-    </div>
-    <div class="footer">
-      Atiéndeme la Pyme · Automatización con IA para tu negocio
-    </div>
-  </div>
+<div class="container">
+<div class="header"><h1>⏰ Recordatorio</h1></div>
+<div class="content">
+<p>Hola <strong>${clientName}</strong>,</p>
+<p>Tu reunión es <strong>mañana</strong> a las <strong>${time}</strong>.</p>
+<p><strong>Fecha:</strong> ${dateFormatted}</p>
+${calendarLink ? `<a href="${calendarLink}" class="button">Ver Evento</a>` : ''}
+<p>Si necesitas cambiar la hora, responde este correo.</p>
+<p>¡Nos vemos!</p>
+</div>
+<div class="footer">Atiéndeme la Pyme · Automatización con IA para tu negocio</div>
+</div>
 </body>
 </html>`;
 
@@ -262,7 +233,7 @@ export async function sendReminderEmail(options, env) {
       body: JSON.stringify({
         from: fromEmail,
         to: clientEmail,
-        subject: `Recordatorio: Tu cita es mañana`,
+        subject: `Recordatorio: Tu reunión es mañana`,
         html: htmlContent
       })
     });

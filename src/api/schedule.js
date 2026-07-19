@@ -155,6 +155,10 @@ export async function onRequestPost(context) {
     );
 
     // ENVIAR EMAIL DE CONFIRMACIÓN
+    console.log('Attempting to send confirmation email...');
+    console.log('RESEND_API_KEY configured:', !!context.env.RESEND_API_KEY);
+    console.log('RESEND_FROM_EMAIL:', context.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev');
+    
     const emailResult = await sendConfirmationEmail(
       {
         clientName: name,
@@ -166,8 +170,12 @@ export async function onRequestPost(context) {
       context.env
     );
 
+    console.log('Email result:', emailResult);
+
     if (emailResult && !emailResult.success) {
       console.error('Failed to send confirmation email:', emailResult.error);
+    } else if (!emailResult) {
+      console.error('Email function returned null - RESEND_API_KEY likely not configured');
     }
 
     return sendSuccess({

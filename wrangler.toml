@@ -9,3 +9,6 @@ preview_id = "71b78676d0a74b47bac411a8782e5184"
 
 [triggers]
 crons = ["0 13 * * *"]
+
+[env.production]
+vars = { }

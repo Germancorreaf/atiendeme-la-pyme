@@ -1,14 +1,26 @@
 name = "atiendeme-la-pyme"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
-
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
 id = "71b78676d0a74b47bac411a8782e5184"
 preview_id = "71b78676d0a74b47bac411a8782e5184"
-
 [triggers]
 crons = ["0 13 * * *"]
-
 [env.production]
 vars = { }
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1

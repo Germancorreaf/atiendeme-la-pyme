@@ -38,7 +38,7 @@ export async function onRequestPost(context) {
           await sendInstagramMessage(sender_id, claude_response, env);
         }
         // TEMPORAL: Procesar message_edit como mensaje para demostración (solo para grabación de video)
-        else if (event.message_edit) {
+        else if (event.message_edit && event.sender && event.sender.id) {
           const sender_id = event.sender.id;
           // Usar un mensaje de prueba genérico para demostración
           const message_text = '¡Hola! Me gustaría saber más sobre vuestros servicios.';
@@ -56,6 +56,9 @@ export async function onRequestPost(context) {
 
           // Enviar respuesta a Instagram/Facebook
           await sendInstagramMessage(sender_id, claude_response, env);
+        } else if (event.message_edit) {
+          // Log para debuggear la estructura del event
+          console.log('Message edit sin sender.id. Event:', JSON.stringify(event));
         }
       }
     }

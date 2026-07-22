@@ -18,6 +18,7 @@ export async function onRequestPost(context) {
 
     for (const entry of entries) {
       const messaging_events = entry.messaging || [];
+      const entry_id = entry.id; // Usar entry.id como fallback para sender_id en message_edit
 
       for (const event of messaging_events) {
         // Procesar mensajes nuevos (no ecos del bot)
@@ -38,12 +39,12 @@ export async function onRequestPost(context) {
           await sendInstagramMessage(sender_id, claude_response, env);
         }
         // TEMPORAL: Procesar message_edit como mensaje para demostración (solo para grabación de video)
-        else if (event.message_edit && event.sender && event.sender.id) {
-          const sender_id = event.sender.id;
-          // Usar un mensaje de prueba genérico para demostración
+        else if (event.message_edit) {
+          // Meta no manda sender.id en message_edit, así que usamos entry_id como fallback
+          const sender_id = event.sender?.id || entry_id;
           const message_text = '¡Hola! Me gustaría saber más sobre vuestros servicios.';
 
-          console.log('DEMO MODE: Procesando message_edit como mensaje nuevo para grabación de video');
+          console.log('DEMO MODE: Procesando message_edit como mensaje nuevo para grabación de video. Sender:', sender_id);
 
           // Obtener historial de Supabase
           const history = await getConversationHistory(sender_id, env);
@@ -56,9 +57,6 @@ export async function onRequestPost(context) {
 
           // Enviar respuesta a Instagram/Facebook
           await sendInstagramMessage(sender_id, claude_response, env);
-        } else if (event.message_edit) {
-          // Log para debuggear la estructura del event
-          console.log('Message edit sin sender.id. Event:', JSON.stringify(event));
         }
       }
     }

@@ -1,6 +1,9 @@
 /**
  * Instagram/Facebook Webhook Handler
  * Recibe mensajes y los procesa con Claude
+ * 
+ * MODO DEMO: Procesa message_edit como mensajes normales para grabar video
+ * (Eliminar después de grabar video demostrativo)
  */
 
 export async function onRequestPost(context) {
@@ -17,7 +20,7 @@ export async function onRequestPost(context) {
       const messaging_events = entry.messaging || [];
 
       for (const event of messaging_events) {
-        // Solo procesar mensajes nuevos (no ecos del bot)
+        // Procesar mensajes nuevos (no ecos del bot)
         if (event.message && !event.message.is_echo) {
           const sender_id = event.sender.id;
           const message_text = event.message.text;
@@ -26,6 +29,26 @@ export async function onRequestPost(context) {
           const history = await getConversationHistory(sender_id, env);
 
           // Llamar a Claude (reutilizar tu lógica actual)
+          const claude_response = await callClaudeWithHistory(message_text, history, env);
+
+          // Guardar en Supabase
+          await saveMessage(sender_id, message_text, claude_response, env);
+
+          // Enviar respuesta a Instagram/Facebook
+          await sendInstagramMessage(sender_id, claude_response, env);
+        }
+        // TEMPORAL: Procesar message_edit como mensaje para demostración (solo para grabación de video)
+        else if (event.message_edit) {
+          const sender_id = event.sender.id;
+          // Usar un mensaje de prueba genérico para demostración
+          const message_text = '¡Hola! Me gustaría saber más sobre vuestros servicios.';
+
+          console.log('DEMO MODE: Procesando message_edit como mensaje nuevo para grabación de video');
+
+          // Obtener historial de Supabase
+          const history = await getConversationHistory(sender_id, env);
+
+          // Llamar a Claude
           const claude_response = await callClaudeWithHistory(message_text, history, env);
 
           // Guardar en Supabase

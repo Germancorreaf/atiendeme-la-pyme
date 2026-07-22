@@ -10,7 +10,6 @@ export default {
         const url = new URL(request.url);
         const pathname = url.pathname;
         try {
-            // RUTAS EXISTENTES
             if (pathname === '/api/chat' && request.method === 'POST') {
                 return await chatPost({ request, env });
             }
@@ -23,16 +22,12 @@ export default {
             if (pathname === '/api/schedule' && request.method === 'GET') {
                 return await scheduleGet({ request, env });
             }
-            
-            // NUEVAS RUTAS INSTAGRAM/FACEBOOK
             if (pathname === '/webhook/instagram' && request.method === 'POST') {
                 return await instagramPost({ request, env });
             }
             if (pathname === '/webhook/instagram' && request.method === 'GET') {
                 return await instagramGet({ request, env });
             }
-            
-            // RUTA POR DEFECTO (HTML)
             return new Response(HTML_CONTENT, {
                 status: 200,
                 headers: { 'Content-Type': 'text/html; charset=utf-8' }

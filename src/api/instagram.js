@@ -266,18 +266,31 @@ async function sendInstagramMessage(recipient_id, message_text, env) {
   const page_token = env.FACEBOOK_PAGE_TOKEN;
 
   try {
-    await fetch('https://graph.instagram.com/v18.0/me/messages', {
+    console.log('Intentando enviar a Instagram:', { recipient_id, message_text_length: message_text.length });
+    
+    const payload = {
+      recipient: { id: recipient_id },
+      message: { text: message_text },
+      access_token: page_token,
+    };
+
+    console.log('Payload a enviar:', JSON.stringify(payload).substring(0, 200));
+
+    const response = await fetch('https://graph.instagram.com/v18.0/me/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        recipient: { id: recipient_id },
-        message: { text: message_text },
-        access_token: page_token,
-      }),
+      body: JSON.stringify(payload),
     });
+
+    const response_text = await response.text();
+    console.log('Respuesta de Instagram:', { status: response.status, body: response_text });
+
+    if (!response.ok) {
+      console.error('Error al enviar a Instagram:', response_text);
+    }
   } catch (error) {
-    console.error('Error sending Instagram message:', error);
+    console.error('Error enviando Instagram message:', error.message, error.stack);
   }
 }

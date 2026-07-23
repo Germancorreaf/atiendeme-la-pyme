@@ -278,7 +278,7 @@ async function sendInstagramMessage(recipient_id, message_text, env) {
 
     console.log('Payload a enviar:', JSON.stringify(payload).substring(0, 200));
 
-    const response = await fetch('https://graph.instagram.com/v18.0/me/messages', {
+    const response = await fetch('https://graph.instagram.com/v21.0/17841409268031206/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

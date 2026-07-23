@@ -21,6 +21,8 @@ export async function onRequestPost(context) {
       const entry_id = entry.id; // Usar entry.id como fallback para sender_id en message_edit
 
       for (const event of messaging_events) {
+        console.log('EVENT COMPLETO DEBUG:', JSON.stringify(event));
+        
         // Procesar mensajes nuevos (no ecos del bot)
         if (event.message && !event.message.is_echo) {
           const sender_id = event.sender.id;
@@ -44,7 +46,7 @@ export async function onRequestPost(context) {
           const sender_id = event.sender?.id || entry_id;
           const message_text = '¡Hola! Me gustaría saber más sobre vuestros servicios.';
 
-          console.log('DEMO MODE: Procesando message_edit como mensaje nuevo para grabación de video. Sender:', sender_id);
+          console.log('DEMO MODE: Procesando message_edit. Sender ID encontrado:', sender_id);
 
           // Obtener historial de Supabase
           const history = await getConversationHistory(sender_id, env);

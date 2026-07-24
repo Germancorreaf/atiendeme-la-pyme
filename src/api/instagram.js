@@ -1,9 +1,10 @@
 /**
- * Instagram/Facebook Webhook Handler
- * Recibe mensajes y los procesa con Claude
+ * Instagram Webhook Handler
+ * Verifica el webhook de Meta (GET) y procesa mensajes reales (POST)
  * 
- * MODO DEMO: Procesa message_edit como mensajes normales para grabar video
- * (Eliminar después de grabar video demostrativo)
+ * NOTA: Actualmente el bot de Instagram opera vía ManyChat.
+ * Este archivo mantiene el webhook activo para verificación de Meta
+ * y está listo para reactivarse si se obtiene aprobación de Tech Provider.
  */
 
 export async function onRequestPost(context) {
@@ -11,65 +12,29 @@ export async function onRequestPost(context) {
 
   try {
     const body = await request.json();
-    console.log('PAYLOAD RECIBIDO:', JSON.stringify(body));
-
-    // Procesar mensajes de Instagram/Facebook
     const entries = body.entry || [];
 
     for (const entry of entries) {
       const messaging_events = entry.messaging || [];
-      const entry_id = entry.id; // Usar entry.id como fallback para sender_id en message_edit
 
       for (const event of messaging_events) {
-        console.log('EVENT COMPLETO DEBUG:', JSON.stringify(event));
-        
-        // Procesar mensajes nuevos (no ecos del bot)
-        if (event.message && !event.message.is_echo) {
+        // Solo procesar mensajes nuevos reales (no ecos del bot)
+        if (event.message && !event.message.is_echo && event.message.text) {
           const sender_id = event.sender.id;
           const message_text = event.message.text;
 
-          // Obtener historial de Supabase
           const history = await getConversationHistory(sender_id, env);
-
-          // Llamar a Claude (reutilizar tu lógica actual)
-          const claude_response = await callClaudeWithHistory(message_text, history, env);
-
-          // Guardar en Supabase
+          const claude_response = await callClaude(message_text, history, env);
           await saveMessage(sender_id, message_text, claude_response, env);
-
-          // Enviar respuesta a Instagram/Facebook
-          await sendInstagramMessage(sender_id, claude_response, env);
-        }
-        // TEMPORAL: Procesar message_edit como mensaje para demostración (solo para grabación de video)
-        else if (event.message_edit) {
-          // Meta no manda sender.id en message_edit, así que usamos entry_id como fallback
-          const sender_id = event.sender?.id || entry_id;
-          const message_text = '¡Hola! Me gustaría saber más sobre vuestros servicios.';
-
-          console.log('DEMO MODE: Procesando message_edit. Sender ID encontrado:', sender_id);
-
-          // Obtener historial de Supabase
-          const history = await getConversationHistory(sender_id, env);
-
-          // Llamar a Claude
-          const claude_response = await callClaudeWithHistory(message_text, history, env);
-
-          // Guardar en Supabase
-          await saveMessage(sender_id, message_text, claude_response, env);
-
-          // Enviar respuesta a Instagram/Facebook
-          await sendInstagramMessage(sender_id, claude_response, env);
+          await sendMessage(sender_id, claude_response, env);
         }
       }
     }
 
     return new Response('ok', { status: 200 });
   } catch (error) {
-    console.error('Instagram webhook error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error('Instagram webhook error:', error.message);
+    return new Response('error', { status: 500 });
   }
 }
 
@@ -77,7 +42,6 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  // Verificar webhook (Meta requiere esto)
   const verify_token = url.searchParams.get('hub.verify_token');
   const challenge = url.searchParams.get('hub.challenge');
 
@@ -88,53 +52,28 @@ export async function onRequestGet(context) {
   return new Response('Forbidden', { status: 403 });
 }
 
-/**
- * Obtener historial de conversación desde Supabase
- */
 async function getConversationHistory(sender_id, env) {
-  const supabase_url = env.SUPABASE_URL;
-  const supabase_key = env.SUPABASE_SERVICE_KEY;
-
   try {
     const response = await fetch(
-      `${supabase_url}/rest/v1/chat_sessions?session_id=eq.${sender_id}`,
+      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sender_id}`,
       {
-        method: 'GET',
         headers: {
-          'apikey': supabase_key,
-          'Authorization': `Bearer ${supabase_key}`,
-          'Content-Type': 'application/json',
+          'apikey': env.SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
         },
       }
     );
-
     const data = await response.json();
-    if (data.length > 0) {
-      return data[0].messages || [];
-    }
-    return [];
-  } catch (error) {
-    console.error('Error getting history from Supabase:', error);
+    return data.length > 0 ? (data[0].messages || []) : [];
+  } catch {
     return [];
   }
 }
 
-/**
- * Llamar a Claude API con historial de conversación
- */
-async function callClaudeWithHistory(user_message, history, env) {
-  const anthropic_key = env.ANTHROPIC_API_KEY;
-
-  // Construir array de mensajes con historial
+async function callClaude(user_message, history, env) {
   const messages = [
-    ...history.map(msg => ({
-      role: msg.role,
-      content: msg.content,
-    })),
-    {
-      role: 'user',
-      content: user_message,
-    },
+    ...history.map(msg => ({ role: msg.role, content: msg.content })),
+    { role: 'user', content: user_message },
   ];
 
   try {
@@ -142,157 +81,79 @@ async function callClaudeWithHistory(user_message, history, env) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': anthropic_key,
+        'x-api-key': env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
-        system: `Eres un asistente de IA para "Atiéndeme la Pyme", una empresa que ofrece agentes de IA para automatizar atención al cliente.
+        system: `Eres Dominga, asistente virtual de "Atiéndeme la Pyme". Responde en español chileno, amable y directo. Máximo 2-3 frases por respuesta.
 
-Tu rol es:
-1. Responder consultas sobre nuestros servicios
-2. Calificar leads
-3. Agendar citas/demos
-4. Ser amable y profesional
-5. Responder en español (Chile)
-
-Información sobre nuestros servicios:
-- Chatbots en WhatsApp, Instagram, Facebook
-- Asistentes de voz que atienden llamadas
-- Integración con Google Calendar/Calendly
-- Implementación en 2-3 semanas
-- Precio implementación: $199.990
-- Suscripción mensual: $99.990/mes
-- Disponible 24/7
-
-Si el cliente muestra interés en agendar demo, sugiere que escriba a contacto@atiendemelapyme.cl o agende directo en el sitio.`,
-        messages: messages,
+Servicios: chatbots para WhatsApp/Instagram/Facebook, asistentes de voz, integración con Google Calendar.
+Precios: implementación $199.990 (pago único), suscripción $99.990/mes.
+Implementación: 2-3 semanas, sin conocimientos técnicos.
+Para demos: contacto@atiendemelapyme.cl`,
+        messages,
       }),
     });
 
     const data = await response.json();
-    if (data.content && data.content.length > 0) {
-      return data.content[0].text;
-    }
-    return 'Lo siento, tuve un error procesando tu solicitud.';
-  } catch (error) {
-    console.error('Error calling Claude:', error);
+    return data.content?.[0]?.text || 'Lo siento, tuve un problema técnico. Intenta de nuevo.';
+  } catch {
     return 'Error de conexión. Por favor intenta de nuevo.';
   }
 }
 
-/**
- * Guardar mensaje y respuesta en Supabase
- */
 async function saveMessage(sender_id, user_message, bot_response, env) {
-  const supabase_url = env.SUPABASE_URL;
-  const supabase_key = env.SUPABASE_SERVICE_KEY;
-
   try {
-    // Obtener sesión existente
     const get_response = await fetch(
-      `${supabase_url}/rest/v1/chat_sessions?session_id=eq.${sender_id}`,
-      {
-        method: 'GET',
-        headers: {
-          'apikey': supabase_key,
-          'Authorization': `Bearer ${supabase_key}`,
-        },
-      }
+      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sender_id}`,
+      { headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}` } }
     );
 
     const existing = await get_response.json();
-    let messages = [];
+    const messages = [
+      ...(existing.length > 0 ? existing[0].messages || [] : []),
+      { role: 'user', content: user_message, timestamp: new Date().toISOString() },
+      { role: 'assistant', content: bot_response, timestamp: new Date().toISOString() },
+    ];
 
-    if (existing.length > 0) {
-      messages = existing[0].messages || [];
-    }
+    const method = existing.length > 0 ? 'PATCH' : 'POST';
+    const url = existing.length > 0
+      ? `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sender_id}`
+      : `${env.SUPABASE_URL}/rest/v1/chat_sessions`;
 
-    // Agregar nuevos mensajes
-    messages.push({
-      role: 'user',
-      content: user_message,
-      timestamp: new Date().toISOString(),
+    await fetch(url, {
+      method,
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ session_id: sender_id, messages, lead_contact: sender_id, updated_at: new Date().toISOString() }),
     });
-    messages.push({
-      role: 'assistant',
-      content: bot_response,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Actualizar o crear
-    if (existing.length > 0) {
-      // Actualizar sesión existente
-      await fetch(
-        `${supabase_url}/rest/v1/chat_sessions?session_id=eq.${sender_id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'apikey': supabase_key,
-            'Authorization': `Bearer ${supabase_key}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: messages,
-            lead_contact: sender_id,
-            updated_at: new Date().toISOString(),
-          }),
-        }
-      );
-    } else {
-      // Crear nueva sesión
-      await fetch(`${supabase_url}/rest/v1/chat_sessions`, {
-        method: 'POST',
-        headers: {
-          'apikey': supabase_key,
-          'Authorization': `Bearer ${supabase_key}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: sender_id,
-          messages: messages,
-          lead_contact: sender_id,
-        }),
-      });
-    }
   } catch (error) {
-    console.error('Error saving message to Supabase:', error);
+    console.error('Error saving to Supabase:', error.message);
   }
 }
 
-/**
- * Enviar mensaje a Instagram/Facebook
- */
-async function sendInstagramMessage(recipient_id, message_text, env) {
-  const page_token = env.FACEBOOK_PAGE_TOKEN;
-
+async function sendMessage(recipient_id, message_text, env) {
   try {
-    console.log('Intentando enviar a Instagram:', { recipient_id, message_text_length: message_text.length });
-    
-    const payload = {
-      recipient: { id: recipient_id },
-      message: { text: message_text },
-      access_token: page_token,
-    };
-
-    console.log('Payload a enviar:', JSON.stringify(payload).substring(0, 200));
-
-    const response = await fetch('https://graph.instagram.com/v21.0/17841409268031206/messages', {
+    const response = await fetch('https://graph.instagram.com/v21.0/me/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient: { id: recipient_id },
+        message: { text: message_text },
+        access_token: env.FACEBOOK_PAGE_TOKEN,
+      }),
     });
 
-    const response_text = await response.text();
-    console.log('Respuesta de Instagram:', { status: response.status, body: response_text });
-
     if (!response.ok) {
-      console.error('Error al enviar a Instagram:', response_text);
+      const err = await response.text();
+      console.error('Instagram API error:', err);
     }
   } catch (error) {
-    console.error('Error enviando Instagram message:', error.message, error.stack);
+    console.error('Error sending message:', error.message);
   }
 }

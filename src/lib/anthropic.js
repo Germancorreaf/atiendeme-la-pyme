@@ -11,11 +11,14 @@ export async function callClaude(messages, systemPrompt, context, options = {}) 
   const {
     model = DEFAULT_MODEL,
     maxTokens = 1024,
-    timeout = DEFAULT_TIMEOUT
+    timeout = DEFAULT_TIMEOUT,
+    apiKeyVar = 'ANTHROPIC_API_KEY'
   } = options;
 
-  if (!context.env.ANTHROPIC_API_KEY) {
-    throw new ApiError('Missing ANTHROPIC_API_KEY environment variable', 500);
+  const apiKey = context.env[apiKeyVar];
+
+  if (!apiKey) {
+    throw new ApiError(`Missing ${apiKeyVar} environment variable`, 500);
   }
 
   const payload = {
@@ -32,7 +35,7 @@ export async function callClaude(messages, systemPrompt, context, options = {}) 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': context.env.ANTHROPIC_API_KEY,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify(payload)

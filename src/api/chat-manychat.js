@@ -170,7 +170,7 @@ export async function onRequestPost(context) {
     await saveHistory(sessionId, updatedMessages, context.env);
 
     // Respuesta en formato que ManyChat puede usar
-    return new Response(JSON.stringify({ reply }), {
+    return new Response(JSON.stringify({ claude_response: reply }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',

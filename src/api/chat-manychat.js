@@ -157,9 +157,10 @@ export async function onRequestPost(context) {
 
     // Llamar a Claude
     const reply = await callClaude(messages, buildSystemPrompt(), context, {
-      model: 'claude-sonnet-4-6',
-      maxTokens: 512
-    });
+  model: 'claude-haiku-4-5-20251001',   // antes: 'claude-sonnet-4-6'
+  maxTokens: 512,
+  apiKeyVar: 'ANTHROPIC_API_KEY_MANYCHAT'
+});
 
     // Guardar historial
     const updatedMessages = [

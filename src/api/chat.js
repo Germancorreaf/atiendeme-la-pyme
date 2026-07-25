@@ -14,6 +14,42 @@ import {
 import { callClaude } from '../lib/anthropic.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 
+const INITIAL_GREETINGS = [
+  {
+    globo1: "¡Hola! 👋 Por acá Dominga, de Atiéndeme la Pyme. ¿Cómo va todo?",
+    globo2: "Dime no más de qué es tu negocio 💡 y te muestro al toque cómo automatizar tus respuestas o cotizaciones 📲 para no dejar ir ni un solo cliente. ⚡"
+  },
+  {
+    globo1: "¡Hola! 😊 Qué gusto saludarte. Soy Dominga de Atiéndeme la Pyme.",
+    globo2: "Cuéntame brevemente ✍️ a qué te dedicas y te envío directo un par de ideas concretas 🚀 para que la IA atienda tus chats 24/7. 📲"
+  },
+  {
+    globo1: "Estimado/a, un gusto saludarte. 💼 Te habla Dominga de Atiéndeme la Pyme.",
+    globo2: "Si me indicas el rubro 📊 de tu empresa, te preparo al instante ejemplos prácticos ⚡ para reducir tareas manuales y optimizar tus ventas por WhatsApp. 📈"
+  },
+  {
+    globo1: "¡Hola! 🌟 Espero que estés teniendo un gran día. Por aquí Dominga de Atiéndeme la Pyme.",
+    globo2: "¿De qué es tu negocio? 🏪 Cuéntame un poco y te muestro cómo dejar un asistente respondiendo por ti 💬 a cualquier hora, ¡incluso los fines de semana! ⏱️"
+  },
+  {
+    globo1: "¡Hola! 🙌 Te doy la bienvenida a Atiéndeme la Pyme. Soy Dominga.",
+    globo2: "¡Dime qué vendes u ofreces! 🏷️ Te armo altiro una propuesta 🤖 para responder consultas y agendar citas 🗓️ en automático para tu caso. 🤝"
+  },
+  {
+    globo1: "¡Hola! 📲 Qué tal. Soy Dominga de Atiéndeme la Pyme.",
+    globo2: "Coméntame de qué se trata tu pyme 💡 y te muestro cómo resolver las dudas de tus clientes en segundos ⚡ sin que tengas que estar pegado al celular. 😊"
+  },
+  {
+    globo1: "¡Hola! 👋 Soy Dominga de Atiéndeme la Pyme. ¡Bienvenido/a!",
+    globo2: "¿De qué es tu negocio? 🏢 Cuéntame y te muestro de inmediato 💡 cómo la IA puede atender 📲 y agendar por ti 🗓️ desde hoy."
+  }
+];
+
+function getRandomGreeting() {
+  const random = INITIAL_GREETINGS[Math.floor(Math.random() * INITIAL_GREETINGS.length)];
+  return `${random.globo1}\n\n${random.globo2}`;
+}
+
 function getTodayInfo() {
   // Fecha actual en zona horaria de Chile
   const now = new Date();
@@ -227,13 +263,18 @@ export async function onRequestPost(context) {
 
     const limitedMessages = limitHistory(validMessages, 20);
 
-    // Construir system prompt CON LA FECHA ACTUAL REAL
-    const systemPrompt = buildSystemPrompt();
-
-    const reply = await callClaude(limitedMessages, systemPrompt, context, {
-      model: 'claude-haiku-4-5-20251001',
-      maxTokens: 1024
-    });
+    // Si es el primer mensaje (solo el usuario ha escrito), devuelve saludo aleatorio
+    let reply;
+    if (limitedMessages.length === 1 && limitedMessages[0].role === 'user') {
+      reply = getRandomGreeting();
+    } else {
+      // Si no, usa Claude normalmente
+      const systemPrompt = buildSystemPrompt();
+      reply = await callClaude(limitedMessages, systemPrompt, context, {
+        model: 'claude-haiku-4-5-20251001',
+        maxTokens: 1024
+      });
+    }
 
     const updatedMessages = [
       ...limitedMessages,

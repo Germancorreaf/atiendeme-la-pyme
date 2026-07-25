@@ -11,6 +11,42 @@
 
 import { callClaude } from '../lib/anthropic.js';
 
+const INITIAL_GREETINGS = [
+  {
+    globo1: "¡Hola! 👋 Por acá Dominga, de Atiéndeme la Pyme. ¿Cómo va todo?",
+    globo2: "Dime no más de qué es tu negocio 💡 y te muestro al toque cómo automatizar tus respuestas o cotizaciones 📲 para no dejar ir ni un solo cliente. ⚡"
+  },
+  {
+    globo1: "¡Hola! 😊 Qué gusto saludarte. Soy Dominga de Atiéndeme la Pyme.",
+    globo2: "Cuéntame brevemente ✍️ a qué te dedicas y te envío directo un par de ideas concretas 🚀 para que la IA atienda tus chats 24/7. 📲"
+  },
+  {
+    globo1: "Estimado/a, un gusto saludarte. 💼 Te habla Dominga de Atiéndeme la Pyme.",
+    globo2: "Si me indicas el rubro 📊 de tu empresa, te preparo al instante ejemplos prácticos ⚡ para reducir tareas manuales y optimizar tus ventas por WhatsApp. 📈"
+  },
+  {
+    globo1: "¡Hola! 🌟 Espero que estés teniendo un gran día. Por aquí Dominga de Atiéndeme la Pyme.",
+    globo2: "¿De qué es tu negocio? 🏪 Cuéntame un poco y te muestro cómo dejar un asistente respondiendo por ti 💬 a cualquier hora, ¡incluso los fines de semana! ⏱️"
+  },
+  {
+    globo1: "¡Hola! 🙌 Te doy la bienvenida a Atiéndeme la Pyme. Soy Dominga.",
+    globo2: "¡Dime qué vendes u ofreces! 🏷️ Te armo altiro una propuesta 🤖 para responder consultas y agendar citas 🗓️ en automático para tu caso. 🤝"
+  },
+  {
+    globo1: "¡Hola! 📲 Qué tal. Soy Dominga de Atiéndeme la Pyme.",
+    globo2: "Coméntame de qué se trata tu pyme 💡 y te muestro cómo resolver las dudas de tus clientes en segundos ⚡ sin que tengas que estar pegado al celular. 😊"
+  },
+  {
+    globo1: "¡Hola! 👋 Soy Dominga de Atiéndeme la Pyme. ¡Bienvenido/a!",
+    globo2: "¿De qué es tu negocio? 🏢 Cuéntame y te muestro de inmediato 💡 cómo la IA puede atender 📲 y agendar por ti 🗓️ desde hoy."
+  }
+];
+
+function getRandomGreeting() {
+  const random = INITIAL_GREETINGS[Math.floor(Math.random() * INITIAL_GREETINGS.length)];
+  return `${random.globo1}\n\n${random.globo2}`;
+}
+
 function getTodayInfo() {
   const now = new Date();
   const chileFormatter = new Intl.DateTimeFormat('es-CL', {
@@ -155,12 +191,18 @@ export async function onRequestPost(context) {
       { role: 'user', content: userMessage }
     ];
 
-    // Llamar a Claude
-    const reply = await callClaude(messages, buildSystemPrompt(), context, {
-  model: 'claude-haiku-4-5-20251001',   // antes: 'claude-sonnet-4-6'
-  maxTokens: 512,
-  apiKeyVar: 'ANTHROPIC_API_KEY_MANYCHAT'
-});
+    // Si es el primer mensaje (sin historial previo), devuelve saludo aleatorio
+    let reply;
+    if (history.length === 0) {
+      reply = getRandomGreeting();
+    } else {
+      // Si no, usa Claude normalmente
+      reply = await callClaude(messages, buildSystemPrompt(), context, {
+        model: 'claude-haiku-4-5-20251001',
+        maxTokens: 512,
+        apiKeyVar: 'ANTHROPIC_API_KEY_MANYCHAT'
+      });
+    }
 
     // Guardar historial
     const updatedMessages = [
@@ -180,7 +222,7 @@ export async function onRequestPost(context) {
 
   } catch (err) {
     console.error('ManyChat endpoint error:', err.message);
-    return new Response(JSON.stringify({ reply: 'Tuve un problema técnico. ¡Intenta de nuevo! 😊' }), {
+    return new Response(JSON.stringify({ claude_response: 'Tuve un problema técnico. ¡Intenta de nuevo! 😊' }), {
       status: 200, // 200 para que ManyChat no falle el flujo
       headers: { 'Content-Type': 'application/json' }
     });

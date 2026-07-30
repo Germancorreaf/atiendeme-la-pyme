@@ -1,10 +1,10 @@
 // src/lib/reminder-cron.js
-// Lógica del cron job para enviar recordatorios 1 día antes
+// LÃ³gica del cron job para enviar recordatorios 1 dÃ­a antes
 
 import { sendReminderEmail } from './email.js';
 
 /**
- * Obtiene la fecha de mañana en formato YYYY-MM-DD (zona horaria Chile)
+ * Obtiene la fecha de maÃ±ana en formato YYYY-MM-DD (zona horaria Chile)
  */
 function getTomorrowDate() {
   const now = new Date();
@@ -27,7 +27,7 @@ function getTomorrowDate() {
 }
 
 /**
- * Busca citas de mañana que no han recibido recordatorio
+ * Busca citas de maÃ±ana que no han recibido recordatorio
  */
 async function getAppointmentsForTomorrow(env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
@@ -96,7 +96,7 @@ async function markReminderSent(appointmentId, env) {
 }
 
 /**
- * Procesa todos los recordatorios pendientes para mañana
+ * Procesa todos los recordatorios pendientes para maÃ±ana
  */
 export async function processReminders(env) {
   console.log('Starting reminder cron job...');

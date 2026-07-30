@@ -21,9 +21,12 @@ export function sendError(err, requestPath = '') {
   
   console.error(`[${status}] ${requestPath || 'unknown'}: ${safeMessage}`);
   
+  // Importante: al cliente solo le va el mensaje ya redactado. Antes se
+  // devolvía "message" (sin redactar) aquí, lo que filtraba tokens/keys/
+  // emails hacia afuera aunque el log sí los ocultara.
   return new Response(
     JSON.stringify({
-      error: message,
+      error: safeMessage,
       status: status
     }),
     {

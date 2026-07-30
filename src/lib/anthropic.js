@@ -75,13 +75,3 @@ export async function callClaude(messages, systemPrompt, context, options = {}) 
     );
   }
 }
-
-export const AVAILABLE_MODELS = {
-  'sonnet-latest': 'claude-sonnet-4-5-20250929',
-  'haiku-latest': 'claude-haiku-4-5-20251001',
-  'opus-latest': 'claude-opus-4-6'
-};
-
-export function getModelId(modelName = 'sonnet-latest') {
-  return AVAILABLE_MODELS[modelName] || DEFAULT_MODEL;
-}

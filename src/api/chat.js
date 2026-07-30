@@ -13,7 +13,7 @@ import {
 
 import { callClaude } from '../lib/anthropic.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
-import { getRandomGreeting, buildSystemPrompt } from '../lib/dominga-prompt.js';
+import { buildSystemPrompt } from '../lib/dominga-prompt.js';
 
 function extractLeadContact(messages) {
   const fullText = messages
@@ -138,18 +138,16 @@ export async function onRequestPost(context) {
 
     const limitedMessages = limitHistory(validMessages, 20);
 
-    // Si es el primer mensaje (solo el usuario ha escrito), devuelve saludo aleatorio
-    let reply;
-    if (limitedMessages.length === 1 && limitedMessages[0].role === 'user') {
-      reply = getRandomGreeting();
-    } else {
-      // Si no, usa Claude normalmente
-      const systemPrompt = buildSystemPrompt({ canScheduleViaJSON: true });
-      reply = await callClaude(limitedMessages, systemPrompt, context, {
-        model: 'claude-haiku-4-5-20251001',
-        maxTokens: 1024
-      });
-    }
+    // Nota: el widget del sitio ya muestra un saludo inicial en el navegador
+    // (ver <script> del chat widget) SIN pasar por este endpoint ni tocar el
+    // historial. Por eso el primer mensaje que llega acá es siempre un
+    // mensaje real del usuario, y siempre debe ir a Claude — nunca a un
+    // saludo enlatado, o se ignoraría lo que la persona realmente escribió.
+    const systemPrompt = buildSystemPrompt({ canScheduleViaJSON: true });
+    const reply = await callClaude(limitedMessages, systemPrompt, context, {
+      model: 'claude-haiku-4-5-20251001',
+      maxTokens: 1024
+    });
 
     const updatedMessages = [
       ...limitedMessages,

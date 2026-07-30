@@ -2,6 +2,7 @@ import { createCalendarEvent } from '../lib/google-calendar.js';
 import { sendConfirmationEmail } from '../lib/email.js';
 import { ApiError, sendError, sendSuccess, parseJSON } from '../lib/errors.js';
 import { checkRateLimit } from '../lib/rateLimit.js';
+import { validateDate, validateTime, validateEmail, validateName, ValidationError } from '../lib/validator.js';
 
 async function checkAvailability(date, time, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
@@ -94,28 +95,24 @@ async function saveAppointment(eventId, name, email, date, time, calendarLink, e
 export async function onRequestPost(context) {
   try {
     const body = await parseJSON(context.request);
-    const { date, time, name, email, sessionId } = body;
+    const { sessionId } = body;
 
-    if (!date || !time || !name || !email) {
-      throw new ApiError('Faltan campos: date, time, name, email', 400);
+    let date, time, name, email;
+    try {
+      date = validateDate(body.date);
+      time = validateTime(body.time);
+      name = validateName(body.name);
+      email = validateEmail(body.email);
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        throw new ApiError(err.message, 400);
+      }
+      throw err;
     }
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      throw new ApiError('Formato de fecha inválido. Usa YYYY-MM-DD', 400);
-    }
-
-    if (!/^\d{2}:\d{2}$/.test(time)) {
-      throw new ApiError('Formato de hora inválido. Usa HH:MM', 400);
-    }
-
-    if (!/[\w.+-]+@[\w-]+\.[\w.-]+/.test(email)) {
-      throw new ApiError('Email inválido', 400);
-    }
-
-    const rlCheck = await checkRateLimit(email, context.env.RATE_LIMIT_KV, {
-      maxRequests: 5,
-      windowSeconds: 3600
-    });
+    // Nota: checkRateLimit espera (identifier, kv, maxRequests, windowSeconds)
+    // como argumentos posicionales, no un objeto de opciones.
+    const rlCheck = await checkRateLimit(email, context.env.RATE_LIMIT_KV, 5, 3600);
 
     if (!rlCheck.allowed) {
       throw new ApiError(
@@ -154,11 +151,6 @@ export async function onRequestPost(context) {
       context.env
     );
 
-    // ENVIAR EMAIL DE CONFIRMACIÓN
-    console.log('Attempting to send confirmation email...');
-    console.log('RESEND_API_KEY configured:', !!context.env.RESEND_API_KEY);
-    console.log('RESEND_FROM_EMAIL:', context.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev');
-    
     const emailResult = await sendConfirmationEmail(
       {
         clientName: name,
@@ -169,8 +161,6 @@ export async function onRequestPost(context) {
       },
       context.env
     );
-
-    console.log('Email result:', emailResult);
 
     if (emailResult && !emailResult.success) {
       console.error('Failed to send confirmation email:', emailResult.error);

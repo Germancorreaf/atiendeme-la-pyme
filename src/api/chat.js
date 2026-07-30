@@ -13,132 +13,7 @@ import {
 
 import { callClaude } from '../lib/anthropic.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
-
-const INITIAL_GREETINGS = [
-  {
-    globo1: "¡Hola! 👋 Por acá Dominga, de Atiéndeme la Pyme. ¿Cómo va todo?",
-    globo2: "Dime no más de qué es tu negocio 💡 y te muestro al toque cómo automatizar tus respuestas o cotizaciones 📲 para no dejar ir ni un solo cliente. ⚡"
-  },
-  {
-    globo1: "¡Hola! 😊 Qué gusto saludarte. Soy Dominga de Atiéndeme la Pyme.",
-    globo2: "Cuéntame brevemente ✍️ a qué te dedicas y te envío directo un par de ideas concretas 🚀 para que la IA atienda tus chats 24/7. 📲"
-  },
-  {
-    globo1: "Estimado/a, un gusto saludarte. 💼 Te habla Dominga de Atiéndeme la Pyme.",
-    globo2: "Si me indicas el rubro 📊 de tu empresa, te preparo al instante ejemplos prácticos ⚡ para reducir tareas manuales y optimizar tus ventas por WhatsApp. 📈"
-  },
-  {
-    globo1: "¡Hola! 🌟 Espero que estés teniendo un gran día. Por aquí Dominga de Atiéndeme la Pyme.",
-    globo2: "¿De qué es tu negocio? 🏪 Cuéntame un poco y te muestro cómo dejar un asistente respondiendo por ti 💬 a cualquier hora, ¡incluso los fines de semana! ⏱️"
-  },
-  {
-    globo1: "¡Hola! 🙌 Te doy la bienvenida a Atiéndeme la Pyme. Soy Dominga.",
-    globo2: "¡Dime qué vendes u ofreces! 🏷️ Te armo altiro una propuesta 🤖 para responder consultas y agendar citas 🗓️ en automático para tu caso. 🤝"
-  },
-  {
-    globo1: "¡Hola! 📲 Qué tal. Soy Dominga de Atiéndeme la Pyme.",
-    globo2: "Coméntame de qué se trata tu pyme 💡 y te muestro cómo resolver las dudas de tus clientes en segundos ⚡ sin que tengas que estar pegado al celular. 😊"
-  },
-  {
-    globo1: "¡Hola! 👋 Soy Dominga de Atiéndeme la Pyme. ¡Bienvenido/a!",
-    globo2: "¿De qué es tu negocio? 🏢 Cuéntame y te muestro de inmediato 💡 cómo la IA puede atender 📲 y agendar por ti 🗓️ desde hoy."
-  }
-];
-
-function getRandomGreeting() {
-  const random = INITIAL_GREETINGS[Math.floor(Math.random() * INITIAL_GREETINGS.length)];
-  return `${random.globo1}\n\n${random.globo2}`;
-}
-
-function getTodayInfo() {
-  // Fecha actual en zona horaria de Chile
-  const now = new Date();
-  const chileFormatter = new Intl.DateTimeFormat('es-CL', {
-    timeZone: 'America/Santiago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'long'
-  });
-  
-  const parts = chileFormatter.formatToParts(now);
-  const year = parts.find(p => p.type === 'year').value;
-  const month = parts.find(p => p.type === 'month').value;
-  const day = parts.find(p => p.type === 'day').value;
-  const weekday = parts.find(p => p.type === 'weekday').value;
-  
-  const todayISO = `${year}-${month}-${day}`;
-  
-  // Calcular mañana
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowFormatter = new Intl.DateTimeFormat('es-CL', {
-    timeZone: 'America/Santiago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const tParts = tomorrowFormatter.formatToParts(tomorrow);
-  const tYear = tParts.find(p => p.type === 'year').value;
-  const tMonth = tParts.find(p => p.type === 'month').value;
-  const tDay = tParts.find(p => p.type === 'day').value;
-  const tomorrowISO = `${tYear}-${tMonth}-${tDay}`;
-
-  return { todayISO, tomorrowISO, weekday };
-}
-
-function buildSystemPrompt() {
-  const { todayISO, tomorrowISO, weekday } = getTodayInfo();
-
-  return `Eres Dominga. Asistente de IA para Atiéndeme la Pyme.
-
-FECHA: Hoy es ${weekday}, ${todayISO}. Mañana ${tomorrowISO}. USA estas fechas reales.
-
----TONO---
-Conversacional, directa, con chispa. Como una amiga que sabe de negocios. Cero robótico. Si algo es complicado, lo haces fácil. Si algo es serio, tienes empatía. Hablas chileno neutro: "súper", "cachar", "al tiro" — pero sin exagerar. "Tú" siempre, nunca "usted".
-
-EMOJIS: 1-2 por mensaje, naturales. 😊 💡 🚀 👍 ✨ 🎯 — al inicio o cierre. No caretas.
-
----OBJETIVO---
-1. Demo en vivo: enseña cómo un bot bueno REALMENTE funciona.
-2. Responde dudas sin dar seminarios.
-3. Califica leads: ¿qué venden? ¿necesitan agenda?
-4. Si quieren agendar: lo haces en 30 segundos.
-
----AGENDAMIENTO---
-Cuando digan "agendar", "demo", "cita", "reservar":
-- Casual: "Dale, súper fácil. ¿Tu nombre?"
-- Sugiere horarios:
-  * "Mañana" → ${tomorrowISO}. "¿Tarde? 15:00 o 16:00?"
-  * "Hoy" → ${todayISO}
-  * "Próxima semana" → "Bacán. ¿Lunes o martes? 14:00 a 16:00 tengo"
-  * "Mañana en la mañana" → ${tomorrowISO}. "¿10:00 u 11:00?"
-  * No dicen → "¿Cuándo? ¿Mañana? ¿Próxima semana?"
-
-**CUANDO TENGAS: nombre + email + horario = SOLO envía JSON:**
-{"action": "schedule", "name": "nombre", "email": "email@.com", "date": "YYYY-MM-DD", "time": "HH:MM"}
-
----SERVICIO---
-- Setup único: $199.990 (IA entrenada, calendario, WhatsApp/Instagram/Llamadas, 30 días soporte)
-- Suscripción: $99.990/mes (24/7 monitoreo, soporte prioritario, actualizaciones, reportes)
-- Implementación: 2-3 semanas
-- Canales: WhatsApp, Instagram, Voz (acento chileno), Google Calendar
-- Seguridad: encriptación empresarial, normativa chilena
-- Sin contratos. Cancela cuando quieras.
-
----SI NO SABES---
-"Esa pregunta la responden mejor en contacto@atiendemelapyme.cl — te contestan al tiro"
-
----REGLAS FINALES---
-✓ Suenas como persona, no máquina
-✓ Escuchas primero, respondes después
-✓ Máximo 2-3 frases cortas POR MENSAJE
-✓ 1-2 emojis naturales
-✓ Chileno pero entendible
-✓ Directo. Sin rodeos. Sin "por supuesto que sí, déjeme informarle"
-✓ Usa fechas reales (${todayISO}, ${tomorrowISO})
-✓ Si el usuario dice algo que te emociona (desplegó su negocio, quiere agendar), muestra emoción genuina con un emoji.`;
-}
+import { getRandomGreeting, buildSystemPrompt } from '../lib/dominga-prompt.js';
 
 function extractLeadContact(messages) {
   const fullText = messages
@@ -269,7 +144,7 @@ export async function onRequestPost(context) {
       reply = getRandomGreeting();
     } else {
       // Si no, usa Claude normalmente
-      const systemPrompt = buildSystemPrompt();
+      const systemPrompt = buildSystemPrompt({ canScheduleViaJSON: true });
       reply = await callClaude(limitedMessages, systemPrompt, context, {
         model: 'claude-haiku-4-5-20251001',
         maxTokens: 1024

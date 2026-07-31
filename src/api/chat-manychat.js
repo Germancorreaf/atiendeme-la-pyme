@@ -11,6 +11,7 @@
 
 import { callClaude } from '../lib/anthropic.js';
 import { getRandomGreeting, buildSystemPrompt } from '../lib/dominga-prompt.js';
+import { checkAllLimits } from '../lib/rateLimit.js';
 
 async function getHistory(sessionId, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return [];
@@ -65,6 +66,28 @@ async function saveHistory(sessionId, messages, env) {
 
 export async function onRequestPost(context) {
   try {
+    const incomingToken = context.request.headers.get('X-Manychat-Token');
+    if (!context.env.MANYCHAT_SHARED_SECRET || incomingToken !== context.env.MANYCHAT_SHARED_SECRET) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const clientIP = context.request.headers.get('CF-Connecting-IP') || 'unknown-ip';
+    const rlCheck = await checkAllLimits(clientIP, context.env.RATE_LIMIT_KV, {
+      maxRequests: 30,
+      windowSeconds: 60,
+      maxBurstRequests: 5,
+      burstWindowSeconds: 5
+    });
+    if (!rlCheck.allowed) {
+      return new Response(JSON.stringify({ error: `${rlCheck.reason}. Retry after ${rlCheck.retryAfter}s` }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const body = await context.request.json();
 
     // Normalizar el mensaje entrante (ManyChat puede enviar distintos formatos)
@@ -126,8 +149,7 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ claude_response: reply }), {
       status: 200,
       headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Content-Type': 'application/json'
       }
     });
 

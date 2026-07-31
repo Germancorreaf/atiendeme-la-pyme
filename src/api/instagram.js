@@ -11,6 +11,11 @@ import { callClaude } from '../lib/anthropic.js';
 import { buildSystemPrompt } from '../lib/dominga-prompt.js';
 
 export async function onRequestPost(context) {
+  // Desactivado: Instagram opera vía ManyChat, no vía este webhook directo.
+  // Reactivar solo si se obtiene aprobación de Meta como Tech Provider.
+  return new Response('Disabled', { status: 403 });
+
+  // eslint-disable-next-line no-unreachable
   const { request, env } = context;
 
   try {

@@ -91,7 +91,14 @@ export default {
             }
             return new Response(HTML_CONTENT, {
                 status: 200,
-                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+                headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+                    'X-Frame-Options': 'DENY',
+                    'X-Content-Type-Options': 'nosniff',
+                    'Referrer-Policy': 'strict-origin-when-cross-origin',
+                    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'"
+                }
             });
         } catch (err) {
             console.error('Worker error:', err);

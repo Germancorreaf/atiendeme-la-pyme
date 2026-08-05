@@ -175,7 +175,17 @@ Profesional pero cercana, como una asesora de confianza. Español neutro, sin je
 ${PRICING_SUMMARY}
 
 ---FORMATO DE SALIDA---
-Responde SOLO con el cuerpo del correo (sin asunto, sin "Asunto:", sin explicarme lo que hiciste). Firma como:
+Responde SOLO con el cuerpo del correo (sin asunto, sin "Asunto:", sin explicarme lo que hiciste).
+
+MUY IMPORTANTE — saltos de línea: separa CADA párrafo (saludo, cada idea del cuerpo, despedida, firma) con una línea completamente vacía entre medio. Nunca escribas dos ideas seguidas en el mismo bloque sin una línea en blanco entre ellas — esto es obligatorio porque el correo se abre luego en apps de Mail que colapsan los saltos simples y todo queda pegado en un solo párrafo si no dejas la línea vacía.
+
+Estructura exacta a seguir (cada elemento separado por línea en blanco):
+
+Hola,
+
+[idea 1 del cuerpo, 1-2 frases]
+
+[idea 2 del cuerpo si hace falta, 1-2 frases]
 
 Saludos,
 Dominga

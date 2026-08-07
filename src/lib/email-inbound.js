@@ -39,78 +39,20 @@ async function notifyGerman({ fromEmail, fromName, subject, originalText, draftT
   const replySubject = subject && !/^re:/i.test(subject) ? `Re: ${subject}` : (subject || 'Re: tu consulta');
   const mailtoLink = buildMailtoLink(fromEmail, replySubject, draftText);
 
-  // Estilos inline a propósito (no <style> ni fuentes web): Gmail y Outlook
-  // ignoran/eliminan la mayoría de eso. Monospace de sistema como aproximación
-  // a JetBrains Mono, y la paleta oscuro+ámbar del sitio para que se sienta
-  // igual a atiendemelapyme.cl aunque el motor de render sea limitado.
-  const mono = "'SF Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace";
-  const bg = '#0A0A0A', panel = '#0F0F0F', line = '#242424', text = '#EDEDE8', muted = '#8A8A82', accent = '#E8A33D';
-
   const html = `<!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#EFEDE4;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFEDE4;padding:32px 16px;">
-<tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${bg};border:2px solid ${text};">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,Arial,sans-serif;line-height:1.6;color:#222;max-width:640px;margin:0 auto;padding:20px;">
+  <h2 style="margin:0 0 4px;">📩 Nuevo correo en hola@atiendemelapyme.cl</h2>
+  <p style="color:#666;margin:0 0 24px;">De: <strong>${escapeHtml(fromDisplay)}</strong><br>Asunto: ${escapeHtml(subject || '(sin asunto)')}</p>
 
-  <!-- header -->
-  <tr><td style="padding:20px 28px;border-bottom:2px solid ${text};">
-    <span style="font-family:${mono};font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${text};">ATIÉNDEME_LA_PYME</span>
-    <span style="font-family:${mono};font-size:11px;color:${accent};display:inline-block;margin-left:8px;">// dominga</span>
-  </td></tr>
+  <div style="border-left:3px solid #ccc;padding:10px 16px;background:#fafafa;margin-bottom:24px;white-space:pre-wrap;color:#444;">${escapeHtml(originalText || '(sin contenido de texto)')}</div>
 
-  <!-- title -->
-  <tr><td style="padding:28px 28px 4px;">
-    <span style="font-family:${mono};font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:${muted};">./ nuevo correo</span>
-    <div style="font-family:${mono};font-size:20px;font-weight:700;color:${text};margin-top:6px;line-height:1.3;">📩 hola@atiendemelapyme.cl</div>
-  </td></tr>
+  <h3 style="margin:0 0 8px;color:#E8A33D;">✍️ Borrador de Dominga</h3>
+  <div style="border:1px solid #E8A33D;border-radius:6px;padding:16px;white-space:pre-wrap;margin-bottom:24px;">${escapeHtml(draftText)}</div>
 
-  <!-- meta -->
-  <tr><td style="padding:14px 28px 0;">
-    <table role="presentation" cellpadding="0" cellspacing="0" style="font-family:${mono};font-size:12.5px;color:${muted};">
-      <tr><td style="padding:3px 10px 3px 0;color:${muted};">De:</td><td style="padding:3px 0;color:${text};">${escapeHtml(fromDisplay)}</td></tr>
-      <tr><td style="padding:3px 10px 3px 0;color:${muted};">Asunto:</td><td style="padding:3px 0;color:${text};">${escapeHtml(subject || '(sin asunto)')}</td></tr>
-    </table>
-  </td></tr>
-
-  <!-- original message -->
-  <tr><td style="padding:20px 28px 0;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${panel};border-left:3px solid ${line};">
-      <tr><td style="padding:14px 16px;font-family:${mono};font-size:13px;line-height:1.7;color:${muted};white-space:pre-wrap;">${escapeHtml(originalText || '(sin contenido de texto)')}</td></tr>
-    </table>
-  </td></tr>
-
-  <!-- draft -->
-  <tr><td style="padding:26px 28px 0;">
-    <span style="font-family:${mono};font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:${accent};">✍️ ./ borrador de dominga</span>
-  </td></tr>
-  <tr><td style="padding:10px 28px 0;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:2px solid ${accent};">
-      <tr><td style="padding:18px;font-family:${mono};font-size:13.5px;line-height:1.75;color:#111111;white-space:pre-wrap;">${escapeHtml(draftText)}</td></tr>
-    </table>
-  </td></tr>
-
-  <!-- cta -->
-  <tr><td style="padding:24px 28px 8px;">
-    <table role="presentation" cellpadding="0" cellspacing="0">
-      <tr><td style="background:${accent};">
-        <a href="${mailtoLink}" style="display:inline-block;font-family:${mono};font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0A0A0A;text-decoration:none;padding:14px 26px;">Revisar y responder →</a>
-      </td></tr>
-    </table>
-  </td></tr>
-  <tr><td style="padding:0 28px 24px;">
-    <span style="font-family:${mono};font-size:11px;color:${muted};line-height:1.6;">Este botón abre tu correo con la respuesta de Dominga ya escrita. Revísala, ajústala si quieres, y presiona enviar.</span>
-  </td></tr>
-
-  <!-- footer -->
-  <tr><td style="padding:16px 28px;border-top:1px solid ${line};">
-    <span style="font-family:${mono};font-size:10.5px;letter-spacing:.06em;color:${muted};">SYS.OK — © 2026 ATIÉNDEME LA PYME</span>
-  </td></tr>
-
-</table>
-</td></tr>
-</table>
+  <a href="${mailtoLink}" style="display:inline-block;background:#E8A33D;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">Revisar y responder →</a>
+  <p style="color:#999;font-size:12px;margin-top:24px;">Este botón abre tu correo con la respuesta de Dominga ya escrita. Revísala, ajústala si quieres, y presiona enviar.</p>
 </body>
 </html>`;
 
@@ -122,11 +64,7 @@ async function notifyGerman({ fromEmail, fromName, subject, originalText, draftT
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        // Remitente fijo a hola@ para esta notificación específica, sin
-        // depender de RESEND_FROM_EMAIL (esa variable la comparten los
-        // correos de confirmación de citas en lib/email.js, y no queremos
-        // cambiar el remitente de esos también).
-        from: 'Dominga <hola@atiendemelapyme.cl>',
+        from: env.RESEND_FROM_EMAIL || 'contacto@atiendemelapyme.cl',
         to: notifyTo,
         reply_to: fromEmail,
         subject: `[Borrador] ${subject || 'Nuevo correo de ' + fromDisplay}`,

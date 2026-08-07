@@ -2,7 +2,6 @@ import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.j
 import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 import { onRequestPost as instagramPost, onRequestGet as instagramGet } from './api/instagram.js';
 import { onRequestPost as manychatPost, onRequestGet as manychatGet } from './api/chat-manychat.js';
-import { onRequestPost as emailInboundPost } from './api/email-inbound.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 

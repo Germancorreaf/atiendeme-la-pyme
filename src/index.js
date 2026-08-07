@@ -56,9 +56,6 @@ export default {
             if (pathname === '/api/chat-manychat' && request.method === 'GET') {
                 return await manychatGet({ request, env });
             }
-            if (pathname === '/api/email-inbound' && request.method === 'POST') {
-                return await emailInboundPost({ request, env });
-            }
             if (pathname === '/webhook/instagram' && request.method === 'POST') {
                 return await instagramPost({ request, env });
             }

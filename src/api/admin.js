@@ -262,6 +262,36 @@ $$('.chip').forEach(c=>c.addEventListener('click',()=>{
 }));
 renderAgenda();
 
+// ---------- pagespeed ----------
+function scoreColor(n){if(n==null)return'var(--muted)';if(n>=90)return'#43D17C';if(n>=50)return'var(--accent)';return'#E85D3D';}
+function psiCol(label,data){
+  if(!data)return'';
+  if(data.error)return '<div class="card" style="flex:1;min-width:220px;"><h2 style="font-size:12px;">'+label+'</h2><p class="empty">'+esc(data.error)+'</p></div>';
+  const rows=[['Performance',data.performance],['Accesibilidad',data.accessibility],['Buenas pr\\u00e1cticas',data.bestPractices],['SEO',data.seo]];
+  const scores=rows.map(([lbl,val])=>'<div style="text-align:center;flex:1;"><div style="font-size:26px;font-weight:700;color:'+scoreColor(val)+'">'+(val??'\\u2013')+'</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">'+lbl+'</div></div>').join('');
+  const vitals=[['LCP',data.lcp],['CLS',data.cls],['TBT',data.tbt],['FCP',data.fcp],['Speed Index',data.speedIndex]]
+    .filter(([,v])=>v).map(([lbl,v])=>'<div class="badge" style="margin:2px 4px 0 0;display:inline-block;">'+lbl+': '+esc(v)+'</div>').join('');
+  return '<div class="card" style="flex:1;min-width:260px;">'
+    +'<h2 style="font-size:12px;">'+label+'</h2>'
+    +'<div style="display:flex;gap:6px;margin-bottom:12px;">'+scores+'</div>'
+    +'<div>'+vitals+'</div>'
+    +'</div>';
+}
+$('#psi-run').addEventListener('click',async()=>{
+  const btn=$('#psi-run');const status=$('#psi-status');const out=$('#psi-results');
+  btn.disabled=true;status.textContent='Corriendo Lighthouse en mobile y desktop\\u2026';
+  out.innerHTML='<p class="empty">Analizando\\u2026 esto puede tardar hasta 30 segundos.</p>';
+  try{
+    const res=await fetch('/api/admin/pagespeed?url='+encodeURIComponent('https://atiendemelapyme.cl/'));
+    const data=await res.json();
+    out.innerHTML='<div style="display:flex;gap:14px;flex-wrap:wrap;">'+psiCol('\\u{1F4F1} Mobile',data.mobile)+psiCol('\\u{1F5A5}\\uFE0F Desktop',data.desktop)+'</div>';
+    status.textContent='\\u00daltimo an\\u00e1lisis: '+new Date(data.checkedAt).toLocaleTimeString('es-CL',{timeZone:TZ});
+  }catch(err){
+    out.innerHTML='<p class="empty">Error al consultar PageSpeed: '+esc(err.message)+'</p>';
+    status.textContent='';
+  }finally{btn.disabled=false;}
+});
+
 // vista inicial segun hash
 show((location.hash||'#inicio').slice(1));
 `;
@@ -293,6 +323,7 @@ async function onRequestGetAdmin(context) {
     <button class="nav-btn active" data-view="inicio"><span class="ico">\u25A6</span> Inicio</button>
     <button class="nav-btn" data-view="conversaciones"><span class="ico">\u2709</span> Conversaciones</button>
     <button class="nav-btn" data-view="agenda"><span class="ico">\u25F4</span> Agenda</button>
+    <button class="nav-btn" data-view="rendimiento"><span class="ico">\u26A1</span> Rendimiento</button>
     <div class="side-foot">Panel interno<br>atiendemelapyme.cl</div>
   </aside>
   <main class="main">
@@ -307,6 +338,7 @@ async function onRequestGetAdmin(context) {
       <button class="nav-btn active" data-view="inicio">Inicio</button>
       <button class="nav-btn" data-view="conversaciones">Chats</button>
       <button class="nav-btn" data-view="agenda">Agenda</button>
+      <button class="nav-btn" data-view="rendimiento">Rendimiento</button>
     </div>
     <div class="stats">
       <div class="stat hero"><div class="label">Conversaciones</div><div class="num" id="st-conv">\u2013</div><div class="hint">total registradas</div></div>
@@ -362,6 +394,16 @@ async function onRequestGetAdmin(context) {
         <div id="agenda-list"></div>
       </div>
     </section>
+    <section class="view" data-view="rendimiento">
+      <div class="card">
+        <h2>Rendimiento del sitio <span class="count">Google PageSpeed Insights</span></h2>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="refresh" id="psi-run" style="border-color:var(--accent);color:var(--accent);">\u25B6 Analizar atiendemelapyme.cl</button>
+          <span class="convo-meta" id="psi-status"></span>
+        </div>
+        <div id="psi-results"><p class="empty">Presiona "Analizar" para correr Lighthouse sobre el sitio (toma ~15-30s, corre en vivo contra Google).</p></div>
+      </div>
+    </section>
   </main>
 </div>
 <script>window.__DATA__=${safeJson({ sessions, appointments })};</script>
@@ -379,4 +421,51 @@ async function onRequestGetAdmin(context) {
     });
 }
 
-export { onRequestGetAdmin, checkAdminAuth };
+async function runPSI(targetUrl, strategy, env) {
+    const keyParam = env.GOOGLE_PAGESPEED_API_KEY ? `&key=${env.GOOGLE_PAGESPEED_API_KEY}` : '';
+    const psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(targetUrl)}&strategy=${strategy}&category=performance&category=seo&category=best-practices&category=accessibility${keyParam}`;
+    try {
+        const res = await fetch(psiUrl);
+        if (!res.ok) {
+            const errText = await res.text();
+            return { error: `PageSpeed (${strategy}) fall\u00f3: ${res.status} ${errText.slice(0, 160)}` };
+        }
+        const data = await res.json();
+        const lr = data.lighthouseResult;
+        const audits = lr?.audits || {};
+        const cats = lr?.categories || {};
+        const pct = (c) => (cats[c]?.score != null ? Math.round(cats[c].score * 100) : null);
+        return {
+            performance: pct('performance'),
+            accessibility: pct('accessibility'),
+            bestPractices: pct('best-practices'),
+            seo: pct('seo'),
+            lcp: audits['largest-contentful-paint']?.displayValue || null,
+            cls: audits['cumulative-layout-shift']?.displayValue || null,
+            tbt: audits['total-blocking-time']?.displayValue || null,
+            fcp: audits['first-contentful-paint']?.displayValue || null,
+            speedIndex: audits['speed-index']?.displayValue || null
+        };
+    } catch (err) {
+        return { error: `PageSpeed (${strategy}) error: ${err.message}` };
+    }
+}
+
+async function onRequestGetPagespeed(context) {
+    const { request, env } = context;
+    if (!checkAdminAuth(request, env)) {
+        return unauthorizedResponse();
+    }
+    const url = new URL(request.url);
+    const targetUrl = url.searchParams.get('url') || 'https://atiendemelapyme.cl/';
+    const [mobile, desktop] = await Promise.all([
+        runPSI(targetUrl, 'mobile', env),
+        runPSI(targetUrl, 'desktop', env)
+    ]);
+    return new Response(JSON.stringify({ url: targetUrl, mobile, desktop, checkedAt: new Date().toISOString() }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
+    });
+}
+
+export { onRequestGetAdmin, onRequestGetPagespeed, checkAdminAuth };

@@ -2,7 +2,7 @@ import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.j
 import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 import { onRequestPost as instagramPost, onRequestGet as instagramGet } from './api/instagram.js';
 import { onRequestPost as manychatPost, onRequestGet as manychatGet } from './api/chat-manychat.js';
-import { onRequestGetAdmin } from './api/admin.js';
+import { onRequestGetAdmin, onRequestGetPagespeed } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 
@@ -179,6 +179,9 @@ export default {
             }
             if (pathname === '/admin' || pathname === '/admin/') {
                 return await onRequestGetAdmin({ request, env });
+            }
+            if (pathname === '/api/admin/pagespeed' && request.method === 'GET') {
+                return await onRequestGetPagespeed({ request, env });
             }
             return new Response(NOT_FOUND_PAGE, {
                 status: 404,

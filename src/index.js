@@ -2,6 +2,7 @@ import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.j
 import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 import { onRequestPost as instagramPost, onRequestGet as instagramGet } from './api/instagram.js';
 import { onRequestPost as manychatPost, onRequestGet as manychatGet } from './api/chat-manychat.js';
+import { onRequestGetAdmin } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 
@@ -175,6 +176,9 @@ export default {
                         'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com; frame-ancestors 'none'"
                     }
                 });
+            }
+            if (pathname === '/admin' || pathname === '/admin/') {
+                return await onRequestGetAdmin({ request, env });
             }
             return new Response(NOT_FOUND_PAGE, {
                 status: 404,

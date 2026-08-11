@@ -3,6 +3,14 @@
 
 const RESEND_API = 'https://api.resend.com/emails';
 
+function escapeHtml(str = '') {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function formatDateSpanish(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
   const date = new Date(year, month - 1, day);
@@ -79,7 +87,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Ne
   <div class="content">
     
     <div class="greeting">
-      Hola, <strong>${clientName}</strong>:<br>
+      Hola, <strong>${escapeHtml(clientName)}</strong>:<br>
       ¿Cómo estás? Por aquí <strong>Dominga</strong>. 
     </div>
 
@@ -211,7 +219,7 @@ export async function sendReminderEmail(options, env) {
 <div class="container">
 <div class="header"><h1>⏰ Recordatorio</h1></div>
 <div class="content">
-<p>Hola <strong>${clientName}</strong>,</p>
+<p>Hola <strong>${escapeHtml(clientName)}</strong>,</p>
 <p>Tu reunión es <strong>mañana</strong> a las <strong>${time}</strong>.</p>
 <p><strong>Fecha:</strong> ${dateFormatted}</p>
 ${calendarLink ? `<a href="${calendarLink}" class="button">Ver Evento</a>` : ''}

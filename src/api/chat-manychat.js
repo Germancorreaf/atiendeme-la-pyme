@@ -13,6 +13,16 @@ import { callClaude } from '../lib/anthropic.js';
 import { getRandomGreeting, buildSystemPrompt } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 
+function timingSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const len = Math.max(a.length, b.length);
+  let diff = a.length === b.length ? 0 : 1;
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
 async function getHistory(sessionId, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return [];
   try {
@@ -67,7 +77,7 @@ async function saveHistory(sessionId, messages, env) {
 export async function onRequestPost(context) {
   try {
     const incomingToken = context.request.headers.get('X-Manychat-Token');
-    if (!context.env.MANYCHAT_SHARED_SECRET || incomingToken !== context.env.MANYCHAT_SHARED_SECRET) {
+    if (!context.env.MANYCHAT_SHARED_SECRET || !timingSafeEqual(incomingToken, context.env.MANYCHAT_SHARED_SECRET)) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }

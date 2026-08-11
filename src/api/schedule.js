@@ -112,6 +112,19 @@ export async function onRequestPost(context) {
 
     // Nota: checkRateLimit espera (identifier, kv, maxRequests, windowSeconds)
     // como argumentos posicionales, no un objeto de opciones.
+    // Se limita tanto por email (evita spam a una misma casilla) como por IP
+    // (evita que alguien rote emails de terceros para bombardearlos de
+    // confirmaciones, ya que el email destino lo controla quien llama).
+    const clientIP = context.request.headers.get('CF-Connecting-IP') || 'unknown-ip';
+    const ipCheck = await checkRateLimit(clientIP, context.env.RATE_LIMIT_KV, 15, 3600);
+
+    if (!ipCheck.allowed) {
+      throw new ApiError(
+        `Demasiadas solicitudes de agendamiento. Intenta de nuevo en ${ipCheck.retryAfter}s`,
+        429
+      );
+    }
+
     const rlCheck = await checkRateLimit(email, context.env.RATE_LIMIT_KV, 5, 3600);
 
     if (!rlCheck.allowed) {

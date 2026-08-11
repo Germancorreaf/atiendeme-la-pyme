@@ -118,8 +118,9 @@ export async function onRequestPost(context) {
       throw err;
     }
 
+    const clientIP = context.request.headers.get('CF-Connecting-IP') || 'unknown-ip';
     const rlCheck = await checkAllLimits(
-      validSessionId,
+      clientIP,
       context.env.RATE_LIMIT_KV,
       {
         maxRequests: 30,

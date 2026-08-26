@@ -4,3 +4,6 @@ node_modules/
 .env.local
 .wrangler/
 *.log
+.claude/
+.agents/
+skills-lock.json

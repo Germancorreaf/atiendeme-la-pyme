@@ -23,11 +23,19 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
+// A diferencia del sessionId de /api/chat (UUID generado por el frontend),
+// los IDs de ManyChat/Meta (contact_id) son numericos/alfanumericos, no UUID.
+// Validamos charset + largo para que nunca lleguen sin escapar a una query
+// de Supabase (& = . rompen el filtro de PostgREST), sin exigir formato UUID.
+function isSafeManychatId(id) {
+  return typeof id === 'string' && id.length > 0 && id.length <= 128 && /^[a-zA-Z0-9_.-]+$/.test(id);
+}
+
 async function getHistory(sessionId, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return [];
   try {
     const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${sessionId}`,
+      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodeURIComponent(sessionId)}`,
       {
         headers: {
           'apikey': env.SUPABASE_SERVICE_KEY,
@@ -117,6 +125,13 @@ export async function onRequestPost(context) {
       // Formato 3: {"text": "texto", "contact_id": "id"}
       userMessage = body.text;
       sessionId = body.contact_id || body.sessionId || sessionId;
+    }
+
+    if (!isSafeManychatId(sessionId)) {
+      return new Response(JSON.stringify({ error: 'sessionId/contact_id invalido' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     if (!userMessage) {

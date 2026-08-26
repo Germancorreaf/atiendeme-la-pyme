@@ -2,6 +2,30 @@
 // Dashboard interno: metricas + conversaciones + agenda. Protegido con Basic Auth.
 // Requiere el secret ADMIN_DASHBOARD_PASSWORD configurado en el Worker.
 
+import { checkAllLimits } from '../lib/rateLimit.js';
+
+function tooManyAttemptsResponse(retryAfter) {
+    return new Response('Demasiados intentos. Intenta de nuevo en unos minutos.', {
+        status: 429,
+        headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Retry-After': String(retryAfter || 300)
+        }
+    });
+}
+
+async function checkAdminBruteForce(request, env) {
+    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown-ip';
+    // Login endpoint: mas estricto que el chat publico. 10 intentos / 5 min,
+    // con rafaga de 3 en 5s, por IP.
+    return checkAllLimits(clientIP, env.RATE_LIMIT_KV, {
+        maxRequests: 10,
+        windowSeconds: 300,
+        maxBurstRequests: 3,
+        burstWindowSeconds: 5
+    });
+}
+
 function unauthorizedResponse() {
     return new Response('Autenticaci\u00f3n requerida', {
         status: 401,
@@ -298,6 +322,10 @@ show((location.hash||'#inicio').slice(1));
 
 async function onRequestGetAdmin(context) {
     const { request, env } = context;
+    const rlCheck = await checkAdminBruteForce(request, env);
+    if (!rlCheck.allowed) {
+        return tooManyAttemptsResponse(rlCheck.retryAfter);
+    }
     if (!checkAdminAuth(request, env)) {
         return unauthorizedResponse();
     }
@@ -453,6 +481,10 @@ async function runPSI(targetUrl, strategy, env) {
 
 async function onRequestGetPagespeed(context) {
     const { request, env } = context;
+    const rlCheck = await checkAdminBruteForce(request, env);
+    if (!rlCheck.allowed) {
+        return tooManyAttemptsResponse(rlCheck.retryAfter);
+    }
     if (!checkAdminAuth(request, env)) {
         return unauthorizedResponse();
     }

@@ -37,7 +37,7 @@ const INITIAL_GREETINGS = [
 
 // Único lugar donde viven los 3 planes + el add-on. Si cambian los precios
 // en la landing (index.js), hay que actualizarlos acá también.
-const PRICING_SUMMARY = `- Plan Básico: $149.990 implementación + $49.990/mes — chatbot IA en tu sitio web, transferencia a humano, 30 días de soporte. Listo en 1 semana.
+const PRICING_SUMMARY = `- Plan Básico: $149.990 implementación + $49.990/mes — chatbot IA en tu sitio web, 30 días de soporte. Listo en 1 semana.
 - Plan Recomendado: $249.990 implementación + $99.990/mes — chatbot en sitio web, WhatsApp e Instagram, agenda automática (Google Calendar/Calendly). Listo en 2 semanas.
 - Plan Experto: $449.990 implementación + $179.990/mes — todo lo anterior + llamadas y voicebot. Listo en 3 semanas.
 - Add-on opcional: Landing Page Profesional $199.990 (pago único, aplica a cualquier plan).
@@ -138,6 +138,9 @@ ${PRICING_SUMMARY}
 
 ---SI NO SABES---
 "Esa pregunta la responden mejor en contacto@atiendemelapyme.cl — te contestan al tiro"
+
+---SI PIDEN HABLAR CON UNA PERSONA---
+No inventes que los transferís a un humano en el momento (eso no existe todavía). Respondé con naturalidad: "El equipo te responde a la brevedad, te dejo anotado tu mensaje" — y seguí ayudando con lo que puedas en el chat.
 
 ---REGLAS FINALES---
 ✓ Suenas como persona, no máquina

@@ -2,18 +2,6 @@
 
 ## Producto
 
-### Arreglar número de WhatsApp placeholder en la landing
-
-**What:** El link de WhatsApp en `src/index.js` apunta a `wa.me/56900000000` — número placeholder (puros ceros), no funciona. Reemplazar por el número real del negocio.
-
-**Why:** Encontrado en QA en vivo del sitio (2026-08-26): un prospecto que hace clic en "WhatsApp" hoy no llega a nadie.
-
-**Context:** El usuario va a tener el número real mañana. Es el único bloqueante de este TODO — apenas esté disponible, es un cambio de una línea.
-
-**Effort:** S
-**Priority:** P0
-**Depends on:** Número real de WhatsApp (pendiente, llega mañana).
-
 ### Sacar/ajustar promesa de "transferencia a humano" en la página de precios
 
 **What:** Los planes Básico ($149.990) y Recomendado ($249.990) en la landing (`src/index.js`) prometen textualmente "Transferencia automática a un humano cuando no puede resolver" — el mismo mecanismo que no existe y que ya se sacó del system prompt de Dominga (ver commit `9c2e9c1`). Falta aplicar el mismo criterio acá, en el texto que ve un prospecto antes de pagar.
@@ -101,3 +89,15 @@
 **Effort:** M
 **Priority:** P3
 **Depends on:** None
+
+## Completed
+
+### Arreglar número de WhatsApp placeholder en la landing
+
+**What:** El link de WhatsApp en `src/index.js` (y en `src/lib/vertical-pages.js`) apuntaba a `wa.me/56900000000` — número placeholder, no funcionaba. Reemplazado por el número real del negocio (+56 9 2205 3594) en ambos archivos.
+
+**Why:** Encontrado en QA en vivo del sitio (2026-08-26): un prospecto que hacía clic en "WhatsApp" no llegaba a nadie.
+
+**Effort:** S
+**Priority:** P0
+**Completed:** 2026-09-04

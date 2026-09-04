@@ -116,7 +116,7 @@ const SHARED_HEADER_NAV = `<header class="nav-header">
     <p class="menu-socials-title">Síguenos</p>
     <div class="menu-socials-list">
       <a href="https://instagram.com/atiendemelapyme" target="_blank" rel="noopener">Instagram</a>
-      <a href="https://wa.me/56900000000" target="_blank" rel="noopener">WhatsApp</a>
+      <a href="https://wa.me/56922053594" target="_blank" rel="noopener">WhatsApp</a>
       <a href="mailto:hola@atiendemelapyme.cl">Correo</a>
     </div>
   </div>

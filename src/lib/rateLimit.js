@@ -90,17 +90,20 @@ export async function checkBurstLimit(
   }
 
   const key = `burst:${identifier}`;
-  
+  // Cloudflare KV exige expirationTtl >= 60s, aunque la ventana de burst
+  // real (usada para filtrar los timestamps) sea más corta.
+  const kvTtl = Math.max(60, burstWindowSeconds);
+
   try {
     const current = await kvNamespace.get(key, 'json');
     const now = Date.now();
     const windowStart = now - burstWindowSeconds * 1000;
-    
+
     if (!current) {
       await kvNamespace.put(
         key,
         JSON.stringify({ requests: [now] }),
-        { expirationTtl: burstWindowSeconds }
+        { expirationTtl: kvTtl }
       );
       return { allowed: true };
     }
@@ -121,7 +124,7 @@ export async function checkBurstLimit(
     await kvNamespace.put(
       key,
       JSON.stringify({ requests: recentRequests }),
-      { expirationTtl: burstWindowSeconds }
+      { expirationTtl: kvTtl }
     );
 
     return { allowed: true };

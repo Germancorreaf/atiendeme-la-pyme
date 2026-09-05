@@ -2,6 +2,7 @@ import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.j
 import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 import { onRequestPost as instagramPost, onRequestGet as instagramGet } from './api/instagram.js';
 import { onRequestPost as manychatPost, onRequestGet as manychatGet } from './api/chat-manychat.js';
+import { onRequestPost as whatsappPost, onRequestGet as whatsappGet } from './api/whatsapp.js';
 import { onRequestGetAdmin, onRequestGetPagespeed } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
@@ -125,6 +126,12 @@ export default {
             }
             if (pathname === '/webhook/instagram' && request.method === 'GET') {
                 return await instagramGet({ request, env });
+            }
+            if (pathname === '/webhook/whatsapp' && request.method === 'POST') {
+                return await whatsappPost({ request, env });
+            }
+            if (pathname === '/webhook/whatsapp' && request.method === 'GET') {
+                return await whatsappGet({ request, env });
             }
             if (pathname === '/privacidad' || pathname === '/privacidad/') {
                 return new Response(PRIVACY_POLICY, {

@@ -8,11 +8,515 @@ import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 import { getVerticalPage } from './lib/vertical-pages.js';
 
-const TERMS_OF_SERVICE = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Términos y Condiciones — Atiéndeme la Pyme</title><meta name="description" content="Términos y condiciones del servicio de agentes de IA de Atiéndeme la Pyme: planes, precios, cancelación y normativa aplicable en Chile."><meta name="robots" content="index, follow"><link rel="canonical" href="https://atiendemelapyme.cl/terminos"><meta property="og:type" content="website"><meta property="og:title" content="Términos y Condiciones — Atiéndeme la Pyme"><meta property="og:description" content="Términos y condiciones del servicio de agentes de IA de Atiéndeme la Pyme para pymes en Chile."><meta property="og:url" content="https://atiendemelapyme.cl/terminos"><style>:root{--bg:#0A0A0A;--text:#EDEDE8;--accent:#E8A33D;--muted:#8A8A82;}*{box-sizing:border-box;margin:0;padding:0;}body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;line-height:1.6;}.container{max-width:800px;margin:0 auto;padding:40px 20px;}h1{font-size:32px;margin-bottom:10px;}.meta{color:var(--muted);font-size:12px;margin-bottom:40px;}h2{font-size:18px;margin-top:32px;margin-bottom:14px;color:var(--accent);}p{margin-bottom:12px;}a{color:var(--accent);}footer{border-top:1px solid #333;padding-top:20px;margin-top:60px;text-align:center;color:var(--muted);font-size:11px;}</style></head><body><div class="container"><h1>TÉRMINOS Y CONDICIONES</h1><div class="meta">Última actualización: 10 de agosto de 2026</div><h2>1. QUIÉNES SOMOS Y ACEPTACIÓN</h2><p>Atiéndeme la Pyme ("nosotros", "el proveedor") ofrece agentes de inteligencia artificial (chat y voz) para automatizar la atención al cliente, ventas y agendamiento de citas de pequeñas y medianas empresas en Chile, a través de canales como sitio web, WhatsApp, Instagram, Facebook Messenger y correo electrónico. Al contratar nuestros servicios o usar este sitio, usted acepta estos Términos y Condiciones. Si no está de acuerdo, no debe usar el servicio.</p><h2>2. NATURALEZA DEL SERVICIO</h2><p>El servicio consiste en la configuración, entrenamiento e implementación de asistentes de inteligencia artificial que responden consultas, califican leads y agendan citas en nombre del cliente contratante ("el Cliente"), según el plan contratado. Las respuestas del asistente de IA se generan de forma automatizada y pueden requerir supervisión humana; no garantizamos exactitud absoluta en cada interacción.</p><h2>3. PLANES, PRECIOS Y FORMA DE PAGO</h2><p>Los precios publicados en el sitio son en pesos chilenos (CLP), incluyen o excluyen IVA según se indique, y están sujetos a cambio sin previo aviso para nuevos contratos (no afectan contratos vigentes). El pago único cubre la configuración inicial; el cobro mensual cubre mantención, hosting y uso continuo de la plataforma. La falta de pago puede resultar en la suspensión del servicio, previo aviso al correo de contacto del Cliente.</p><h2>4. DURACIÓN Y TÉRMINO</h2><p>El servicio no exige contratos de permanencia mínima forzosa. El Cliente puede solicitar la cancelación en cualquier momento, sin penalización, mediante comunicación escrita a hola@atiendemelapyme.cl. La cancelación aplica al ciclo de facturación siguiente al aviso; no se realizan devoluciones proporcionales de mensualidades ya facturadas, salvo que la ley chilena disponga lo contrario.</p><h2>5. OBLIGACIONES DEL CLIENTE</h2><p>El Cliente es responsable de: (a) entregar información veraz sobre su negocio para el entrenamiento del asistente; (b) contar con las cuentas y permisos necesarios en WhatsApp Business, Instagram, Facebook u otros canales que desee integrar; (c) supervisar razonablemente las interacciones automatizadas con sus propios clientes finales; y (d) cumplir con la normativa aplicable a su rubro (por ejemplo, si opera en salud, retail regulado u otros sectores con requisitos específicos).</p><h2>6. LIMITACIÓN DE RESPONSABILIDAD</h2><p>El servicio se entrega "tal cual" ("as is"), sin garantías de disponibilidad ininterrumpida. No nos hacemos responsables por: (a) decisiones comerciales tomadas por el Cliente en base a las interacciones del asistente de IA; (b) pérdidas derivadas de fallas de terceros (WhatsApp, Meta, Google, proveedores de hosting o de modelos de IA); o (c) contenido generado por el asistente que se desvíe de la información proporcionada por el Cliente para su entrenamiento, en la medida permitida por la ley chilena. Nada en esta cláusula limita responsabilidades que, conforme a la Ley N.° 19.496 sobre Protección de los Derechos de los Consumidores, no puedan renunciarse anticipadamente.</p><h2>7. PROTECCIÓN DE DATOS PERSONALES</h2><p>El tratamiento de datos personales de los usuarios finales que interactúan con los asistentes de IA se rige por nuestra <a href="/privacidad">Política de Privacidad</a>, elaborada conforme a la Ley N.° 19.628 sobre Protección de la Vida Privada y, en lo que corresponda según su entrada en vigencia, la Ley N.° 21.719 que Regula la Protección y el Tratamiento de los Datos Personales y crea la Agencia de Protección de Datos Personales. El Cliente, como responsable de los datos de sus propios clientes finales, debe asegurarse de contar con las bases de licitud correspondientes para el tratamiento de dichos datos a través de nuestros servicios.</p><h2>8. DERECHOS DEL CONSUMIDOR (LEY N.° 19.496)</h2><p>Conforme a la Ley N.° 19.496 sobre Protección de los Derechos de los Consumidores, el Cliente tiene derecho a: (a) información veraz y oportuna sobre las condiciones del servicio; (b) no ser discriminado arbitrariamente por proveedores de bienes y servicios; (c) la reparación e indemnización adecuada por todos los daños materiales y morales en caso de incumplimiento; y (d) retracto y otros derechos que la ley establezca según corresponda a la modalidad de contratación. Ante cualquier controversia, el Cliente puede recurrir al Servicio Nacional del Consumidor (SERNAC).</p><h2>9. CONTRATACIÓN ELECTRÓNICA Y VALIDEZ DE COMUNICACIONES</h2><p>Las comunicaciones, aceptaciones y confirmaciones realizadas por correo electrónico o a través de nuestro sitio web tienen valor conforme a la Ley N.° 19.799 sobre Documentos Electrónicos, Firma Electrónica y Servicios de Certificación de dicha Firma, en lo que resulte aplicable a la naturaleza de este servicio.</p><h2>10. PROPIEDAD INTELECTUAL</h2><p>El software, la plataforma, el diseño del sitio y la tecnología subyacente son de propiedad de Atiéndeme la Pyme o de sus licenciantes, y están protegidos conforme a la Ley N.° 17.336 sobre Propiedad Intelectual. La información y contenidos que el Cliente entrega para entrenar su asistente (textos, precios, horarios, marca) permanecen de propiedad del Cliente; el Cliente nos otorga una licencia limitada para usarlos únicamente con el fin de operar su asistente de IA.</p><h2>11. USO ACEPTABLE</h2><p>El Cliente no debe utilizar el servicio para fines ilícitos, para difundir contenido que infrinja derechos de terceros, ni para actividades contrarias al orden público o las buenas costumbres. Nos reservamos el derecho de suspender el servicio ante un uso que incumpla esta cláusula, previa notificación cuando sea razonablemente posible.</p><h2>12. MODIFICACIONES A ESTOS TÉRMINOS</h2><p>Podemos actualizar estos Términos y Condiciones ocasionalmente. Los cambios sustanciales serán notificados a los Clientes activos por correo electrónico. La fecha de "Última actualización" refleja la versión vigente. El uso continuado del servicio tras una actualización constituye aceptación de los nuevos términos.</p><h2>13. LEY APLICABLE Y JURISDICCIÓN</h2><p>Estos Términos y Condiciones se rigen por las leyes de la República de Chile. Cualquier controversia derivada de estos términos que no pueda resolverse de forma directa entre las partes, o a través de SERNAC en el caso de consumidores, será sometida a los tribunales ordinarios de justicia con asiento en Santiago de Chile, sin perjuicio de las normas de competencia que la ley establezca en favor del consumidor.</p><h2>14. CONTACTO</h2><p>Si tienes preguntas sobre estos Términos y Condiciones: <strong>hola@atiendemelapyme.cl</strong></p><footer>© 2026 Atiéndeme la Pyme — Cumplimiento con la legislación de la República de Chile</footer></div></body></html>`;
+const TERMS_OF_SERVICE = `<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Términos y Condiciones — Atiéndeme la Pyme</title>
+<meta name="description" content="Términos y condiciones del servicio de agentes de IA de Atiéndeme la Pyme: planes, precios, cancelación y normativa aplicable en Chile.">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="canonical" href="https://atiendemelapyme.cl/terminos">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Atiéndeme la Pyme">
+<meta property="og:title" content="Términos y Condiciones — Atiéndeme la Pyme">
+<meta property="og:description" content="Términos y condiciones del servicio de agentes de IA de Atiéndeme la Pyme para pymes en Chile.">
+<meta property="og:url" content="https://atiendemelapyme.cl/terminos">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230A0A0A%22%2F%3E%3Ctext%20x%3D%2210%22%20y%3D%2248%22%20font-family%3D%22'Space%20Grotesk'%2C'Arial%20Black'%2Csans-serif%22%20font-weight%3D%22700%22%20font-size%3D%2242%22%20fill%3D%22%23EDEDE8%22%3Ea%3C%2Ftext%3E%3Crect%20x%3D%2240%22%20y%3D%2216%22%20width%3D%2213%22%20height%3D%2234%22%20fill%3D%22%23E8A33D%22%2F%3E%3C%2Fsvg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0A0A;--panel:#0F0F0F;--line:#242424;--line-hard:#EDEDE8;--text:#EDEDE8;--muted:#8A8A82;--muted2:#7D7D74;--accent:#E8A33D;--ok:#43D17C;--ink:#0A0A0A;--ease:cubic-bezier(0.23,1,0.32,1);}
+*{box-sizing:border-box;border-radius:0 !important;}
+html{scroll-behavior:smooth;scrollbar-color:var(--accent) var(--bg);}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+::selection{background:var(--accent);color:var(--ink);}
+a{color:var(--text);text-decoration:none;transition:color 150ms var(--ease);}
+a:hover{color:var(--accent);}
+button{font-family:inherit;cursor:pointer;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+@keyframes blink{0%,49%{opacity:1;}50%,100%{opacity:0;}}
+.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:64px 64px;opacity:.35;}
+.wrap{max-width:1180px;margin:0 auto;position:relative;z-index:1;border-left:1px solid var(--line);border-right:1px solid var(--line);background:var(--bg);}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+.label b{color:var(--accent);font-weight:400;}
+
+/* nav */
+.nav-header{position:fixed;top:0;left:0;width:100%;z-index:50;display:flex;align-items:stretch;justify-content:space-between;background:var(--bg);border-bottom:2px solid var(--line-hard);}
+.nav-logo{font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;padding:18px 20px;display:flex;align-items:center;gap:10px;}
+.nav-logo .cursor{display:inline-block;width:9px;height:16px;background:var(--accent);animation:blink 1.1s steps(1) infinite;}
+.nav-toggle{display:inline-flex;align-items:center;gap:10px;background:var(--bg);border:none;border-left:2px solid var(--line-hard);padding:0 26px;color:var(--text);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;transition:background 150ms var(--ease),color 150ms var(--ease);}
+.nav-toggle:hover{background:var(--accent);color:var(--ink);}
+body.menu-open .nav-toggle{background:var(--text);color:var(--ink);}
+.nav-toggle .bars{position:relative;width:14px;height:10px;flex:0 0 14px;}
+.nav-toggle .bars span{position:absolute;left:0;width:100%;height:2px;background:currentColor;transition:transform 200ms var(--ease);}
+.nav-toggle .bars span:nth-child(1){top:0;}
+.nav-toggle .bars span:nth-child(2){bottom:0;}
+body.menu-open .nav-toggle .bars span:nth-child(1){transform:translateY(4px) rotate(45deg);}
+body.menu-open .nav-toggle .bars span:nth-child(2){transform:translateY(-4px) rotate(-45deg);}
+.menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);opacity:0;pointer-events:none;transition:opacity 200ms var(--ease);z-index:39;}
+body.menu-open .menu-overlay{opacity:1;pointer-events:auto;}
+.menu-panel{position:fixed;top:0;right:0;height:100%;width:clamp(300px,36vw,420px);background:var(--bg);border-left:2px solid var(--line-hard);display:flex;flex-direction:column;padding:96px 32px 32px;overflow-y:auto;z-index:40;transform:translateX(105%);transition:transform 300ms var(--ease);}
+body.menu-open .menu-panel{transform:translateX(0);}
+.menu-list{list-style:none;margin:0 0 auto;padding:0;display:flex;flex-direction:column;counter-reset:mi;}
+.menu-list li{counter-increment:mi;border-bottom:1px solid var(--line);}
+.menu-list a{display:flex;align-items:baseline;gap:14px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.9rem;line-height:1.1;letter-spacing:-0.01em;text-transform:uppercase;padding:18px 2px;transition:color 150ms var(--ease),padding-left 150ms var(--ease);}
+.menu-list a::before{content:'0' counter(mi);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:400;color:var(--accent);}
+.menu-list a:hover{color:var(--accent);padding-left:10px;}
+.menu-socials{margin-top:2.5rem;padding-top:1.5rem;border-top:2px solid var(--line-hard);display:flex;flex-direction:column;gap:.75rem;}
+.menu-socials-title{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);}
+.menu-socials-list{list-style:none;margin:0;padding:0;display:flex;gap:1.4rem;flex-wrap:wrap;}
+.menu-socials-list a{font-size:13px;color:var(--muted);display:inline-block;padding:10px 4px;}
+.menu-socials-list a:hover{color:var(--accent);}
+
+/* hero */
+.legal-hero{padding:150px 40px 60px;border-bottom:2px solid var(--line-hard);}
+.sign-badge{display:inline-flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text);border:1px solid var(--accent);padding:8px 14px;background:var(--bg);box-shadow:4px 4px 0 var(--accent);}
+.sign-badge .dot{width:8px;height:8px;background:var(--ok);animation:blink 1.4s steps(1) infinite;}
+.legal-hero h1{margin:28px 0 0;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(32px,6vw,58px);line-height:1;letter-spacing:-0.02em;text-transform:uppercase;}
+.legal-hero .sub{margin:20px 0 0;max-width:640px;font-size:14px;line-height:1.75;color:var(--muted);}
+
+/* clauses */
+.clause{padding:36px 40px;border-bottom:1px solid var(--line);position:relative;}
+.clause .num{display:inline-block;font-size:11px;letter-spacing:.1em;color:var(--muted);border:1px solid var(--line-hard);padding:4px 10px;margin-bottom:14px;}
+.clause h2{margin:0 0 14px;font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:var(--accent);}
+.clause p{margin:0 0 12px;font-size:13.5px;line-height:1.8;color:var(--muted);}
+.clause p:last-child{margin-bottom:0;}
+.clause p strong{color:var(--text);font-weight:700;}
+.clause a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;}
+.clause ul{margin:0 0 12px 20px;padding:0;color:var(--muted);font-size:13.5px;line-height:1.8;}
+.clause ul:last-child{margin-bottom:0;}
+.clause ul li{margin-bottom:4px;}
+.clause ul strong{color:var(--text);}
+
+/* cta */
+.legal-cta{padding:56px 40px;text-align:center;border-bottom:2px solid var(--line-hard);}
+.legal-cta p{margin:0 0 24px;color:var(--muted);font-size:13.5px;}
+.btn-primary{display:inline-block;background:var(--accent);color:var(--ink);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:16px 30px;border:2px solid var(--accent);box-shadow:5px 5px 0 var(--line-hard);transition:transform 150ms var(--ease),box-shadow 150ms var(--ease);}
+.btn-primary:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--line-hard);color:var(--ink);}
+
+footer{padding:0;display:flex;flex-wrap:wrap;align-items:stretch;justify-content:space-between;font-size:11px;letter-spacing:.06em;color:var(--muted2);}
+footer .cell{padding:20px 24px;display:flex;align-items:center;gap:8px;}
+footer .cell .ok-dot{width:7px;height:7px;background:var(--ok);display:inline-block;animation:blink 1.4s steps(1) infinite;}
+footer .links{display:flex;align-items:stretch;}
+footer .links a{color:var(--muted2);padding:20px 20px;display:flex;align-items:center;border-left:1px solid var(--line);text-transform:uppercase;}
+footer .links a:hover{color:var(--accent);background:var(--panel);}
+
+@media (max-width:640px){
+  .legal-hero{padding:120px 20px 40px;}
+  .clause{padding:28px 20px;}
+  .legal-cta{padding:40px 20px;}
+  .menu-panel{width:min(calc(100vw - 16px),320px);padding:88px 20px 20px;}
+  .menu-list a{font-size:1.4rem;}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<header class="nav-header">
+  <div class="nav-logo"><svg class="brand-mark" width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" focusable="false" style="flex-shrink:0"><rect width="64" height="64" fill="var(--bg)"/><text x="10" y="48" font-family="'Space Grotesk','Arial Black',sans-serif" font-weight="700" font-size="42" fill="var(--text)">a</text><rect x="40" y="16" width="13" height="34" fill="var(--accent)"/></svg>ATIÉNDEME_LA_PYME<span class="cursor"></span></div>
+  <button class="nav-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="menuPanel">
+    <span class="bars"><span></span><span></span></span>
+    Menú
+  </button>
+</header>
+<div class="menu-overlay" id="menuOverlay"></div>
+<nav class="menu-panel" id="menuPanel" aria-label="Navegación principal">
+  <ul class="menu-list">
+    <li><a href="/#solucion" class="menu-link">Solución</a></li>
+    <li><a href="/#canales" class="menu-link">Canales</a></li>
+    <li><a href="/#precios" class="menu-link">Precios</a></li>
+    <li><a href="/#faq" class="menu-link">FAQ</a></li>
+    <li><a href="/#contacto" class="menu-link">Agendar demo</a></li>
+  </ul>
+  <div class="menu-socials">
+    <p class="menu-socials-title">Síguenos</p>
+    <div class="menu-socials-list">
+      <a href="https://instagram.com/atiendemelapyme" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://wa.me/56922053594" target="_blank" rel="noopener">WhatsApp</a>
+      <a href="mailto:hola@atiendemelapyme.cl">Correo</a>
+    </div>
+  </div>
+</nav>
+<main class="wrap">
+
+  <section class="legal-hero">
+    <span class="sign-badge"><span class="dot"></span>Última actualización: 10 de agosto de 2026</span>
+    <h1>Términos y condiciones</h1>
+    <p class="sub">Estas son las condiciones bajo las cuales Atiéndeme la Pyme presta sus servicios de agentes de inteligencia artificial a pequeñas y medianas empresas en Chile.</p>
+  </section>
+
+  <section class="legal-body">
+
+    <div class="clause">
+      <span class="num">01</span>
+      <h2>Quiénes somos y aceptación</h2>
+      <p>Atiéndeme la Pyme ("nosotros", "el proveedor") ofrece agentes de inteligencia artificial (chat y voz) para automatizar la atención al cliente, ventas y agendamiento de citas de pequeñas y medianas empresas en Chile, a través de canales como sitio web, WhatsApp, Instagram, Facebook Messenger y correo electrónico. Al contratar nuestros servicios o usar este sitio, usted acepta estos Términos y Condiciones. Si no está de acuerdo, no debe usar el servicio.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">02</span>
+      <h2>Naturaleza del servicio</h2>
+      <p>El servicio consiste en la configuración, entrenamiento e implementación de asistentes de inteligencia artificial que responden consultas, califican leads y agendan citas en nombre del cliente contratante ("el Cliente"), según el plan contratado. Las respuestas del asistente de IA se generan de forma automatizada y pueden requerir supervisión humana; no garantizamos exactitud absoluta en cada interacción.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">03</span>
+      <h2>Planes, precios y forma de pago</h2>
+      <p>Los precios publicados en el sitio son en pesos chilenos (CLP), incluyen o excluyen IVA según se indique, y están sujetos a cambio sin previo aviso para nuevos contratos (no afectan contratos vigentes). El pago único cubre la configuración inicial; el cobro mensual cubre mantención, hosting y uso continuo de la plataforma. La falta de pago puede resultar en la suspensión del servicio, previo aviso al correo de contacto del Cliente.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">04</span>
+      <h2>Duración y término</h2>
+      <p>El servicio no exige contratos de permanencia mínima forzosa. El Cliente puede solicitar la cancelación en cualquier momento, sin penalización, mediante comunicación escrita a hola@atiendemelapyme.cl. La cancelación aplica al ciclo de facturación siguiente al aviso; no se realizan devoluciones proporcionales de mensualidades ya facturadas, salvo que la ley chilena disponga lo contrario.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">05</span>
+      <h2>Obligaciones del cliente</h2>
+      <p>El Cliente es responsable de: (a) entregar información veraz sobre su negocio para el entrenamiento del asistente; (b) contar con las cuentas y permisos necesarios en WhatsApp Business, Instagram, Facebook u otros canales que desee integrar; (c) supervisar razonablemente las interacciones automatizadas con sus propios clientes finales; y (d) cumplir con la normativa aplicable a su rubro (por ejemplo, si opera en salud, retail regulado u otros sectores con requisitos específicos).</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">06</span>
+      <h2>Limitación de responsabilidad</h2>
+      <p>El servicio se entrega "tal cual" ("as is"), sin garantías de disponibilidad ininterrumpida. No nos hacemos responsables por: (a) decisiones comerciales tomadas por el Cliente en base a las interacciones del asistente de IA; (b) pérdidas derivadas de fallas de terceros (WhatsApp, Meta, Google, proveedores de hosting o de modelos de IA); o (c) contenido generado por el asistente que se desvíe de la información proporcionada por el Cliente para su entrenamiento, en la medida permitida por la ley chilena. Nada en esta cláusula limita responsabilidades que, conforme a la Ley N.° 19.496 sobre Protección de los Derechos de los Consumidores, no puedan renunciarse anticipadamente.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">07</span>
+      <h2>Protección de datos personales</h2>
+      <p>El tratamiento de datos personales de los usuarios finales que interactúan con los asistentes de IA se rige por nuestra <a href="/privacidad">Política de Privacidad</a>, elaborada conforme a la Ley N.° 19.628 sobre Protección de la Vida Privada y, en lo que corresponda según su entrada en vigencia, la Ley N.° 21.719 que Regula la Protección y el Tratamiento de los Datos Personales y crea la Agencia de Protección de Datos Personales. El Cliente, como responsable de los datos de sus propios clientes finales, debe asegurarse de contar con las bases de licitud correspondientes para el tratamiento de dichos datos a través de nuestros servicios.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">08</span>
+      <h2>Derechos del consumidor (Ley N.° 19.496)</h2>
+      <p>Conforme a la Ley N.° 19.496 sobre Protección de los Derechos de los Consumidores, el Cliente tiene derecho a: (a) información veraz y oportuna sobre las condiciones del servicio; (b) no ser discriminado arbitrariamente por proveedores de bienes y servicios; (c) la reparación e indemnización adecuada por todos los daños materiales y morales en caso de incumplimiento; y (d) retracto y otros derechos que la ley establezca según corresponda a la modalidad de contratación. Ante cualquier controversia, el Cliente puede recurrir al Servicio Nacional del Consumidor (SERNAC).</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">09</span>
+      <h2>Contratación electrónica y validez de comunicaciones</h2>
+      <p>Las comunicaciones, aceptaciones y confirmaciones realizadas por correo electrónico o a través de nuestro sitio web tienen valor conforme a la Ley N.° 19.799 sobre Documentos Electrónicos, Firma Electrónica y Servicios de Certificación de dicha Firma, en lo que resulte aplicable a la naturaleza de este servicio.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">10</span>
+      <h2>Propiedad intelectual</h2>
+      <p>El software, la plataforma, el diseño del sitio y la tecnología subyacente son de propiedad de Atiéndeme la Pyme o de sus licenciantes, y están protegidos conforme a la Ley N.° 17.336 sobre Propiedad Intelectual. La información y contenidos que el Cliente entrega para entrenar su asistente (textos, precios, horarios, marca) permanecen de propiedad del Cliente; el Cliente nos otorga una licencia limitada para usarlos únicamente con el fin de operar su asistente de IA.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">11</span>
+      <h2>Uso aceptable</h2>
+      <p>El Cliente no debe utilizar el servicio para fines ilícitos, para difundir contenido que infrinja derechos de terceros, ni para actividades contrarias al orden público o las buenas costumbres. Nos reservamos el derecho de suspender el servicio ante un uso que incumpla esta cláusula, previa notificación cuando sea razonablemente posible.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">12</span>
+      <h2>Modificaciones a estos términos</h2>
+      <p>Podemos actualizar estos Términos y Condiciones ocasionalmente. Los cambios sustanciales serán notificados a los Clientes activos por correo electrónico. La fecha de "Última actualización" refleja la versión vigente. El uso continuado del servicio tras una actualización constituye aceptación de los nuevos términos.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">13</span>
+      <h2>Ley aplicable y jurisdicción</h2>
+      <p>Estos Términos y Condiciones se rigen por las leyes de la República de Chile. Cualquier controversia derivada de estos términos que no pueda resolverse de forma directa entre las partes, o a través de SERNAC en el caso de consumidores, será sometida a los tribunales ordinarios de justicia con asiento en Santiago de Chile, sin perjuicio de las normas de competencia que la ley establezca en favor del consumidor.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">14</span>
+      <h2>Contacto</h2>
+      <p>Si tienes preguntas sobre estos Términos y Condiciones: <strong>hola@atiendemelapyme.cl</strong></p>
+    </div>
+
+  </section>
+
+  <section class="legal-cta">
+    <p>¿Tienes dudas sobre estos términos? Escríbenos y te respondemos el mismo día.</p>
+    <a href="mailto:hola@atiendemelapyme.cl" class="btn-primary">Escribir a hola@atiendemelapyme.cl</a>
+  </section>
+
+  <footer>
+    <span class="cell"><span class="ok-dot"></span>SYS.OK — © 2026 ATIÉNDEME LA PYME</span>
+    <div class="links">
+      <a href="/terminos">Términos</a>
+      <a href="/privacidad">Privacidad</a>
+      <a href="mailto:hola@atiendemelapyme.cl">Contacto</a>
+    </div>
+  </footer>
+
+</main>
+<script>
+const menuOverlay = document.getElementById('menuOverlay');
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#menuToggle')) { document.body.classList.toggle('menu-open'); syncMenu(); return; }
+  if (e.target === menuOverlay || e.target.closest('.menu-link')) { document.body.classList.remove('menu-open'); syncMenu(); }
+});
+function syncMenu(){ document.getElementById('menuToggle').setAttribute('aria-expanded', document.body.classList.contains('menu-open')); }
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body.classList.contains('menu-open')){ document.body.classList.remove('menu-open'); syncMenu(); } });
+</script>
+</body></html>
+`;
 
 const NOT_FOUND_PAGE = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Página no encontrada — Atiéndeme la Pyme</title><meta name="robots" content="noindex, follow"><style>:root{--bg:#0A0A0A;--text:#EDEDE8;--accent:#E8A33D;--muted:#8A8A82;--line-hard:#EDEDE8;}*{box-sizing:border-box;margin:0;padding:0;}body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;line-height:1.6;min-height:100vh;display:flex;align-items:center;justify-content:center;}.container{max-width:560px;margin:0 auto;padding:40px 20px;text-align:center;}.code{font-family:'Space Grotesk',sans-serif;font-size:clamp(64px,14vw,120px);font-weight:700;letter-spacing:-0.03em;color:var(--accent);line-height:1;}.code .caret{display:inline-block;width:.5em;height:.75em;background:var(--accent);vertical-align:baseline;margin-left:4px;animation:blink 1s steps(1) infinite;}@keyframes blink{0%,49%{opacity:1;}50%,100%{opacity:0;}}h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(20px,3vw,28px);font-weight:700;text-transform:uppercase;letter-spacing:-0.01em;margin-top:20px;}p{color:var(--muted);font-size:13.5px;margin-top:14px;line-height:1.8;}.btn-row{display:flex;gap:14px;justify-content:center;margin-top:32px;flex-wrap:wrap;}.btn-primary{display:inline-block;background:var(--accent);color:#0A0A0A;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:14px 26px;border:2px solid var(--accent);box-shadow:5px 5px 0 var(--line-hard);transition:transform 150ms ease,box-shadow 150ms ease;}.btn-primary:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--line-hard);}.btn-outline{display:inline-block;background:var(--bg);color:var(--text);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:14px 26px;border:2px solid var(--line-hard);box-shadow:5px 5px 0 var(--accent);transition:transform 150ms ease,box-shadow 150ms ease,background 150ms ease,color 150ms ease;}.btn-outline:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--accent);background:var(--text);color:#0A0A0A;}.comment{color:#5C5C55;font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin-top:36px;}.comment::before{content:'// ';}</style></head><body><div class="container"><div class="code">404<span class="caret"></span></div><h1>Esta página no existe</h1><p>La ruta que buscas no está disponible. Puede que el enlace esté roto o la página se haya movido.</p><div class="btn-row"><a href="/" class="btn-primary">Volver al inicio</a><a href="/#contacto" class="btn-outline">Agendar demo</a></div><div class="comment">error: ruta no encontrada</div></div></body></html>`;
 
-const PRIVACY_POLICY = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Política de Privacidad — Atiéndeme la Pyme</title><meta name="description" content="Política de privacidad de Atiéndeme la Pyme: qué datos recopilamos, cómo los usamos y tus derechos según la normativa chilena."><meta name="robots" content="index, follow"><link rel="canonical" href="https://atiendemelapyme.cl/privacidad"><meta property="og:type" content="website"><meta property="og:title" content="Política de Privacidad — Atiéndeme la Pyme"><meta property="og:description" content="Política de privacidad de Atiéndeme la Pyme: qué datos recopilamos, cómo los usamos y tus derechos."><meta property="og:url" content="https://atiendemelapyme.cl/privacidad"><style>:root{--bg:#0A0A0A;--text:#EDEDE8;--accent:#E8A33D;--muted:#8A8A82;}*{box-sizing:border-box;margin:0;padding:0;}body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;line-height:1.6;}.container{max-width:800px;margin:0 auto;padding:40px 20px;}h1{font-size:32px;margin-bottom:10px;}.meta{color:var(--muted);font-size:12px;margin-bottom:40px;}h2{font-size:18px;margin-top:32px;margin-bottom:14px;color:var(--accent);}p{margin-bottom:12px;}a{color:var(--accent);}footer{border-top:1px solid #333;padding-top:20px;margin-top:60px;text-align:center;color:var(--muted);font-size:11px;}</style></head><body><div class="container"><h1>POLÍTICA DE PRIVACIDAD</h1><div class="meta">Última actualización: 22 de julio de 2026</div><h2>1. QUIÉNES SOMOS</h2><p>Atiéndeme la Pyme ("nosotros") ofrece agentes de inteligencia artificial para automatizar la atención al cliente de pequeñas y medianas empresas en Chile, a través de canales como WhatsApp, Instagram, Facebook Messenger y correo electrónico.</p><h2>2. QUÉ DATOS RECOPILAMOS</h2><p>Cuando un usuario interactúa con nuestro asistente de IA a través de Instagram, Facebook Messenger, WhatsApp o el chat de nuestro sitio web, podemos recopilar:</p><ul style="margin-left:20px;"><li>Identificador de la cuenta de Instagram/Facebook/WhatsApp del usuario (ID de remitente)</li><li>El contenido de los mensajes enviados a nuestro asistente</li><li>Nombre de contacto y datos que el usuario decida entregar voluntariamente (ej. email, teléfono) para agendar una cita</li><li>Marca de tiempo de la conversación</li></ul><p>No recopilamos contraseñas, datos financieros ni información sensible de salud a través de estos canales.</p><h2>3. PARA QUÉ USAMOS LOS DATOS</h2><ul style="margin-left:20px;"><li>Responder consultas sobre nuestros servicios de forma automatizada</li><li>Calificar leads comerciales</li><li>Agendar citas o demostraciones cuando el usuario lo solicita</li><li>Mejorar la calidad de las respuestas de nuestro asistente</li></ul><h2>4. CON QUIÉN COMPARTIMOS LOS DATOS</h2><p>Para operar el servicio, utilizamos los siguientes proveedores externos:</p><ul style="margin-left:20px;"><li><strong>Meta Platforms, Inc.</strong> (Instagram, Facebook Messenger)</li><li><strong>Anthropic</strong> (modelo Claude para IA)</li><li><strong>Supabase</strong> (almacenamiento de conversación)</li><li><strong>Cloudflare</strong> (infraestructura/hosting)</li></ul><p>No vendemos ni compartimos datos personales con terceros para marketing ajeno.</p><h2>5. ALMACENAMIENTO Y SEGURIDAD</h2><p>Los datos de conversación se almacenan de forma segura en Supabase, con acceso restringido. Conservamos el historial mientras sea necesario para el propósito comercial, o hasta que el usuario solicite su eliminación.</p><h2>6. DERECHOS DEL USUARIO (LEY N.° 19.628 DE CHILE)</h2><p>De acuerdo con la Ley N.° 19.628 sobre Protección de la Vida Privada de Chile, el usuario tiene derecho a:</p><ul style="margin-left:20px;"><li>Acceder a los datos personales</li><li>Solicitar la rectificación de datos inexactos</li><li>Solicitar la eliminación de sus datos ("derecho al olvido")</li><li>Oponerse al tratamiento para fines específicos</li></ul><p>Para ejercer estos derechos: <a href="mailto:hola@atiendemelapyme.cl">hola@atiendemelapyme.cl</a></p><h2>7. RETENCIÓN DE DATOS</h2><p>Conservamos datos mientras la relación esté activa o según lo requiera la ley. El usuario puede solicitar eliminación anticipada en cualquier momento.</p><h2>8. MENORES DE EDAD</h2><p>Nuestros servicios están dirigidos a empresas y clientes adultos. No recopilamos intencionalmente datos de menores de 18 años.</p><h2>9. CAMBIOS A ESTA POLÍTICA</h2><p>Podemos actualizar esta política ocasionalmente. La fecha de "Última actualización" refleja la versión vigente.</p><h2>10. CONTACTO</h2><p>Si tienes preguntas: <strong>hola@atiendemelapyme.cl</strong></p><footer>© 2026 Atiéndeme la Pyme — Cumplimiento con Ley N.° 19.628 de Chile</footer></div></body></html>`;
+const PRIVACY_POLICY = `<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Política de Privacidad — Atiéndeme la Pyme</title>
+<meta name="description" content="Política de privacidad de Atiéndeme la Pyme: qué datos recopilamos, cómo los usamos y tus derechos según la normativa chilena.">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="canonical" href="https://atiendemelapyme.cl/privacidad">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Atiéndeme la Pyme">
+<meta property="og:title" content="Política de Privacidad — Atiéndeme la Pyme">
+<meta property="og:description" content="Política de privacidad de Atiéndeme la Pyme: qué datos recopilamos, cómo los usamos y tus derechos.">
+<meta property="og:url" content="https://atiendemelapyme.cl/privacidad">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230A0A0A%22%2F%3E%3Ctext%20x%3D%2210%22%20y%3D%2248%22%20font-family%3D%22'Space%20Grotesk'%2C'Arial%20Black'%2Csans-serif%22%20font-weight%3D%22700%22%20font-size%3D%2242%22%20fill%3D%22%23EDEDE8%22%3Ea%3C%2Ftext%3E%3Crect%20x%3D%2240%22%20y%3D%2216%22%20width%3D%2213%22%20height%3D%2234%22%20fill%3D%22%23E8A33D%22%2F%3E%3C%2Fsvg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0A0A;--panel:#0F0F0F;--line:#242424;--line-hard:#EDEDE8;--text:#EDEDE8;--muted:#8A8A82;--muted2:#7D7D74;--accent:#E8A33D;--ok:#43D17C;--ink:#0A0A0A;--ease:cubic-bezier(0.23,1,0.32,1);}
+*{box-sizing:border-box;border-radius:0 !important;}
+html{scroll-behavior:smooth;scrollbar-color:var(--accent) var(--bg);}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+::selection{background:var(--accent);color:var(--ink);}
+a{color:var(--text);text-decoration:none;transition:color 150ms var(--ease);}
+a:hover{color:var(--accent);}
+button{font-family:inherit;cursor:pointer;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+@keyframes blink{0%,49%{opacity:1;}50%,100%{opacity:0;}}
+.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:64px 64px;opacity:.35;}
+.wrap{max-width:1180px;margin:0 auto;position:relative;z-index:1;border-left:1px solid var(--line);border-right:1px solid var(--line);background:var(--bg);}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+.label b{color:var(--accent);font-weight:400;}
+
+/* nav */
+.nav-header{position:fixed;top:0;left:0;width:100%;z-index:50;display:flex;align-items:stretch;justify-content:space-between;background:var(--bg);border-bottom:2px solid var(--line-hard);}
+.nav-logo{font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;padding:18px 20px;display:flex;align-items:center;gap:10px;}
+.nav-logo .cursor{display:inline-block;width:9px;height:16px;background:var(--accent);animation:blink 1.1s steps(1) infinite;}
+.nav-toggle{display:inline-flex;align-items:center;gap:10px;background:var(--bg);border:none;border-left:2px solid var(--line-hard);padding:0 26px;color:var(--text);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;transition:background 150ms var(--ease),color 150ms var(--ease);}
+.nav-toggle:hover{background:var(--accent);color:var(--ink);}
+body.menu-open .nav-toggle{background:var(--text);color:var(--ink);}
+.nav-toggle .bars{position:relative;width:14px;height:10px;flex:0 0 14px;}
+.nav-toggle .bars span{position:absolute;left:0;width:100%;height:2px;background:currentColor;transition:transform 200ms var(--ease);}
+.nav-toggle .bars span:nth-child(1){top:0;}
+.nav-toggle .bars span:nth-child(2){bottom:0;}
+body.menu-open .nav-toggle .bars span:nth-child(1){transform:translateY(4px) rotate(45deg);}
+body.menu-open .nav-toggle .bars span:nth-child(2){transform:translateY(-4px) rotate(-45deg);}
+.menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);opacity:0;pointer-events:none;transition:opacity 200ms var(--ease);z-index:39;}
+body.menu-open .menu-overlay{opacity:1;pointer-events:auto;}
+.menu-panel{position:fixed;top:0;right:0;height:100%;width:clamp(300px,36vw,420px);background:var(--bg);border-left:2px solid var(--line-hard);display:flex;flex-direction:column;padding:96px 32px 32px;overflow-y:auto;z-index:40;transform:translateX(105%);transition:transform 300ms var(--ease);}
+body.menu-open .menu-panel{transform:translateX(0);}
+.menu-list{list-style:none;margin:0 0 auto;padding:0;display:flex;flex-direction:column;counter-reset:mi;}
+.menu-list li{counter-increment:mi;border-bottom:1px solid var(--line);}
+.menu-list a{display:flex;align-items:baseline;gap:14px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.9rem;line-height:1.1;letter-spacing:-0.01em;text-transform:uppercase;padding:18px 2px;transition:color 150ms var(--ease),padding-left 150ms var(--ease);}
+.menu-list a::before{content:'0' counter(mi);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:400;color:var(--accent);}
+.menu-list a:hover{color:var(--accent);padding-left:10px;}
+.menu-socials{margin-top:2.5rem;padding-top:1.5rem;border-top:2px solid var(--line-hard);display:flex;flex-direction:column;gap:.75rem;}
+.menu-socials-title{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);}
+.menu-socials-list{list-style:none;margin:0;padding:0;display:flex;gap:1.4rem;flex-wrap:wrap;}
+.menu-socials-list a{font-size:13px;color:var(--muted);display:inline-block;padding:10px 4px;}
+.menu-socials-list a:hover{color:var(--accent);}
+
+/* hero */
+.legal-hero{padding:150px 40px 60px;border-bottom:2px solid var(--line-hard);}
+.sign-badge{display:inline-flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text);border:1px solid var(--accent);padding:8px 14px;background:var(--bg);box-shadow:4px 4px 0 var(--accent);}
+.sign-badge .dot{width:8px;height:8px;background:var(--ok);animation:blink 1.4s steps(1) infinite;}
+.legal-hero h1{margin:28px 0 0;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(32px,6vw,58px);line-height:1;letter-spacing:-0.02em;text-transform:uppercase;}
+.legal-hero .sub{margin:20px 0 0;max-width:640px;font-size:14px;line-height:1.75;color:var(--muted);}
+
+/* clauses */
+.clause{padding:36px 40px;border-bottom:1px solid var(--line);position:relative;}
+.clause .num{display:inline-block;font-size:11px;letter-spacing:.1em;color:var(--muted);border:1px solid var(--line-hard);padding:4px 10px;margin-bottom:14px;}
+.clause h2{margin:0 0 14px;font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:var(--accent);}
+.clause p{margin:0 0 12px;font-size:13.5px;line-height:1.8;color:var(--muted);}
+.clause p:last-child{margin-bottom:0;}
+.clause p strong{color:var(--text);font-weight:700;}
+.clause a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;}
+.clause ul{margin:0 0 12px 20px;padding:0;color:var(--muted);font-size:13.5px;line-height:1.8;}
+.clause ul:last-child{margin-bottom:0;}
+.clause ul li{margin-bottom:4px;}
+.clause ul strong{color:var(--text);}
+
+/* cta */
+.legal-cta{padding:56px 40px;text-align:center;border-bottom:2px solid var(--line-hard);}
+.legal-cta p{margin:0 0 24px;color:var(--muted);font-size:13.5px;}
+.btn-primary{display:inline-block;background:var(--accent);color:var(--ink);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:16px 30px;border:2px solid var(--accent);box-shadow:5px 5px 0 var(--line-hard);transition:transform 150ms var(--ease),box-shadow 150ms var(--ease);}
+.btn-primary:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--line-hard);color:var(--ink);}
+
+footer{padding:0;display:flex;flex-wrap:wrap;align-items:stretch;justify-content:space-between;font-size:11px;letter-spacing:.06em;color:var(--muted2);}
+footer .cell{padding:20px 24px;display:flex;align-items:center;gap:8px;}
+footer .cell .ok-dot{width:7px;height:7px;background:var(--ok);display:inline-block;animation:blink 1.4s steps(1) infinite;}
+footer .links{display:flex;align-items:stretch;}
+footer .links a{color:var(--muted2);padding:20px 20px;display:flex;align-items:center;border-left:1px solid var(--line);text-transform:uppercase;}
+footer .links a:hover{color:var(--accent);background:var(--panel);}
+
+@media (max-width:640px){
+  .legal-hero{padding:120px 20px 40px;}
+  .clause{padding:28px 20px;}
+  .legal-cta{padding:40px 20px;}
+  .menu-panel{width:min(calc(100vw - 16px),320px);padding:88px 20px 20px;}
+  .menu-list a{font-size:1.4rem;}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<header class="nav-header">
+  <div class="nav-logo"><svg class="brand-mark" width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" focusable="false" style="flex-shrink:0"><rect width="64" height="64" fill="var(--bg)"/><text x="10" y="48" font-family="'Space Grotesk','Arial Black',sans-serif" font-weight="700" font-size="42" fill="var(--text)">a</text><rect x="40" y="16" width="13" height="34" fill="var(--accent)"/></svg>ATIÉNDEME_LA_PYME<span class="cursor"></span></div>
+  <button class="nav-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="menuPanel">
+    <span class="bars"><span></span><span></span></span>
+    Menú
+  </button>
+</header>
+<div class="menu-overlay" id="menuOverlay"></div>
+<nav class="menu-panel" id="menuPanel" aria-label="Navegación principal">
+  <ul class="menu-list">
+    <li><a href="/#solucion" class="menu-link">Solución</a></li>
+    <li><a href="/#canales" class="menu-link">Canales</a></li>
+    <li><a href="/#precios" class="menu-link">Precios</a></li>
+    <li><a href="/#faq" class="menu-link">FAQ</a></li>
+    <li><a href="/#contacto" class="menu-link">Agendar demo</a></li>
+  </ul>
+  <div class="menu-socials">
+    <p class="menu-socials-title">Síguenos</p>
+    <div class="menu-socials-list">
+      <a href="https://instagram.com/atiendemelapyme" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://wa.me/56922053594" target="_blank" rel="noopener">WhatsApp</a>
+      <a href="mailto:hola@atiendemelapyme.cl">Correo</a>
+    </div>
+  </div>
+</nav>
+<main class="wrap">
+
+  <section class="legal-hero">
+    <span class="sign-badge"><span class="dot"></span>Última actualización: 22 de julio de 2026</span>
+    <h1>Política de privacidad</h1>
+    <p class="sub">Qué datos recopilamos cuando interactúas con nuestros agentes de IA, para qué los usamos y cómo puedes ejercer tus derechos conforme a la normativa chilena.</p>
+  </section>
+
+  <section class="legal-body">
+
+    <div class="clause">
+      <span class="num">01</span>
+      <h2>Quiénes somos</h2>
+      <p>Atiéndeme la Pyme ("nosotros") ofrece agentes de inteligencia artificial para automatizar la atención al cliente de pequeñas y medianas empresas en Chile, a través de canales como WhatsApp, Instagram, Facebook Messenger y correo electrónico.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">02</span>
+      <h2>Qué datos recopilamos</h2>
+      <p>Cuando un usuario interactúa con nuestro asistente de IA a través de Instagram, Facebook Messenger, WhatsApp o el chat de nuestro sitio web, podemos recopilar:</p>
+      <ul>
+        <li>Identificador de la cuenta de Instagram/Facebook/WhatsApp del usuario (ID de remitente)</li>
+        <li>El contenido de los mensajes enviados a nuestro asistente</li>
+        <li>Nombre de contacto y datos que el usuario decida entregar voluntariamente (ej. email, teléfono) para agendar una cita</li>
+        <li>Marca de tiempo de la conversación</li>
+      </ul>
+      <p>No recopilamos contraseñas, datos financieros ni información sensible de salud a través de estos canales.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">03</span>
+      <h2>Para qué usamos los datos</h2>
+      <ul>
+        <li>Responder consultas sobre nuestros servicios de forma automatizada</li>
+        <li>Calificar leads comerciales</li>
+        <li>Agendar citas o demostraciones cuando el usuario lo solicita</li>
+        <li>Mejorar la calidad de las respuestas de nuestro asistente</li>
+      </ul>
+    </div>
+
+    <div class="clause">
+      <span class="num">04</span>
+      <h2>Con quién compartimos los datos</h2>
+      <p>Para operar el servicio, utilizamos los siguientes proveedores externos:</p>
+      <ul>
+        <li><strong>Meta Platforms, Inc.</strong> (Instagram, Facebook Messenger)</li>
+        <li><strong>Anthropic</strong> (modelo Claude para IA)</li>
+        <li><strong>Supabase</strong> (almacenamiento de conversación)</li>
+        <li><strong>Cloudflare</strong> (infraestructura/hosting)</li>
+      </ul>
+      <p>No vendemos ni compartimos datos personales con terceros para marketing ajeno.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">05</span>
+      <h2>Almacenamiento y seguridad</h2>
+      <p>Los datos de conversación se almacenan de forma segura en Supabase, con acceso restringido. Conservamos el historial mientras sea necesario para el propósito comercial, o hasta que el usuario solicite su eliminación.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">06</span>
+      <h2>Derechos del usuario (Ley N.° 19.628 de Chile)</h2>
+      <p>De acuerdo con la Ley N.° 19.628 sobre Protección de la Vida Privada de Chile, el usuario tiene derecho a:</p>
+      <ul>
+        <li>Acceder a los datos personales</li>
+        <li>Solicitar la rectificación de datos inexactos</li>
+        <li>Solicitar la eliminación de sus datos ("derecho al olvido")</li>
+        <li>Oponerse al tratamiento para fines específicos</li>
+      </ul>
+      <p>Para ejercer estos derechos: <a href="mailto:hola@atiendemelapyme.cl">hola@atiendemelapyme.cl</a></p>
+    </div>
+
+    <div class="clause">
+      <span class="num">07</span>
+      <h2>Retención de datos</h2>
+      <p>Conservamos datos mientras la relación esté activa o según lo requiera la ley. El usuario puede solicitar eliminación anticipada en cualquier momento.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">08</span>
+      <h2>Menores de edad</h2>
+      <p>Nuestros servicios están dirigidos a empresas y clientes adultos. No recopilamos intencionalmente datos de menores de 18 años.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">09</span>
+      <h2>Cambios a esta política</h2>
+      <p>Podemos actualizar esta política ocasionalmente. La fecha de "Última actualización" refleja la versión vigente.</p>
+    </div>
+
+    <div class="clause">
+      <span class="num">10</span>
+      <h2>Contacto</h2>
+      <p>Si tienes preguntas: <strong>hola@atiendemelapyme.cl</strong></p>
+    </div>
+
+  </section>
+
+  <section class="legal-cta">
+    <p>¿Quieres ejercer tus derechos sobre tus datos o tienes dudas? Escríbenos y te respondemos el mismo día.</p>
+    <a href="mailto:hola@atiendemelapyme.cl" class="btn-primary">Escribir a hola@atiendemelapyme.cl</a>
+  </section>
+
+  <footer>
+    <span class="cell"><span class="ok-dot"></span>SYS.OK — © 2026 ATIÉNDEME LA PYME</span>
+    <div class="links">
+      <a href="/terminos">Términos</a>
+      <a href="/privacidad">Privacidad</a>
+      <a href="mailto:hola@atiendemelapyme.cl">Contacto</a>
+    </div>
+  </footer>
+
+</main>
+<script>
+const menuOverlay = document.getElementById('menuOverlay');
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#menuToggle')) { document.body.classList.toggle('menu-open'); syncMenu(); return; }
+  if (e.target === menuOverlay || e.target.closest('.menu-link')) { document.body.classList.remove('menu-open'); syncMenu(); }
+});
+function syncMenu(){ document.getElementById('menuToggle').setAttribute('aria-expanded', document.body.classList.contains('menu-open')); }
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body.classList.contains('menu-open')){ document.body.classList.remove('menu-open'); syncMenu(); } });
+</script>
+</body></html>
+`;
 
 
 const OG_IMAGE_PNG_BASE64 = "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z9eQSKXdds7OTu+89cqokcPt7e3d3d1WLFvy0IN3CyHS0jIaPxrXxmpv4pl18NCRdt2EefveWHFxye49+4UQUnaUl5d/4OBhS8WzafPWffsP2dnZffDe67ffdnN0dG9HRweNRhMSErx0ycIvP3v/xef/HRDg38EnY2uj6sTWftDA/pZt7dtox45fhRAajebJJx4NDQ021qjqS/i//3nc2koYANANdYVn1mtr6267/Z7H//XQjOlTJsSMnRAz1uKbeP7F16Kje/cIC12xfMmK5Uv03+fm5d3/wL8+//Rd+cXfeffD/732gkaj+dejDzT+fs68K5rO/NbbH6y95W9vvP6iwVXpnXc/ZPDbf21t3V33PPS/11/oERb6txvW/O2Gv/w0fuLEqX8+9rR5UeU0fvROoYjoGR7RM1x6cbyBuJOnX3/jHYsUslarvee+Rx7754PNHsfz5y/+8MNmC+5+OxkxfOi7b79q8GXfvn2OH92r/+/UGQukx9WcnZ2lzsAnT51p/MaCxjIyMrOzcwIC/CdPivnv86+0PUKpgr395suNvywoLLr73of1HZItUu1N8e57H/foEdqumzBv3w1+qtCP/rr55+0WfPWfVqt94KHHHn343rlzZl5/3arrr1tlMMOu3fveee8jE0/Gw0eOWeRkbHVUXau1v/eeO65euczgSxcX58ancHl5xcQpc5oue+r02W+/27jsikVjx4zc+P3/P8y5aOlV+kcHrbyEAQAkhLaqqqr6gYce++rr7+bPnTl8+FAfH2+1SpWXl5+Wnrlr995fft3dxvUXFhatXnPTmtUrp02bFBIcXFdfl5WVs2fv/s8//7quvuW3qP9++NgNN9626uoVgwb29/LylH9G7tdde44eO37D9asHDxro6OiYk5O7b//BDz/+vLC5x5YyMrNWXn3DsisWTZs6KaJnuLOzU2lp2YWLCdu27dy8pYUrVxOjKigoXH7ltWPHjho1cnhISJCfr69Goy4sKj5//uKWrTvOxV+srLTYSJ6VlVUPPPTY+m++Wzh/zpAhg3x9fFQqZXJy6k+bt2749semj3i1ZfetQcz4MVKxG3uAUHL02IkF82f7+/v17dsn3siNRNNt3bYz7uTp6669esCAfo4Ojjk5uXv27v/w48+bDqnSxmpviuKS0vbehHn73tiRo7EZGZnS8EWbLDGcTGPV1dWP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27b92n4bcnJyHDZskBDi+PGTrXoyZciQgdIVINcngCm6QpdR6UNDg7ZxJxP9nxOdThQWFrZxK1u37gwM9Pf29ho1atioUf//Q2lpadk33/xw003XyS++e/e+VauuVKlUCxfOafz9Sy+90fi/vr4+vr4+0ltrDSQlpfzyy57GuZn0w3laWoaxB6yLiopLSkrd3d369Om1ZctOg6m//bZ36tSJa9asbPxleXnF+vXfGfThkV+kqqpaZhGrEh4edt11Vxt86ePjLT3ILnnuuVfb/jCk6cexVVWltLSsaYXs379P//59TKmQFRWV69d/t2rVcgcH+4UL5+jXX1VV/dtve+bOndn2Em7jadJl1NXVJyen9O4d5eXlIYzfHpQuPdev/2716hXe3l4TJ46bOHFc46mpqWk//LC58Tf6d/EFBQU88si9za7z/fc/bUt3uw5gdvNlRh3W6XQbNvy4YMHsQYP6x8SMiYkZYzDD+fMXm32DtunKysq/+eaHq666wtnZadmyRY2rwZ49+6WLZmNniunnb4edjzt2/Hbddas0GvWkSeP1907Lyys2bdq2cuVSs//SNW6+WlvtrepPduMdmT17+pgxIwyWdXCwb/w3pbq65tlnX248g1arW7/++0WL5vbvH927d6TBmyqzsrINxmWR2Zdff927ZMk8+X1pnM3qdBZ7smPChD+OmkFUBtcMZo8pqjd69AiNRqPVaqU7q6aThpOpr69vp+7iAAmhtSWEpdKboDMzsxoPY52Xly89cFJWVtb2ATArKirfffeTceNG9evXx9PTs6GhoaSk5MKFhIMHD5sy4FViYspHH30+ZszIkJAgFxfnZp8KKC+vePPN9yMjIyIienh6erq5uahUqoqKyqys7FOnzp47d77xj829ekX8eVP0ssx2k5NThwwZ6O7uFhQUoH9NtuT06XNpaRnjx48JCQnSaDSlpaUXLlzat++QTDrU7CKXLiXn5uZzIpl3HM2rKo0r5KBBA1xdXUyskKmpaW+++cGECWOjoiJcXJwrK6uSk1N3794v5S2ipXFE2/s06UouXEiQxsSTTwilzOfttz8cMWJo3759fH197O3tqqqqs7NzT58+e+rUmXZ6mUTnakvzZVCHa2pqExKS5OtwXV3d999vOnIkdujQQT16hLq6uqpUqtLS0qSk1NjYuKYvTDNDUlLKm29+EBMz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";

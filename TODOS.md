@@ -66,19 +66,17 @@
 
 ## Infraestructura
 
+## Completed
+
 ### Tests automatizados y CI
 
-**What:** Agregar tests automatizados (al menos para las rutas API críticas: chat, schedule, admin auth) y un pipeline de CI básico.
+**What:** Se agregó una suite de 82 tests con `@cloudflare/vitest-pool-workers` (corren dentro del runtime real de Workers, no un mock de Node): validación completa de `validator.js`, redacción de secretos y manejo de errores en `errors.js`, rate limiting con el KV real de `wrangler.toml`, autenticación del admin (`checkAdminAuth`), la capa de validación de `/api/chat` y `/api/schedule` (sin mockear Anthropic/Supabase/Calendar — la validación corre antes de tocar cualquier servicio externo), y un smoke test de rutas estáticas (`/`, `/terminos`, `/privacidad`, `robots.txt`, `sitemap.xml`, 404, redirect www→apex, `/admin` sin auth). CI en GitHub Actions corre `npm test` en cada push/PR a `main`.
 
-**Why:** El proyecto no tiene ningún test ni CI configurado — todo el despliegue es manual vía `wrangler deploy`. Deuda preexistente, no causada por el cambio de esta revisión, pero visible en la auditoría.
-
-**Context:** Encontrado durante la revisión CEO del plan de validación (2026-08-26). No urgente mientras el producto esté en etapa de validación con tráfico mínimo.
+**Why:** El proyecto no tenía ningún test ni CI configurado — todo el despliegue era manual vía `wrangler deploy`. Encontrado durante la revisión CEO del plan de validación (2026-08-26).
 
 **Effort:** M
 **Priority:** P3
-**Depends on:** None
-
-## Completed
+**Completed:** 2026-09-06
 
 ### Sacar "automática" de la promesa de transferencia a humano
 

@@ -4,12 +4,24 @@
   "type": "module",
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev"
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "postal-mime": "^2.7.5"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "vitest": "^4.1.11",
     "wrangler": "^3.90.0"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true,
+    "sharp@0.33.5": true,
+    "esbuild@0.28.1": true,
+    "esbuild@0.17.19": true,
+    "workerd@1.20260815.1": true,
+    "workerd@1.20250718.0": true
   }
 }

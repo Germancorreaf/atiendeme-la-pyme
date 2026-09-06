@@ -2,28 +2,16 @@
 
 ## Producto
 
-### Sacar/ajustar promesa de "transferencia a humano" en la página de precios
+### Plan Experto — voicebot es entregable bajo pedido, no corre por defecto
 
-**What:** Los planes Básico ($149.990) y Recomendado ($249.990) en la landing (`src/index.js`) prometen textualmente "Transferencia automática a un humano cuando no puede resolver" — el mismo mecanismo que no existe y que ya se sacó del system prompt de Dominga (ver commit `9c2e9c1`). Falta aplicar el mismo criterio acá, en el texto que ve un prospecto antes de pagar.
+**What:** El Plan Experto ($449.990 + $179.990/mes) vende "llamadas y voicebot" — un asistente de voz que "contesta llamadas... con acento chileno neutro". No hay integración de voz/telefonía corriendo en este código (sin Twilio, sin API de voz activa).
 
-**Why:** Es peor que el gap del chat — esto está en la página de precios, con plata real de por medio. Encontrado al revisar el copy de la landing (2026-08-26); no se detectó en la revisión CEO previa porque el grep usado no coincidía con esta redacción exacta.
+**Why:** Aclarado con el fundador (2026-09-06): el voicebot ya fue probado y validado con ElevenLabs — la capacidad existe y es entregable si un cliente lo contrata. No se mantiene corriendo en producción por defecto para no pagar el costo de una integración sin cliente activo. No es una promesa vacía, es un modelo de "se activa/construye cuando se vende", igual que la implementación de los otros planes.
 
-**Context:** Mismo criterio que la decisión D2 (`docs/designs/validacion-piloto-ventas-nocturnas.md`): no prometer algo que no está construido. Decidir si se saca la línea o se reemplaza por algo honesto (ej. "seguimiento por email/WhatsApp").
+**Context:** Bajado de prioridad tras la aclaración; ya no se considera un riesgo de honestidad. Si en el futuro se decide dejarlo siempre activo (ej. demo en vivo en la landing), reevaluar esfuerzo.
 
-**Effort:** S
-**Priority:** P1
-**Depends on:** None
-
-### Revisar el Plan Experto — vende voicebot/llamadas que no existen
-
-**What:** El Plan Experto ($449.990 + $179.990/mes) vende "llamadas y voicebot" — un asistente de voz que "contesta llamadas... con acento chileno neutro". No hay ninguna integración de voz/telefonía en el código (sin Twilio, sin API de voz, nada). Decidir: ocultar el plan hasta construirlo, marcarlo "próximamente", o priorizar construirlo.
-
-**Why:** Es el plan más caro del sitio, vendiendo una funcionalidad completamente inexistente. Si alguien lo contrata hoy, no hay forma de entregarlo.
-
-**Context:** Encontrado al revisar el copy de la landing (2026-08-26), mismo día que se corrigió el gap de transferencia a humano en el prompt de Dominga. El usuario decidió diferir el arreglo (priorizando primero la alineación de mensaje con el plan de validación).
-
-**Effort:** S (ocultar/marcar) o XL (construir voicebot real)
-**Priority:** P1
+**Effort:** —
+**Priority:** P3
 **Depends on:** None
 
 ### Escalamiento real a humano en el chat en vivo
@@ -91,6 +79,16 @@
 **Depends on:** None
 
 ## Completed
+
+### Sacar "automática" de la promesa de transferencia a humano
+
+**What:** Los planes Básico y Recomendado en la landing (`src/index.js`) decían "Transferencia automática a un humano cuando no puede resolver". Se cambió a "Transferencia a un humano cuando no puede resolver": el fundador sí puede transferir la conversación a una persona, pero de forma manual, no automática.
+
+**Why:** El texto anterior prometía un mecanismo automático inexistente. Encontrado en la revisión de copy de la landing (2026-08-26), aclarado y corregido el 2026-09-06.
+
+**Effort:** S
+**Priority:** P1
+**Completed:** 2026-09-06
 
 ### Arreglar número de WhatsApp placeholder en la landing
 

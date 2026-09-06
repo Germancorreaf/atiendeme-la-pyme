@@ -46,4 +46,28 @@ describe('checkAdminAuth', () => {
     expect(() => checkAdminAuth(req, { ADMIN_DASHBOARD_PASSWORD: 'x' })).not.toThrow();
     expect(checkAdminAuth(req, { ADMIN_DASHBOARD_PASSWORD: 'x' })).toBe(false);
   });
+
+  // The comparison must be constant-time (no early-exit on the first byte
+  // mismatch), so it's worth locking in correctness across every mismatch
+  // position, not just "totally wrong password".
+  it('rejects a password that differs only in its last character', () => {
+    const req = new Request('https://example.com/admin', {
+      headers: { Authorization: basicAuthHeader('admin', 'correct-horse-battery-stapleX') },
+    });
+    expect(checkAdminAuth(req, { ADMIN_DASHBOARD_PASSWORD: 'correct-horse-battery-staple' })).toBe(false);
+  });
+
+  it('rejects a password of different length', () => {
+    const req = new Request('https://example.com/admin', {
+      headers: { Authorization: basicAuthHeader('admin', 'short') },
+    });
+    expect(checkAdminAuth(req, { ADMIN_DASHBOARD_PASSWORD: 'a-much-longer-password' })).toBe(false);
+  });
+
+  it('accepts a password containing multi-byte UTF-8 characters', () => {
+    const req = new Request('https://example.com/admin', {
+      headers: { Authorization: basicAuthHeader('admin', 'contraseña-ñoño') },
+    });
+    expect(checkAdminAuth(req, { ADMIN_DASHBOARD_PASSWORD: 'contraseña-ñoño' })).toBe(true);
+  });
 });

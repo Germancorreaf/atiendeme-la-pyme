@@ -26,17 +26,17 @@
 **Priority:** P2
 **Depends on:** Piloto validado con compromiso de pago real.
 
-### Reforzar seguridad del dashboard admin
+### Reforzar seguridad del dashboard admin (parcial)
 
-**What:** Reemplazar la contraseña única de Basic Auth por algo más robusto (rotación, rate limiting propio en el login, o auth por sesión) antes de que el admin maneje datos de clientes pagando de forma sostenida.
+**What:** La comparación de la contraseña en `checkAdminAuth` (`src/api/admin.js`) usaba `===`, vulnerable a timing attack (un atacante puede inferir la contraseña carácter por carácter midiendo cuánto tarda cada intento). Se reemplazó por una comparación de tiempo constante (XOR byte a byte sobre el largo completo). El rate limiting del login (10 intentos/5min + ráfaga de 3/5s por IP, en `checkAdminBruteForce`) ya existía y se revisó: sigue pareciendo razonable para un solo operador.
 
-**Why:** Hoy `/admin` protege conversaciones y agenda con una sola contraseña compartida y sin rate limiting propio en el login — aceptable para un solo operador en etapa de validación, no para datos de un tercero pagando.
+**Why:** Es la mejora de mayor impacto para el esfuerzo S ya escrito en este ítem — cierra una vulnerabilidad real y concreta sin cambiar cómo el fundador inicia sesión hoy.
 
-**Context:** Encontrado durante la revisión CEO del plan de validación (2026-08-26). No bloquea el piloto (nadie más que el fundador usa el admin hoy).
+**Context:** Encontrado durante la revisión CEO del plan de validación (2026-08-26); corregido el 2026-09-06. Sigue pendiente si en algún momento se quiere migrar de una sola contraseña compartida (Basic Auth) a auth por sesión con login propio — eso es un cambio más grande (M+), no cabe en el esfuerzo S original. Se deja abierto para cuando el admin maneje datos de un cliente pagando de forma sostenida.
 
-**Effort:** S
+**Effort:** S (hecho) — migrar a auth por sesión sería M+
 **Priority:** P2
-**Depends on:** El piloto se convierte en cliente pagando sostenido.
+**Depends on:** El piloto se convierte en cliente pagando sostenido (para justificar la migración a auth por sesión).
 
 ## Marketing
 

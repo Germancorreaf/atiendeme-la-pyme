@@ -36,6 +36,24 @@ function unauthorizedResponse() {
     });
 }
 
+// Comparación de tiempo constante: evita que un atacante infiera la
+// contraseña carácter por carácter midiendo cuánto tarda cada intento
+// (un "===" normal corta apenas encuentra la primera diferencia).
+function timingSafeEqual(a, b) {
+    const aBytes = new TextEncoder().encode(a);
+    const bBytes = new TextEncoder().encode(b);
+    if (aBytes.length !== bBytes.length) {
+        // Igual recorremos "a" completo contra sí mismo para no filtrar el
+        // largo a través de un timing todavía más corto que el caso normal.
+        let dummy = 0;
+        for (let i = 0; i < aBytes.length; i++) dummy |= aBytes[i] ^ aBytes[i];
+        return false;
+    }
+    let diff = 0;
+    for (let i = 0; i < aBytes.length; i++) diff |= aBytes[i] ^ bBytes[i];
+    return diff === 0;
+}
+
 function checkAdminAuth(request, env) {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Basic ')) return false;
@@ -44,7 +62,7 @@ function checkAdminAuth(request, env) {
         const decoded = atob(authHeader.slice(6));
         const separatorIndex = decoded.indexOf(':');
         const password = separatorIndex === -1 ? decoded : decoded.slice(separatorIndex + 1);
-        return password === env.ADMIN_DASHBOARD_PASSWORD;
+        return timingSafeEqual(password, env.ADMIN_DASHBOARD_PASSWORD);
     } catch {
         return false;
     }

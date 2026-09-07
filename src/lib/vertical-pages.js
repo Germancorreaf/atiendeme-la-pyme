@@ -163,7 +163,7 @@ const VERTICALS = {
     intro: 'Una clienta que quiere agendar una limpieza facial un domingo a la noche, o pregunta el precio de un tratamiento a las 22:00, no siempre puede esperar hasta el lunes para que le contesten. Mientras tanto, sigue buscando en otro centro. Dominga responde esas consultas al tiro — en tu sitio web, WhatsApp o Instagram — y agenda directo en tu calendario.',
     whatItSolves: [
       { t: 'Responde preguntas frecuentes', d: 'sobre tratamientos, precios y duración, con la información real de tu centro.' },
-      { t: 'Agenda citas directo en tu calendario', d: 'Google Calendar o Calendly, sin dobles reservas.' },
+      { t: 'Agenda citas directo en tu calendario', d: 'Google Calendar, sin dobles reservas.' },
       { t: 'Envía recordatorios automáticos', d: 'antes de la cita, para reducir las inasistencias.' },
       { t: 'Califica a quien pregunta', d: 'antes de que tengas que hablar con ella — sabés si es una consulta real o solo curiosidad.' }
     ]
@@ -176,7 +176,7 @@ const VERTICALS = {
     h1: 'Agenda horas y responde consultas fuera de horario',
     intro: 'Un paciente que necesita una hora de urgencia o pregunta por el precio de un tratamiento no siempre escribe en horario de atención. Si nadie contesta a tiempo, busca otra clínica. Dominga responde en tu sitio web, WhatsApp o Instagram, agenda directo en tu calendario y manda recordatorio antes de la hora.',
     whatItSolves: [
-      { t: 'Agenda citas directo en tu calendario', d: 'Google Calendar o Calendly, sin dobles reservas.' },
+      { t: 'Agenda citas directo en tu calendario', d: 'Google Calendar, sin dobles reservas.' },
       { t: 'Envía recordatorios automáticos', d: 'un día antes de la cita — menos inasistencias sin que nadie tenga que llamar a confirmar.' },
       { t: 'Responde preguntas frecuentes', d: 'sobre tratamientos, precios y horarios, con la información real de tu clínica.' },
       { t: 'Califica al paciente', d: 'antes de que hables con él — nombre, motivo de consulta, urgencia.' }
@@ -190,7 +190,7 @@ const VERTICALS = {
     h1: 'Atiende consultas fuera de tu horario de atención',
     intro: 'Los dueños de mascotas escriben a cualquier hora — de noche, un feriado, mientras están preocupados por su mascota. Si nadie responde a tiempo, agendan en otra veterinaria o van directo a una urgencia. Dominga responde en tu sitio web, WhatsApp o Instagram, y agenda controles y vacunas directo en tu calendario.',
     whatItSolves: [
-      { t: 'Agenda controles, vacunas y horas', d: 'directo en Google Calendar o Calendly, sin dobles reservas.' },
+      { t: 'Agenda controles, vacunas y horas', d: 'directo en Google Calendar, sin dobles reservas.' },
       { t: 'Responde preguntas frecuentes', d: 'sobre precios y servicios, con la información real de tu veterinaria.' },
       { t: 'Envía recordatorios automáticos', d: 'antes de la hora agendada.' },
       { t: 'Califica la consulta', d: 'antes de que hables con el dueño — motivo, urgencia, mascota.' }

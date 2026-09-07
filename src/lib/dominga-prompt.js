@@ -38,7 +38,7 @@ const INITIAL_GREETINGS = [
 // Único lugar donde viven los 3 planes + el add-on. Si cambian los precios
 // en la landing (index.js), hay que actualizarlos acá también.
 const PRICING_SUMMARY = `- Plan Básico: $149.990 implementación + $49.990/mes — chatbot IA en tu sitio web, 30 días de soporte. Listo en 1 semana.
-- Plan Recomendado: $249.990 implementación + $99.990/mes — chatbot en sitio web, WhatsApp e Instagram, agenda automática (Google Calendar/Calendly). Listo en 2 semanas.
+- Plan Recomendado: $249.990 implementación + $99.990/mes — chatbot en sitio web, WhatsApp e Instagram, agenda automática (Google Calendar). Listo en 2 semanas.
 - Plan Experto: $449.990 implementación + $179.990/mes — todo lo anterior + llamadas y voicebot. Listo en 3 semanas.
 - Add-on opcional: Landing Page Profesional $199.990 (pago único, aplica a cualquier plan).
 - Sin contratos. Cancela cuando quieras.`;

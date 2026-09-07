@@ -245,6 +245,26 @@ h1{font-size:20px;}
 .view{display:none;}
 .view.active{display:block;}
 .mobile-nav{display:none;gap:8px;margin-bottom:16px;}
+/* ---- chat en vivo ---- */
+.live-chat-panel{position:fixed;bottom:24px;right:24px;z-index:999;width:340px;max-width:calc(100vw - 32px);height:460px;max-height:70vh;background:var(--panel);border:1px solid var(--accent);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;flex-direction:column;overflow:hidden;}
+.live-chat-panel.open{display:flex;}
+.live-chat-header{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);}
+.live-chat-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex-shrink:0;animation:blink 1.2s steps(1) infinite;}
+.live-chat-title{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;}
+.live-chat-session{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.live-chat-close{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:2px 6px;}
+.live-chat-close:hover{color:var(--text);}
+.live-chat-messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.live-msg{max-width:88%;padding:8px 11px;border-radius:8px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;}
+.live-msg.visitor{align-self:flex-start;background:var(--panel2);border:1px solid var(--line);}
+.live-msg.admin{align-self:flex-end;background:var(--accent);color:var(--accent-ink);}
+.live-msg.sys{align-self:center;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;}
+.live-chat-input-row{display:flex;gap:6px;padding:10px;border-top:1px solid var(--line);}
+.live-chat-input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);font:inherit;font-size:12.5px;padding:8px 10px;}
+.live-chat-input:focus{outline:none;border-color:var(--accent);}
+.live-chat-send{background:var(--accent);color:var(--accent-ink);border:none;border-radius:6px;font-weight:700;font-size:12px;padding:0 14px;cursor:pointer;}
+.live-btn{background:none;border:1px solid var(--ok);color:var(--ok);border-radius:20px;font:inherit;font-size:11px;padding:5px 12px;cursor:pointer;margin-bottom:10px;}
+.live-btn:hover{background:var(--ok);color:var(--accent-ink);}
 `;
 
 const ADMIN_SCRIPT = `
@@ -335,13 +355,15 @@ function renderConvos(list,mount){
     const last=msgs[msgs.length-1];
     const preview=last?esc(last.content).slice(0,160):'(sin mensajes)';
     const thread=msgs.map(m=>'<div class="msg '+(m.role==='user'?'user':'bot')+'"><span class="role">'+(m.role==='user'?'Visitante':'Dominga')+'</span><p>'+esc(m.content)+'</p></div>').join('');
-    return '<div class="convo" data-i="'+i+'">'
+    return '<div class="convo" data-i="'+i+'" data-session="'+esc(s.session_id||'')+'">'
       +'<div class="convo-head">'
       +(s.lead_contact?'<span class="convo-title">'+esc(s.lead_contact)+'</span><span class="badge lead">lead</span>':'<span class="convo-title anon">An\\u00f3nimo</span>')
       +(s.escalated?'<span class="badge escalated" title="'+esc(s.escalation_reason||'')+'">escalado</span>':'')
       +'<span class="convo-meta">'+msgs.length+' msjs \\u00b7 '+fmtDT(s.updated_at)+'</span>'
       +'<span class="convo-preview">'+preview+'</span>'
-      +'</div><div class="thread">'+thread+'</div></div>';
+      +'</div><div class="thread">'
+      +(s.escalated&&s.session_id?'<button class="live-btn" data-session="'+esc(s.session_id)+'">\\u{1F534} Tomar en vivo</button>':'')
+      +thread+'</div></div>';
   }).join('');
   $$('.convo-head',mount).forEach(h=>h.addEventListener('click',()=>h.parentElement.classList.toggle('open')));
 }
@@ -416,6 +438,67 @@ $('#psi-run').addEventListener('click',async()=>{
 
 // vista inicial segun hash
 show((location.hash||'#inicio').slice(1));
+`;
+
+const ADMIN_SCRIPT_LIVE = `
+// ---------- chat en vivo ----------
+let liveSocket=null;
+let liveSessionId=null;
+const livePanel=$('#live-chat-panel');
+const liveMessages=$('#live-chat-messages');
+const liveSessionLabel=$('#live-chat-session');
+const liveInput=$('#live-chat-input');
+
+function addLiveMsg(text,cls){
+  const div=document.createElement('div');
+  div.className='live-msg '+cls;
+  div.textContent=text;
+  liveMessages.appendChild(div);
+  liveMessages.scrollTop=liveMessages.scrollHeight;
+}
+
+function openLiveChat(sessionId){
+  if(liveSocket&&liveSessionId===sessionId){livePanel.classList.add('open');return;}
+  closeLiveChat();
+  liveSessionId=sessionId;
+  liveSessionLabel.textContent=sessionId;
+  liveMessages.innerHTML='';
+  livePanel.classList.add('open');
+  addLiveMsg('Conectando\\u2026','sys');
+  const proto=location.protocol==='https:'?'wss:':'ws:';
+  liveSocket=new WebSocket(proto+'//'+location.host+'/ws/admin-chat/'+encodeURIComponent(sessionId));
+  liveSocket.addEventListener('open',()=>addLiveMsg('Conectado \\u2014 el visitante ve que te uniste','sys'));
+  liveSocket.addEventListener('message',(evt)=>{
+    let data;
+    try{data=JSON.parse(evt.data);}catch(e){return;}
+    if(data.type==='visitor_message'){addLiveMsg(data.text,'visitor');}
+  });
+  liveSocket.addEventListener('close',()=>{addLiveMsg('Conexi\\u00f3n cerrada','sys');});
+  liveSocket.addEventListener('error',()=>{addLiveMsg('Error de conexi\\u00f3n','sys');});
+}
+
+function closeLiveChat(){
+  if(liveSocket){try{liveSocket.close();}catch(e){}}
+  liveSocket=null;
+  liveSessionId=null;
+  livePanel.classList.remove('open');
+}
+
+function sendLiveMsg(){
+  const text=liveInput.value.trim();
+  if(!text||!liveSocket||liveSocket.readyState!==WebSocket.OPEN)return;
+  liveSocket.send(JSON.stringify({type:'admin_message',text:text}));
+  addLiveMsg(text,'admin');
+  liveInput.value='';
+}
+
+document.addEventListener('click',(e)=>{
+  const btn=e.target.closest('.live-btn');
+  if(btn){openLiveChat(btn.dataset.session);return;}
+  if(e.target.closest('#live-chat-close')){closeLiveChat();return;}
+  if(e.target.closest('#live-chat-send')){sendLiveMsg();return;}
+});
+liveInput.addEventListener('keydown',(e)=>{if(e.key==='Enter')sendLiveMsg();});
 `;
 
 async function onRequestGetAdmin(context) {
@@ -533,8 +616,21 @@ async function onRequestGetAdmin(context) {
     </section>
   </main>
 </div>
+<div class="live-chat-panel" id="live-chat-panel">
+  <div class="live-chat-header">
+    <span class="live-chat-dot"></span>
+    <span class="live-chat-title">En vivo</span>
+    <span class="live-chat-session" id="live-chat-session"></span>
+    <button class="live-chat-close" id="live-chat-close" aria-label="Cerrar chat en vivo">✕</button>
+  </div>
+  <div class="live-chat-messages" id="live-chat-messages"></div>
+  <div class="live-chat-input-row">
+    <input type="text" class="live-chat-input" id="live-chat-input" placeholder="Escribe como tú..." autocomplete="off">
+    <button class="live-chat-send" id="live-chat-send">Enviar</button>
+  </div>
+</div>
 <script>window.__DATA__=${safeJson({ sessions, appointments })};</script>
-<script>${ADMIN_SCRIPT}${ADMIN_SCRIPT_2}</script>
+<script>${ADMIN_SCRIPT}${ADMIN_SCRIPT_2}${ADMIN_SCRIPT_LIVE}</script>
 </body>
 </html>`;
 

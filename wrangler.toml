@@ -14,6 +14,14 @@ new_sqlite_classes = ["PlanTest"]
 tag = "v2-remove-plantest"
 deleted_classes = ["PlanTest"]
 
+[[migrations]]
+tag = "v3-chatroom"
+new_sqlite_classes = ["ChatRoom"]
+
+[[durable_objects.bindings]]
+name = "CHAT_ROOM"
+class_name = "ChatRoom"
+
 [triggers]
 crons = ["0 13 * * *"]
 [env.production]

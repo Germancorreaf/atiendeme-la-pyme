@@ -191,7 +191,8 @@ export async function onRequestPost(context) {
 
     return sendSuccess({
       reply,
-      leadDetected: !!leadContact
+      leadDetected: !!leadContact,
+      liveHandoffAvailable: escalation.escalate
     });
   } catch (err) {
     const apiErr =

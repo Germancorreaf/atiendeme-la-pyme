@@ -68,6 +68,18 @@
 
 ## Completed
 
+### Chat en vivo: transferencia real a un humano en tiempo real
+
+**What:** Además del correo de notificación (ver ítem de escalamiento más abajo), se construyó el traspaso real en tiempo real dentro del mismo widget del sitio. Un Durable Object (`src/durable-objects/ChatRoom.js`, uno por sesión de chat) relaya mensajes por WebSocket entre el visitante (`/ws/chat/:sessionId`) y el admin (`/ws/admin-chat/:sessionId`, protegido con la cookie de sesión). En el dashboard, cada conversación escalada tiene un botón "🔴 Tomar en vivo" que abre un panel flotante (igual al widget público) donde German escribe directo; el visitante ve "🟢 Alguien del equipo se unió al chat" y sus mensajes dejan de pasarle a Claude mientras dura la sesión en vivo. Al cerrar el panel, Dominga retoma sola. Toda la conversación (bot + mensajes en vivo) queda en la misma columna `messages` de Supabase, sin duplicar historial.
+
+**Why:** El usuario preguntó explícitamente cómo lograr un traspaso en tiempo real (no solo una notificación asíncrona). Se evaluaron dos caminos (handoff a WhatsApp vs. chat en vivo in-page); se eligió chat en vivo.
+
+**Context:** Requiere Durable Objects — se verificó primero que la cuenta de Cloudflare los soporta gratis usando el backend SQLite (`new_sqlite_classes`, no `new_classes`, que sí exige plan pagado). Probado de punta a punta contra producción real (login admin, WebSocket visitante + admin, relay en ambas direcciones, `human_joined`/`human_left`, persistencia en Supabase), verificado también visualmente en el dashboard. 4 tests nuevos para el relay del Durable Object (incluye un caso de "spoofing": un visitante no puede hacerse pasar por admin) + 3 para el gating de las rutas WebSocket.
+
+**Effort:** L
+**Priority:** — (pedido directo, fuera del TODOS original)
+**Completed:** 2026-09-07
+
 ### Tests automatizados y CI
 
 **What:** Se agregó una suite de 82 tests con `@cloudflare/vitest-pool-workers` (corren dentro del runtime real de Workers, no un mock de Node): validación completa de `validator.js`, redacción de secretos y manejo de errores en `errors.js`, rate limiting con el KV real de `wrangler.toml`, autenticación del admin (`checkAdminAuth`), la capa de validación de `/api/chat` y `/api/schedule` (sin mockear Anthropic/Supabase/Calendar — la validación corre antes de tocar cualquier servicio externo), y un smoke test de rutas estáticas (`/`, `/terminos`, `/privacidad`, `robots.txt`, `sitemap.xml`, 404, redirect www→apex, `/admin` sin auth). CI en GitHub Actions corre `npm test` en cada push/PR a `main`.

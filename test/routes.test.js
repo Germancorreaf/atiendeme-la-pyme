@@ -55,6 +55,27 @@ describe('static/public routes', () => {
   });
 });
 
+describe('/ws/chat and /ws/admin-chat routing', () => {
+  it('requires a websocket upgrade for /ws/chat/:sessionId', async () => {
+    const res = await SELF.fetch('https://example.com/ws/chat/some-session');
+    expect(res.status).toBe(426);
+  });
+
+  it('rejects /ws/chat/ with no sessionId', async () => {
+    const res = await SELF.fetch('https://example.com/ws/chat/', {
+      headers: { Upgrade: 'websocket' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects /ws/admin-chat/:sessionId without a valid admin session cookie', async () => {
+    const res = await SELF.fetch('https://example.com/ws/admin-chat/some-session', {
+      headers: { Upgrade: 'websocket' },
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
 describe('/admin', () => {
   it('shows the login page instead of the dashboard without a session cookie', async () => {
     const res = await SELF.fetch('https://example.com/admin');

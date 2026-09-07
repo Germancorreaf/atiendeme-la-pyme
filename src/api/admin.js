@@ -464,6 +464,15 @@ function openLiveChat(sessionId){
   liveSessionLabel.textContent=sessionId;
   liveMessages.innerHTML='';
   livePanel.classList.add('open');
+
+  const priorSession=sessions.find(s=>s.session_id===sessionId);
+  const priorMsgs=priorSession&&Array.isArray(priorSession.messages)?priorSession.messages:[];
+  if(priorMsgs.length){
+    addLiveMsg('\\u2014 conversaci\\u00f3n previa con Dominga \\u2014','sys');
+    priorMsgs.forEach(m=>addLiveMsg(m.role==='user'?m.content:'\\u{1F916} '+m.content, m.role==='user'?'visitor':'admin'));
+    addLiveMsg('\\u2014 te uniste aqu\\u00ed \\u2014','sys');
+  }
+
   addLiveMsg('Conectando\\u2026','sys');
   const proto=location.protocol==='https:'?'wss:':'ws:';
   liveSocket=new WebSocket(proto+'//'+location.host+'/ws/admin-chat/'+encodeURIComponent(sessionId));

@@ -14,6 +14,18 @@
 **Priority:** P3
 **Depends on:** None
 
+### Integración con AgendaPro — no está construida, pero es fácil con el plan Pro
+
+**What:** Los planes Recomendado y Experto mencionan "Google Calendar o Agenda Pro" como opciones de agenda. Solo Google Calendar está integrado en el código (`src/lib/google-calendar.js`); AgendaPro no tiene ninguna línea de código todavía.
+
+**Why:** Aclarado con el fundador (2026-09-07): con la versión Pro de AgendaPro la integración es fácil de construir (a diferencia de Calendly, que se sacó del copy por no tener un camino claro de integración). Mismo criterio que el voicebot: no es una promesa vacía, se construye cuando un cliente lo pide.
+
+**Context:** Se decidió NO sacar "Agenda Pro" del copy de precios, a diferencia de Calendly.
+
+**Effort:** M (cuando un cliente lo pida)
+**Priority:** P3
+**Depends on:** Un cliente que la pida.
+
 ### Escalamiento real a humano en el chat en vivo
 
 **What:** Se construyó el mecanismo de notificación por correo: `src/lib/escalation.js` detecta (a) cuando el visitante pide explícitamente hablar con una persona, o (b) cuando Dominga cae en su respuesta honesta de "no sé"/"te dejo anotado tu mensaje". `chat.js` guarda `escalated`/`escalation_reason` en `chat_sessions` (columnas nuevas en Supabase) y envía un correo real a `DRAFT_NOTIFICATION_EMAIL` (mismo buzón que ya recibe los borradores de correo entrante) con el mensaje del visitante, la respuesta de Dominga y un link a la conversación. El dashboard admin ahora muestra "Escalados a humano" y "Fuera de horario" (heurística sobre `updated_at`: fuera de L-V 9-19h Chile) como stats, más un badge "escalado" en la lista de conversaciones. Probado en vivo contra producción: sesión normal se guarda sin escalar, sesión con "quiero hablar con una persona" se marca `escalated=true` y dispara el correo.

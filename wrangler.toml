@@ -5,6 +5,15 @@ compatibility_date = "2024-01-01"
 binding = "RATE_LIMIT_KV"
 id = "71b78676d0a74b47bac411a8782e5184"
 preview_id = "71b78676d0a74b47bac411a8782e5184"
+
+[[migrations]]
+tag = "v1-plantest"
+new_sqlite_classes = ["PlanTest"]
+
+[[migrations]]
+tag = "v2-remove-plantest"
+deleted_classes = ["PlanTest"]
+
 [triggers]
 crons = ["0 13 * * *"]
 [env.production]

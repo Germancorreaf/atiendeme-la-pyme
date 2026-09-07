@@ -3,7 +3,7 @@ import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './ap
 import { onRequestPost as instagramPost, onRequestGet as instagramGet } from './api/instagram.js';
 import { onRequestPost as manychatPost, onRequestGet as manychatGet } from './api/chat-manychat.js';
 import { onRequestPost as whatsappPost, onRequestGet as whatsappGet } from './api/whatsapp.js';
-import { onRequestGetAdmin, onRequestGetPagespeed } from './api/admin.js';
+import { onRequestGetAdmin, onRequestGetPagespeed, onRequestPostAdminLogin, onRequestPostAdminLogout } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 import { getVerticalPage } from './lib/vertical-pages.js';
@@ -713,6 +713,12 @@ export default {
                         'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com; frame-ancestors 'none'"
                     }
                 });
+            }
+            if (pathname === '/admin/login' && request.method === 'POST') {
+                return await onRequestPostAdminLogin({ request, env });
+            }
+            if (pathname === '/admin/logout' && request.method === 'POST') {
+                return await onRequestPostAdminLogout({ request, env });
             }
             if (pathname === '/admin' || pathname === '/admin/') {
                 return await onRequestGetAdmin({ request, env });

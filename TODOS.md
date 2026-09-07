@@ -26,17 +26,17 @@
 **Priority:** P2 (hecho) — WhatsApp como canal adicional queda para más adelante si hace falta.
 **Depends on:** ~~Piloto validado con compromiso de pago real~~ — ya no aplica, se hizo directamente.
 
-### Reforzar seguridad del dashboard admin (parcial)
+### Reforzar seguridad del dashboard admin
 
-**What:** La comparación de la contraseña en `checkAdminAuth` (`src/api/admin.js`) usaba `===`, vulnerable a timing attack (un atacante puede inferir la contraseña carácter por carácter midiendo cuánto tarda cada intento). Se reemplazó por una comparación de tiempo constante (XOR byte a byte sobre el largo completo). El rate limiting del login (10 intentos/5min + ráfaga de 3/5s por IP, en `checkAdminBruteForce`) ya existía y se revisó: sigue pareciendo razonable para un solo operador.
+**What:** Dos mejoras. (1) La comparación de la contraseña usaba `===`, vulnerable a timing attack — se reemplazó por comparación de tiempo constante (`src/lib/timingSafe.js`). (2) Se migró de Basic Auth con contraseña única a login por sesión propio: `POST /admin/login` valida la contraseña (mismo rate limiting de fuerza bruta de antes: 10 intentos/5min + ráfaga 3/5s por IP) y entrega una cookie HttpOnly+Secure+SameSite=Lax firmada con HMAC-SHA256 (`src/lib/adminSession.js`, secret `ADMIN_SESSION_SECRET`, expira sola a los 7 días, sin estado en el servidor). `GET /admin` sin cookie válida muestra un formulario de login en vez de la contraseña compartida; `POST /admin/logout` la invalida. Basic Auth quedó completamente descontinuado.
 
-**Why:** Es la mejora de mayor impacto para el esfuerzo S ya escrito en este ítem — cierra una vulnerabilidad real y concreta sin cambiar cómo el fundador inicia sesión hoy.
+**Why:** Cierra el timing attack, y una cookie de sesión con expiración es más robusta que reenviar la misma contraseña en cada request para siempre (permite "cerrar sesión" de verdad, y limita la ventana si la cookie se filtra).
 
-**Context:** Encontrado durante la revisión CEO del plan de validación (2026-08-26); corregido el 2026-09-06. Sigue pendiente si en algún momento se quiere migrar de una sola contraseña compartida (Basic Auth) a auth por sesión con login propio — eso es un cambio más grande (M+), no cabe en el esfuerzo S original. Se deja abierto para cuando el admin maneje datos de un cliente pagando de forma sostenida.
+**Context:** Encontrado durante la revisión CEO del plan de validación (2026-08-26); ambas partes corregidas el 2026-09-06. Probado en vivo contra producción de punta a punta (login con password incorrecta, cookie válida generada con el secret real, endpoint de PageSpeed protegido, logout) sin necesitar la contraseña real del fundador. El secret de sesión se rotó después de las pruebas para invalidar la cookie usada en la verificación.
 
-**Effort:** S (hecho) — migrar a auth por sesión sería M+
-**Priority:** P2
-**Depends on:** El piloto se convierte en cliente pagando sostenido (para justificar la migración a auth por sesión).
+**Effort:** S (password) + M (sesión) — ambas hechas
+**Priority:** P2 (hecho)
+**Depends on:** None
 
 ## Marketing
 

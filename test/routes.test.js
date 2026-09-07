@@ -56,9 +56,11 @@ describe('static/public routes', () => {
 });
 
 describe('/admin', () => {
-  it('requires authentication', async () => {
+  it('shows the login page instead of the dashboard without a session cookie', async () => {
     const res = await SELF.fetch('https://example.com/admin');
-    expect(res.status).toBe(401);
-    expect(res.headers.get('WWW-Authenticate')).toContain('Basic');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('action="/admin/login"');
+    expect(html).not.toContain('id="st-conv"');
   });
 });

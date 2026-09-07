@@ -1,8 +1,12 @@
 // src/api/admin.js
-// Dashboard interno: metricas + conversaciones + agenda. Protegido con Basic Auth.
-// Requiere el secret ADMIN_DASHBOARD_PASSWORD configurado en el Worker.
+// Dashboard interno: metricas + conversaciones + agenda. Protegido con login
+// por sesion (cookie firmada, ver src/lib/adminSession.js) -- antes era Basic
+// Auth con una sola contrasena compartida.
+// Requiere los secrets ADMIN_DASHBOARD_PASSWORD y ADMIN_SESSION_SECRET.
 
 import { checkAllLimits } from '../lib/rateLimit.js';
+import { timingSafeEqual } from '../lib/timingSafe.js';
+import { checkSessionAuth, createSessionCookie, clearSessionCookie } from '../lib/adminSession.js';
 
 function tooManyAttemptsResponse(retryAfter) {
     return new Response('Demasiados intentos. Intenta de nuevo en unos minutos.', {
@@ -26,46 +30,97 @@ async function checkAdminBruteForce(request, env) {
     });
 }
 
-function unauthorizedResponse() {
-    return new Response('Autenticaci\u00f3n requerida', {
-        status: 401,
+const LOGIN_STYLES = `
+:root{--bg:#0A0A0A;--panel:#141414;--line:#262626;--text:#EDEDE8;--muted:#8A8A82;--accent:#E8A33D;--accent-ink:#0A0A0A;--err:#E85D3D;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:14px;line-height:1.55;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.card{width:100%;max-width:340px;padding:32px;background:var(--panel);border:1px solid var(--line);border-radius:12px;}
+.brand{font-weight:700;font-size:14px;margin-bottom:24px;letter-spacing:.02em;}
+.brand span{color:var(--accent);}
+label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;}
+input{width:100%;background:#1A1A1A;border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;padding:12px;margin-bottom:16px;}
+input:focus{outline:none;border-color:var(--accent);}
+button{width:100%;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;padding:12px;border:none;border-radius:8px;cursor:pointer;}
+button:hover{opacity:.9;}
+.error{color:var(--err);font-size:12.5px;margin:-8px 0 16px;}
+`;
+
+function loginPageHtml(options) {
+    const error = options && options.error;
+    const next = (options && options.next) || '/admin';
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acceso \u2014 Ati\u00e9ndeme la Pyme</title>
+<meta name="robots" content="noindex, nofollow">
+<style>${LOGIN_STYLES}</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">Ati\u00e9ndeme<span>_</span>la Pyme</div>
+    <form method="POST" action="/admin/login">
+      <input type="hidden" name="next" value="${next.replace(/"/g, '&quot;')}">
+      <label for="password">Contrase\u00f1a</label>
+      <input type="password" id="password" name="password" autofocus required>
+      ${error ? '<div class="error">Contrase\u00f1a incorrecta.</div>' : ''}
+      <button type="submit">Entrar</button>
+    </form>
+  </div>
+</body>
+</html>`;
+}
+
+function loginPageResponse(options) {
+    return new Response(loginPageHtml(options), {
+        status: (options && options.error) ? 401 : 200,
         headers: {
-            'WWW-Authenticate': 'Basic realm="Panel Atiendeme la Pyme", charset="UTF-8"',
-            'Content-Type': 'text/plain; charset=utf-8'
+            'Content-Type': 'text/html; charset=utf-8',
+            'X-Robots-Tag': 'noindex, nofollow',
+            'Cache-Control': 'no-store'
         }
     });
 }
 
-// Comparación de tiempo constante: evita que un atacante infiera la
-// contraseña carácter por carácter midiendo cuánto tarda cada intento
-// (un "===" normal corta apenas encuentra la primera diferencia).
-function timingSafeEqual(a, b) {
-    const aBytes = new TextEncoder().encode(a);
-    const bBytes = new TextEncoder().encode(b);
-    if (aBytes.length !== bBytes.length) {
-        // Igual recorremos "a" completo contra sí mismo para no filtrar el
-        // largo a través de un timing todavía más corto que el caso normal.
-        let dummy = 0;
-        for (let i = 0; i < aBytes.length; i++) dummy |= aBytes[i] ^ aBytes[i];
-        return false;
+async function onRequestPostAdminLogin(context) {
+    const { request, env } = context;
+
+    const rlCheck = await checkAdminBruteForce(request, env);
+    if (!rlCheck.allowed) {
+        return tooManyAttemptsResponse(rlCheck.retryAfter);
     }
-    let diff = 0;
-    for (let i = 0; i < aBytes.length; i++) diff |= aBytes[i] ^ bBytes[i];
-    return diff === 0;
+
+    if (!env.ADMIN_DASHBOARD_PASSWORD || !env.ADMIN_SESSION_SECRET) {
+        return new Response('Panel admin no configurado', { status: 500 });
+    }
+
+    const form = await request.formData();
+    const password = String(form.get('password') || '');
+    const next = String(form.get('next') || '/admin');
+
+    if (!timingSafeEqual(password, env.ADMIN_DASHBOARD_PASSWORD)) {
+        return loginPageResponse({ error: true, next });
+    }
+
+    const cookie = await createSessionCookie(env.ADMIN_SESSION_SECRET);
+    return new Response(null, {
+        status: 303,
+        headers: {
+            'Location': next.startsWith('/') ? next : '/admin',
+            'Set-Cookie': cookie
+        }
+    });
 }
 
-function checkAdminAuth(request, env) {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Basic ')) return false;
-    if (!env.ADMIN_DASHBOARD_PASSWORD) return false;
-    try {
-        const decoded = atob(authHeader.slice(6));
-        const separatorIndex = decoded.indexOf(':');
-        const password = separatorIndex === -1 ? decoded : decoded.slice(separatorIndex + 1);
-        return timingSafeEqual(password, env.ADMIN_DASHBOARD_PASSWORD);
-    } catch {
-        return false;
-    }
+function onRequestPostAdminLogout() {
+    return new Response(null, {
+        status: 303,
+        headers: {
+            'Location': '/admin',
+            'Set-Cookie': clearSessionCookie()
+        }
+    });
 }
 
 async function fetchTable(env, path) {
@@ -365,12 +420,8 @@ show((location.hash||'#inicio').slice(1));
 
 async function onRequestGetAdmin(context) {
     const { request, env } = context;
-    const rlCheck = await checkAdminBruteForce(request, env);
-    if (!rlCheck.allowed) {
-        return tooManyAttemptsResponse(rlCheck.retryAfter);
-    }
-    if (!checkAdminAuth(request, env)) {
-        return unauthorizedResponse();
+    if (!(await checkSessionAuth(request, env))) {
+        return loginPageResponse();
     }
 
     const [sessions, appointments] = await Promise.all([
@@ -395,7 +446,10 @@ async function onRequestGetAdmin(context) {
     <button class="nav-btn" data-view="conversaciones"><span class="ico">\u2709</span> Conversaciones</button>
     <button class="nav-btn" data-view="agenda"><span class="ico">\u25F4</span> Agenda</button>
     <button class="nav-btn" data-view="rendimiento"><span class="ico">\u26A1</span> Rendimiento</button>
-    <div class="side-foot">Panel interno<br>atiendemelapyme.cl</div>
+    <form method="POST" action="/admin/logout" style="margin-top:auto;">
+      <button type="submit" class="nav-btn" style="width:100%;">← Cerrar sesión</button>
+    </form>
+    <div class="side-foot" style="margin-top:12px;">Panel interno<br>atiendemelapyme.cl</div>
   </aside>
   <main class="main">
     <div class="head">
@@ -526,12 +580,8 @@ async function runPSI(targetUrl, strategy, env) {
 
 async function onRequestGetPagespeed(context) {
     const { request, env } = context;
-    const rlCheck = await checkAdminBruteForce(request, env);
-    if (!rlCheck.allowed) {
-        return tooManyAttemptsResponse(rlCheck.retryAfter);
-    }
-    if (!checkAdminAuth(request, env)) {
-        return unauthorizedResponse();
+    if (!(await checkSessionAuth(request, env))) {
+        return new Response('No autorizado', { status: 401 });
     }
     const url = new URL(request.url);
     const targetUrl = url.searchParams.get('url') || 'https://atiendemelapyme.cl/';
@@ -545,4 +595,4 @@ async function onRequestGetPagespeed(context) {
     });
 }
 
-export { onRequestGetAdmin, onRequestGetPagespeed, checkAdminAuth };
+export { onRequestGetAdmin, onRequestGetPagespeed, onRequestPostAdminLogin, onRequestPostAdminLogout };

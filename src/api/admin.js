@@ -166,6 +166,7 @@ h1{font-size:20px;}
 .convo-preview{flex-basis:100%;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .badge{font-size:10px;border:1px solid var(--line);border-radius:20px;padding:2px 9px;color:var(--muted);}
 .badge.lead{border-color:var(--ok);color:var(--ok);}
+.badge.escalated{border-color:#E85D3D;color:#E85D3D;}
 .thread{display:none;border-top:1px solid var(--line);padding:12px 14px;max-height:420px;overflow-y:auto;}
 .convo.open .thread{display:block;}
 .msg{margin-bottom:10px;padding:9px 12px;border-radius:8px;max-width:92%;}
@@ -213,10 +214,33 @@ const appts=window.__DATA__.appointments||[];
 const leads=sessions.filter(s=>s.lead_contact);
 const today=todayStr();
 const upcoming=appts.filter(a=>a.appointment_date>=today);
+const escalated=sessions.filter(s=>s.escalated);
+// Fuera de horario: heurística simple sobre el timestamp del último mensaje
+// (America/Santiago) — lunes a viernes 9:00-19:00 se considera horario
+// hábil; todo lo demás (noche, madrugada, fin de semana) cuenta como fuera
+// de horario. No requiere una columna nueva: se calcula desde updated_at.
+function isAfterHours(iso){
+  if(!iso)return false;
+  try{
+    const d=new Date(iso);
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',hour12:false,weekday:'short'}).formatToParts(d);
+    const hour=Number(parts.find(p=>p.type==='hour').value);
+    const weekday=parts.find(p=>p.type==='weekday').value;
+    const isWeekend=weekday==='Sat'||weekday==='Sun';
+    return isWeekend||hour<9||hour>=19;
+  }catch{return false;}
+}
+const afterHours=sessions.filter(s=>isAfterHours(s.updated_at));
 $('#st-conv').textContent=sessions.length;
 $('#st-leads').textContent=leads.length;
 $('#st-appts').textContent=appts.length;
 $('#st-upcoming').textContent=upcoming.length;
+$('#st-escalated').textContent=escalated.length;
+$('#st-afterhours').textContent=afterHours.length;
+if(sessions.length){
+  const resolvedPct=Math.round((sessions.length-escalated.length)/sessions.length*100);
+  $('#st-escalated-hint').textContent=resolvedPct+'% resueltas solo por Dominga';
+}
 
 // ---------- proxima cita ----------
 (function(){
@@ -259,6 +283,7 @@ function renderConvos(list,mount){
     return '<div class="convo" data-i="'+i+'">'
       +'<div class="convo-head">'
       +(s.lead_contact?'<span class="convo-title">'+esc(s.lead_contact)+'</span><span class="badge lead">lead</span>':'<span class="convo-title anon">An\\u00f3nimo</span>')
+      +(s.escalated?'<span class="badge escalated" title="'+esc(s.escalation_reason||'')+'">escalado</span>':'')
       +'<span class="convo-meta">'+msgs.length+' msjs \\u00b7 '+fmtDT(s.updated_at)+'</span>'
       +'<span class="convo-preview">'+preview+'</span>'
       +'</div><div class="thread">'+thread+'</div></div>';
@@ -391,6 +416,8 @@ async function onRequestGetAdmin(context) {
       <div class="stat"><div class="label">Leads con contacto</div><div class="num" id="st-leads">\u2013</div><div class="hint">dejaron email/tel\u00e9fono</div></div>
       <div class="stat"><div class="label">Citas totales</div><div class="num" id="st-appts">\u2013</div><div class="hint">hist\u00f3rico agendado</div></div>
       <div class="stat"><div class="label">Citas pr\u00f3ximas</div><div class="num" id="st-upcoming">\u2013</div><div class="hint">desde hoy en adelante</div></div>
+      <div class="stat"><div class="label">Escalados a humano</div><div class="num" id="st-escalated">\u2013</div><div class="hint" id="st-escalated-hint">pidieron persona o Dominga no supo</div></div>
+      <div class="stat"><div class="label">Fuera de horario</div><div class="num" id="st-afterhours">\u2013</div><div class="hint">\u00faltimo mensaje fuera de 9-19h L-V</div></div>
     </div>
 
     <section class="view active" data-view="inicio">

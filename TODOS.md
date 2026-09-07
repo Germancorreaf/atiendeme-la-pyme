@@ -16,15 +16,15 @@
 
 ### Escalamiento real a humano en el chat en vivo
 
-**What:** Construir un mecanismo real de notificación (email/WhatsApp al dueño) cuando el bot no puede resolver algo o el usuario pide hablar con una persona, más métricas en el dashboard admin (mensajes fuera de horario, tasa de resolución bot vs. escalado).
+**What:** Se construyó el mecanismo de notificación por correo: `src/lib/escalation.js` detecta (a) cuando el visitante pide explícitamente hablar con una persona, o (b) cuando Dominga cae en su respuesta honesta de "no sé"/"te dejo anotado tu mensaje". `chat.js` guarda `escalated`/`escalation_reason` en `chat_sessions` (columnas nuevas en Supabase) y envía un correo real a `DRAFT_NOTIFICATION_EMAIL` (mismo buzón que ya recibe los borradores de correo entrante) con el mensaje del visitante, la respuesta de Dominga y un link a la conversación. El dashboard admin ahora muestra "Escalados a humano" y "Fuera de horario" (heurística sobre `updated_at`: fuera de L-V 9-19h Chile) como stats, más un badge "escalado" en la lista de conversaciones. Probado en vivo contra producción: sesión normal se guarda sin escalar, sesión con "quiero hablar con una persona" se marca `escalated=true` y dispara el correo.
 
-**Why:** El copy de ventas prometía "transferencia a humano" sin que existiera. Mientras dure la validación se resuelve con revisión manual del dashboard + una respuesta honesta del bot (ver decisión D2 en `docs/designs/validacion-piloto-ventas-nocturnas.md`), pero un cliente pagando real necesita el mecanismo de verdad.
+**Why:** El copy de ventas prometía "transferencia a humano" sin que existiera. Ahora el "te dejo anotado tu mensaje" que dice el prompt de Dominga es cierto: German recibe un correo real cada vez que pasa.
 
-**Context:** Corresponde a "Approach B" del plan de validación — deliberadamente diferido hasta después del piloto para no retrasar la primera conversación de venta. Si el piloto con la empresa donde trabaja el fundador se convierte en cliente, esto pasa a ser prioritario.
+**Context:** Bonus encontrado en el camino: `saveChatSession` en `chat.js` enviaba un campo `message_count` que no existe en el esquema de `chat_sessions` — Supabase rechazaba el insert desde el 2026-07-15 (commit `7c1ccd3`), así que **ninguna conversación del chat web se guardaba desde esa fecha** (WhatsApp/Instagram/ManyChat sí, porque usan otro código). Se corrigió en el mismo cambio. Sigue pendiente: WhatsApp como canal de notificación (se implementó solo email, que ya tenía la infraestructura lista).
 
 **Effort:** M
-**Priority:** P2
-**Depends on:** Piloto validado con compromiso de pago real.
+**Priority:** P2 (hecho) — WhatsApp como canal adicional queda para más adelante si hace falta.
+**Depends on:** ~~Piloto validado con compromiso de pago real~~ — ya no aplica, se hizo directamente.
 
 ### Reforzar seguridad del dashboard admin (parcial)
 

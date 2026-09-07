@@ -14,6 +14,8 @@ import {
 import { callClaude } from '../lib/anthropic.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { buildSystemPrompt } from '../lib/dominga-prompt.js';
+import { detectEscalation } from '../lib/escalation.js';
+import { sendEscalationNotification } from '../lib/email.js';
 
 function extractLeadContact(messages) {
   const fullText = messages
@@ -39,7 +41,7 @@ function extractLeadContact(messages) {
   return null;
 }
 
-async function saveChatSession(sessionId, messages, leadContact, context) {
+async function saveChatSession(sessionId, messages, leadContact, escalation, context) {
   if (!context.env.SUPABASE_URL || !context.env.SUPABASE_SERVICE_KEY) {
     console.warn('Supabase not configured, skipping session save');
     return null;
@@ -60,7 +62,8 @@ async function saveChatSession(sessionId, messages, leadContact, context) {
           session_id: sessionId,
           messages: messages,
           lead_contact: leadContact?.contact || null,
-          message_count: messages.length,
+          escalated: escalation?.escalate || false,
+          escalation_reason: escalation?.reason || null,
           updated_at: new Date().toISOString()
         })
       }
@@ -156,12 +159,35 @@ export async function onRequestPost(context) {
     ];
     const leadContact = extractLeadContact(updatedMessages);
 
+    const lastUserMessage = [...limitedMessages].reverse().find((m) => m.role === 'user');
+    const escalation = detectEscalation(lastUserMessage?.content || '', reply);
+
     await saveChatSession(
       validSessionId,
       updatedMessages,
       leadContact,
+      escalation,
       context
     );
+
+    if (escalation.escalate) {
+      // No usa waitUntil: este handler no recibe un ExecutionContext (ver
+      // el fetch() en src/index.js), así que se espera aquí para no perder
+      // la notificación si el Worker termina de responder antes de tiempo.
+      const notifyResult = await sendEscalationNotification(
+        {
+          sessionId: validSessionId,
+          reason: escalation.reason,
+          userMessage: lastUserMessage?.content || '',
+          botReply: reply,
+          leadContact: leadContact?.contact || null
+        },
+        context.env
+      );
+      if (!notifyResult.success) {
+        console.error('Escalation notification failed:', notifyResult.error);
+      }
+    }
 
     return sendSuccess({
       reply,

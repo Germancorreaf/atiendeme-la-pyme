@@ -194,6 +194,74 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Ne
   }
 }
 
+const ESCALATION_REASON_LABELS = {
+  user_requested_human: 'El visitante pidió hablar con una persona',
+  bot_could_not_resolve: 'Dominga no pudo resolver la consulta'
+};
+
+/**
+ * Notifica al dueño cuando el chat web necesita intervención humana real
+ * (ver src/lib/escalation.js). Reusa el mismo buzón que ya recibe los
+ * borradores de correo entrante (DRAFT_NOTIFICATION_EMAIL) para no requerir
+ * un secret nuevo.
+ */
+export async function sendEscalationNotification(options, env) {
+  const { sessionId, reason, userMessage, botReply, leadContact } = options;
+
+  const notifyTo = env.DRAFT_NOTIFICATION_EMAIL;
+  if (!env.RESEND_API_KEY || !notifyTo) {
+    console.error('[ESCALATION] Falta RESEND_API_KEY o DRAFT_NOTIFICATION_EMAIL, no se pudo notificar');
+    return { success: false, error: 'RESEND_API_KEY o DRAFT_NOTIFICATION_EMAIL no configurado' };
+  }
+
+  const fromEmail = env.RESEND_FROM_EMAIL || 'contacto@atiendemelapyme.cl';
+  const reasonLabel = ESCALATION_REASON_LABELS[reason] || 'El chat necesita revisión';
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,Arial,sans-serif;line-height:1.6;color:#222;max-width:640px;margin:0 auto;padding:20px;">
+  <h2 style="margin:0 0 4px;">🙋 Chat web necesita una persona</h2>
+  <p style="color:#666;margin:0 0 24px;">${escapeHtml(reasonLabel)}${leadContact ? ` — contacto dejado: <strong>${escapeHtml(leadContact)}</strong>` : ''}</p>
+
+  <h3 style="margin:0 0 8px;color:#666;font-size:13px;text-transform:uppercase;">Último mensaje del visitante</h3>
+  <div style="border-left:3px solid #ccc;padding:10px 16px;background:#fafafa;margin-bottom:24px;white-space:pre-wrap;color:#444;">${escapeHtml(userMessage || '(sin texto)')}</div>
+
+  <h3 style="margin:0 0 8px;color:#E8A33D;font-size:13px;text-transform:uppercase;">Respuesta de Dominga</h3>
+  <div style="border:1px solid #E8A33D;border-radius:6px;padding:16px;white-space:pre-wrap;margin-bottom:24px;">${escapeHtml(botReply || '(sin respuesta)')}</div>
+
+  <a href="https://atiendemelapyme.cl/admin#conversaciones" style="display:inline-block;background:#E8A33D;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">Ver conversación completa →</a>
+  <p style="color:#999;font-size:11px;margin-top:24px;">session_id: ${escapeHtml(sessionId || '')}</p>
+</body>
+</html>`;
+
+  try {
+    const response = await fetch(RESEND_API, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: notifyTo,
+        subject: `[Chat] ${reasonLabel}`,
+        html
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('[ESCALATION] Resend error:', data);
+      return { success: false, error: data };
+    }
+    return { success: true, emailId: data.id };
+  } catch (err) {
+    console.error('[ESCALATION] Error notificando:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 export async function sendReminderEmail(options, env) {
   const { clientName, clientEmail, date, time, calendarLink } = options;
 

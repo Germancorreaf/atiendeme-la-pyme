@@ -21,8 +21,8 @@ import { upsertConnection } from '../lib/metaConnections.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 const OAUTH_SCOPES = [
-  'instagram_business_basic',
-  'instagram_business_manage_messages',
+  'instagram_basic',
+  'instagram_manage_messages',
   'pages_show_list',
   'pages_manage_metadata',
   'pages_messaging',

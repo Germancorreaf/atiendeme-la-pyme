@@ -220,16 +220,20 @@ async function saveMessage(sessionId, senderId, userMessage, botResponse, env) {
   }
 }
 
-async function sendMessage(pageId, pageAccessToken, recipientId, messageText) {
+// NOTA: la conexion se hace hoy via Instagram API con Instagram Login
+// (ver meta-connect.js), no via Pagina de Facebook -- por eso se usa
+// graph.instagram.com con el ig-scoped user id (guardado en connection.page_id)
+// y su token de Instagram (guardado en connection.page_access_token), en vez
+// de graph.facebook.com con un Page ID.
+async function sendMessage(igUserId, igAccessToken, recipientId, messageText) {
   try {
     const response = await fetch(
-      `https://graph.facebook.com/${GRAPH_API_VERSION}/${pageId}/messages?access_token=${encodeURIComponent(pageAccessToken)}`,
+      `https://graph.instagram.com/${GRAPH_API_VERSION}/${igUserId}/messages?access_token=${encodeURIComponent(igAccessToken)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipient: { id: recipientId },
-          messaging_type: 'RESPONSE',
           message: { text: messageText }
         })
       }

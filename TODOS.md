@@ -2,6 +2,18 @@
 
 ## Producto
 
+### Integración nativa con Meta (Instagram + Messenger) — reemplaza a ManyChat
+
+**What:** Se construyó el reemplazo de ManyChat como intermediario de Instagram/Messenger: flujo OAuth "Facebook Login for Business" (`src/api/meta-connect.js`, rutas `/admin/meta/connect` y `/admin/meta/callback`, protegidas por la sesión de admin) que conecta una Página de Facebook y su cuenta de Instagram vinculada, guarda el Page Access Token en una tabla nueva de Supabase (`meta_connections`) y suscribe la app a `messages`/`messaging_postbacks` de esa Página; webhook nativo (`src/api/meta-webhook.js`, ruta `/webhook/meta`) que verifica el challenge de Meta, valida la firma `X-Hub-Signature-256` (HMAC timing-safe), deduplica por `message.mid` en KV, procesa en segundo plano (`ctx.waitUntil`) y responde vía Send API (`POST /{PAGE_ID}/messages`) usando la misma lógica de Claude que ya usan los otros canales.
+
+**Why:** Al preparar el screencast para el permiso `instagram_business_basic` del App Review de Meta, se descubrió que el diálogo de autorización dentro de ManyChat pide acceso para "Manychat", no para la app "Atiéndeme la pyme" (App ID `4305884926391021`) — y ManyChat no soporta bring-your-own-app. No había forma honesta de grabar la evidencia que pide Meta mientras el flujo pasara por ManyChat. Ver memoria de proyecto para el contexto completo del App Review.
+
+**Context:** ManyChat sigue corriendo en paralelo (no se desconectó) hasta probar la integración nueva de punta a punta con la cuenta real @atiendemelapyme. Pendiente antes de poder probarla: (1) Germán tiene que correr él mismo `wrangler secret put META_APP_SECRET` y `wrangler secret put META_VERIFY_TOKEN` (el asistente no debe generar ni tipear esos valores por regla explícita), (2) registrar `https://atiendemelapyme.cl/admin/meta/callback` como Valid OAuth Redirect URI en el panel de Meta, (3) configurar el webhook `/webhook/meta` con ese mismo verify token en Meta, (4) entrar a `/admin` y presionar "Conectar Instagram/Facebook", (5) probar un mensaje real de punta a punta. Una vez validado, ese mismo flujo de conexión sirve como screencast genuino para `instagram_business_basic` — pendiente grabarlo y subir el resto de videos de "Uso permitido" antes de poder enviar la revisión (que requiere confirmación fresca de Germán antes de presionar el botón final, sin excepción).
+
+**Effort:** L (código hecho; falta la prueba end-to-end con cuenta real, que solo puede hacer Germán)
+**Priority:** P1
+**Depends on:** Que Germán configure los secrets/webhook en el panel de Meta y pruebe la conexión real.
+
 ### Plan Experto — voicebot es entregable bajo pedido, no corre por defecto
 
 **What:** El Plan Experto ($449.990 + $179.990/mes) vende "llamadas y voicebot" — un asistente de voz que "contesta llamadas... con acento chileno neutro". No hay integración de voz/telefonía corriendo en este código (sin Twilio, sin API de voz activa).

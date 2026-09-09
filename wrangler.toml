@@ -1,6 +1,12 @@
 name = "atiendeme-la-pyme"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
+
+# App ID de Meta ("Atiéndeme la pyme") — no es secreto, se usa igual en el
+# diálogo de OAuth del lado del cliente. El App Secret sí es secreto
+# (wrangler secret put META_APP_SECRET).
+[vars]
+META_APP_ID = "4305884926391021"
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
 id = "71b78676d0a74b47bac411a8782e5184"

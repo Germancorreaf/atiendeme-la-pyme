@@ -591,6 +591,7 @@ async function onRequestGetAdmin(context) {
               <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">\u2192 Cloudflare (Worker)</a>
               <a href="https://analytics.google.com" target="_blank" rel="noopener">\u2192 Google Analytics</a>
               <a href="/" target="_blank" rel="noopener">\u2192 Ver el sitio</a>
+              <a href="/admin/meta/connect">\u2192 Conectar Instagram/Facebook</a>
             </div>
           </div>
         </div>

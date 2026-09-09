@@ -20,15 +20,15 @@ No es "otro chatbot IA 24/7" — esa es la categoría saturada en Chile (8+ comp
 
 ## Operating Context
 
-El chatbot opera en tres canales: sitio web, WhatsApp (vía integración con ManyChat) e Instagram (el webhook directo a Meta existe en el código pero está desactivado; Instagram opera hoy vía ManyChat). Agenda citas directo en Google Calendar o Calendly, sin dobles reservas, y envía recordatorios automáticos un día antes. Un dashboard interno (protegido con contraseña) permite revisar conversaciones, leads y agenda manualmente — hoy es también el mecanismo de facto para detectar cuando el bot no pudo resolver algo, mientras no existe escalamiento automático a humano.
+El chatbot opera en varios canales: sitio web, WhatsApp Cloud API directo (`src/api/whatsapp.js`), e Instagram/Messenger — hoy vía ManyChat, con una integración nativa directa con Meta (`src/api/meta-connect.js` + `src/api/meta-webhook.js`) construida y pendiente de probar de punta a punta con la cuenta real (ver TODOS.md); ManyChat sigue corriendo en paralelo hasta validarla. Agenda citas directo en Google Calendar, sin dobles reservas, y envía recordatorios automáticos un día antes (el copy de precios también menciona Agenda Pro como opción para el plan Pro del cliente, pero esa integración todavía no tiene código — ver TODOS.md). Un dashboard interno (protegido con login por sesión, cookie HMAC) permite revisar conversaciones, leads y agenda manualmente, y además tomar una conversación en vivo cuando el bot escala.
 
 ## Capabilities and Constraints
 
-**Construido y funcionando:** chat con IA (Claude) en web/WhatsApp/Instagram entrenado con datos reales del negocio; agendamiento automático (Google Calendar/Calendly); recordatorios de citas; calificación de leads; dashboard admin de conversaciones y agenda; rate limiting en los endpoints públicos.
+**Construido y funcionando:** chat con IA (Claude) en web/WhatsApp/Instagram entrenado con datos reales del negocio; agendamiento automático (Google Calendar); recordatorios de citas; calificación de leads; dashboard admin de conversaciones y agenda; rate limiting en los endpoints públicos; escalamiento real a humano en el chat — notificación por correo cuando el visitante pide hablar con una persona o Dominga no sabe responder, más traspaso en tiempo real (Durable Object + WebSocket) donde German puede tomar la conversación en vivo desde el dashboard.
 
-**Vendido pero no construido:** voicebot/llamadas telefónicas (parte del Plan Experto, sin ninguna integración de voz/telefonía en el código todavía — ver TODOS.md).
+**Vendido pero no construido:** voicebot/llamadas telefónicas (parte del Plan Experto, sin ninguna integración de voz/telefonía en el código todavía — ver TODOS.md); integración con Agenda Pro (mencionada en el copy de precios, sin código todavía — se construye si un cliente la pide).
 
-**No construido:** escalamiento real a humano en el chat en vivo (el copy ya no lo promete, pero el mecanismo real —notificación automática al dueño— sigue pendiente); procesamiento de pagos o pedidos (ninguna pasarela integrada; cualquier cobro hoy es manual).
+**No construido:** procesamiento de pagos o pedidos (ninguna pasarela integrada; cualquier cobro hoy es manual).
 
 **Terminología:** "Dominga" es el nombre del asistente de IA del producto — el producto en sí se llama "Atiéndeme la Pyme".
 

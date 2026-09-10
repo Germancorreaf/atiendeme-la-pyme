@@ -38,21 +38,35 @@ export async function onRequestGet(context) {
   return new Response('Forbidden', { status: 403 });
 }
 
-async function verifySignature(request, rawBody, env) {
-  const signatureHeader = request.headers.get('X-Hub-Signature-256') || '';
-  if (!env.META_APP_SECRET || !signatureHeader.startsWith('sha256=')) return false;
-
+// El flujo "Instagram API con Instagram Login" (ver meta-connect.js) firma
+// los webhooks con INSTAGRAM_APP_SECRET (secret de la Instagram App ID
+// 2244834902982613), NO con META_APP_SECRET (secret de la Facebook App ID)
+// -- son dos apps/secrets distintos dentro del mismo panel de Meta. Probamos
+// ambos para no romper si en el futuro llegan también webhooks de
+// Página/Messenger firmados con META_APP_SECRET.
+async function computeHmacSha256Hex(secret, rawBody) {
   const key = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(env.META_APP_SECRET),
+    new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
   );
   const signatureBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
-  const expectedHex = [...new Uint8Array(signatureBuffer)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return [...new Uint8Array(signatureBuffer)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
-  return timingSafeEqual(signatureHeader.slice('sha256='.length), expectedHex);
+async function verifySignature(request, rawBody, env) {
+  const signatureHeader = request.headers.get('X-Hub-Signature-256') || '';
+  if (!signatureHeader.startsWith('sha256=')) return false;
+  const receivedHex = signatureHeader.slice('sha256='.length);
+
+  const secrets = [env.INSTAGRAM_APP_SECRET, env.META_APP_SECRET].filter(Boolean);
+  for (const secret of secrets) {
+    const expectedHex = await computeHmacSha256Hex(secret, rawBody);
+    if (timingSafeEqual(receivedHex, expectedHex)) return true;
+  }
+  return false;
 }
 
 async function alreadyProcessed(messageId, env) {
@@ -140,7 +154,7 @@ async function handleEvent(event, entryId, isInstagram, context) {
     : await getClaudeReply(userMessage, history, context);
 
   await saveMessage(sessionId, senderId, userMessage, reply, env);
-  await sendMessage(connection.page_id, connection.page_access_token, senderId, reply);
+  await sendMessage(isInstagram, connection.page_id, connection.page_access_token, senderId, reply);
 }
 
 async function getConversationHistory(sessionId, env) {
@@ -220,24 +234,25 @@ async function saveMessage(sessionId, senderId, userMessage, botResponse, env) {
   }
 }
 
-// NOTA: la conexion se hace hoy via Instagram API con Instagram Login
-// (ver meta-connect.js), no via Pagina de Facebook -- por eso se usa
-// graph.instagram.com con el ig-scoped user id (guardado en connection.page_id)
-// y su token de Instagram (guardado en connection.page_access_token), en vez
-// de graph.facebook.com con un Page ID.
-async function sendMessage(igUserId, igAccessToken, recipientId, messageText) {
+// Hay dos flujos de conexion (meta-connect.js): Instagram via Instagram
+// Login (token graph.instagram.com) y Pagina de Facebook via Facebook Login
+// for Business (token graph.facebook.com). Cada uno emite un tipo de token
+// distinto y cada Graph API solo entiende el suyo -- mandar un token de
+// Facebook a graph.instagram.com (o viceversa) tira "Cannot parse access
+// token". Por eso hay que elegir el host segun el canal del mensaje entrante.
+async function sendMessage(isInstagram, recipientOrPageId, accessToken, recipientId, messageText) {
+  const url = isInstagram
+    ? `https://graph.instagram.com/${GRAPH_API_VERSION}/${recipientOrPageId}/messages?access_token=${encodeURIComponent(accessToken)}`
+    : `https://graph.facebook.com/${GRAPH_API_VERSION}/${recipientOrPageId}/messages?access_token=${encodeURIComponent(accessToken)}`;
   try {
-    const response = await fetch(
-      `https://graph.instagram.com/${GRAPH_API_VERSION}/${igUserId}/messages?access_token=${encodeURIComponent(igAccessToken)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipient: { id: recipientId },
-          message: { text: messageText }
-        })
-      }
-    );
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text: messageText }
+      })
+    });
     if (!response.ok) {
       const err = await response.text();
       console.error('Meta Send API error:', err);

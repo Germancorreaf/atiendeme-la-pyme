@@ -49,6 +49,26 @@ export async function listConnections(env) {
   }
 }
 
+export async function deleteConnectionByPageId(pageId, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
+    throw new Error('Supabase no configurado (falta SUPABASE_URL o SUPABASE_SERVICE_KEY)');
+  }
+  const response = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/meta_connections?page_id=eq.${encodeURIComponent(pageId)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        apikey: env.SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`
+      }
+    }
+  );
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`No se pudo eliminar la conexión: ${err}`);
+  }
+}
+
 export async function upsertConnection(connection, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
     throw new Error('Supabase no configurado (falta SUPABASE_URL o SUPABASE_SERVICE_KEY)');

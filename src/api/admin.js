@@ -7,6 +7,52 @@
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { timingSafeEqual } from '../lib/timingSafe.js';
 import { checkSessionAuth, createSessionCookie, clearSessionCookie } from '../lib/adminSession.js';
+import { listConnections } from '../lib/metaConnections.js';
+import { listWhatsappConnections } from '../lib/whatsappConnections.js';
+
+function escHtml(x) {
+    return String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function connectionsCardHtml(connections) {
+    const rows = (connections || []).map(c => {
+        const label = c.ig_username
+            ? '@' + escHtml(c.ig_username)
+            : (c.page_name ? escHtml(c.page_name) : 'Cuenta conectada');
+        const sub = c.page_name && c.ig_username ? escHtml(c.page_name) : '';
+        return `<div class="conn-row">
+          <div><span class="conn-dot"></span>${label}${sub ? ' <span class="conn-sub">(' + sub + ')</span>' : ''}</div>
+          <a href="/admin/meta/connections/delete?page_id=${encodeURIComponent(c.page_id)}" onclick="return confirm('¿Desconectar esta cuenta?');">Desconectar</a>
+        </div>`;
+    }).join('');
+    return `<div class="card">
+            <h2>Conexión con Meta</h2>
+            ${rows || '<p class="empty">Todavía no hay cuentas conectadas.</p>'}
+            <div class="stack" style="gap:8px;margin-top:${rows ? '14px' : '10px'};">
+              <a class="connect-btn" href="/admin/meta/connect">→ Conectar Instagram</a>
+              <a class="connect-btn" href="/admin/meta/connect-facebook">→ Conectar Página de Facebook</a>
+            </div>
+          </div>`;
+}
+
+function whatsappConnectionsCardHtml(connections) {
+    const rows = (connections || []).map(c => {
+        const label = c.business_name ? escHtml(c.business_name) : 'Cuenta de WhatsApp';
+        const sub = c.display_phone_number ? escHtml(c.display_phone_number) : '';
+        return `<div class="conn-row">
+          <div><span class="conn-dot"></span>${label}${sub ? ' <span class="conn-sub">(' + sub + ')</span>' : ''}</div>
+          <a href="/admin/whatsapp/connections/delete?phone_number_id=${encodeURIComponent(c.phone_number_id)}" onclick="return confirm('¿Desconectar este número?');">Desconectar</a>
+        </div>`;
+    }).join('');
+    return `<div class="card">
+            <h2>Conexión con WhatsApp</h2>
+            ${rows || '<p class="empty">Todavía no hay números conectados.</p>'}
+            <div class="stack" style="gap:8px;margin-top:${rows ? '14px' : '10px'};">
+              <a class="connect-btn" href="/admin/whatsapp/connect">→ Conectar WhatsApp</a>
+            </div>
+          </div>`;
+}
+
 
 function tooManyAttemptsResponse(retryAfter) {
     return new Response('Demasiados intentos. Intenta de nuevo en unos minutos.', {
@@ -161,7 +207,7 @@ const ADMIN_STYLES = `
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;line-height:1.55;}
 a{color:var(--accent);text-decoration:none;}
-.layout{display:flex;min-height:100vh;}
+.layout{display:flex;min-height:100vh;max-width:1280px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line);}
 /* ---- sidebar ---- */
 .side{width:210px;flex-shrink:0;border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;}
 .brand{font-weight:700;font-size:14px;margin-bottom:22px;letter-spacing:.02em;}
@@ -172,14 +218,14 @@ a{color:var(--accent);text-decoration:none;}
 .nav-btn .ico{width:16px;text-align:center;}
 .side-foot{margin-top:auto;color:var(--muted);font-size:11px;line-height:1.7;}
 /* ---- main ---- */
-.main{flex:1;padding:26px 28px;max-width:1200px;}
+.main{flex:1;padding:26px 28px;max-width:1200px;min-width:0;}
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
 h1{font-size:20px;}
 .head .sub{color:var(--muted);font-size:12px;}
 .refresh{background:var(--panel);border:1px solid var(--line);color:var(--text);font:inherit;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;}
 .refresh:hover{border-color:var(--accent);color:var(--accent);}
 /* ---- stat cards ---- */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px;}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,220px));justify-content:start;gap:12px;margin-bottom:20px;}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative;overflow:hidden;}
 .stat.hero{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
 .stat .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
@@ -188,12 +234,13 @@ h1{font-size:20px;}
 .stat .hint{font-size:11px;color:var(--muted);margin-top:4px;}
 .stat.hero .hint{color:rgba(10,10,10,.65);}
 /* ---- grid ---- */
-.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;align-items:start;}
-@media(max-width:900px){.grid{grid-template-columns:1fr;}.side{display:none;}.mobile-nav{display:flex!important;}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;}
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start;}
+@media(max-width:1050px){.grid{grid-template-columns:1fr;}.side{display:none;}.mobile-nav{display:flex!important;flex-wrap:wrap;}}
+@media(max-width:520px){.main{padding:16px 14px;}.stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;}.stat{padding:12px;}.stat .num{font-size:24px;}.card{padding:14px;}.head h1{font-size:17px;}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0;overflow-wrap:anywhere;}
 .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
 .card h2 .count{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;}
-.stack{display:flex;flex-direction:column;gap:14px;}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0;}
 /* ---- chart ---- */
 .chart{display:flex;align-items:flex-end;gap:6px;height:110px;padding-top:6px;}
 .chart .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
@@ -203,7 +250,7 @@ h1{font-size:20px;}
 .chart .lbl{font-size:10px;color:var(--muted);}
 .chart .val{font-size:10px;color:var(--text);}
 /* ---- next appointment ---- */
-.next-appt{background:linear-gradient(135deg,var(--panel2),var(--panel));border:1px solid var(--accent);border-radius:12px;padding:18px;}
+.next-appt{background:linear-gradient(135deg,var(--panel2),var(--panel));border:1px solid var(--accent);border-radius:12px;padding:18px;min-width:0;overflow-wrap:anywhere;}
 .next-appt .when{color:var(--accent);font-weight:700;font-size:15px;}
 .next-appt .who{margin-top:6px;font-size:14px;}
 .next-appt .mail{color:var(--muted);font-size:12px;}
@@ -264,6 +311,13 @@ h1{font-size:20px;}
 .live-chat-input:focus{outline:none;border-color:var(--accent);}
 .live-chat-send{background:var(--accent);color:var(--accent-ink);border:none;border-radius:6px;font-weight:700;font-size:12px;padding:0 14px;cursor:pointer;}
 .live-btn{background:none;border:1px solid var(--ok);color:var(--ok);border-radius:20px;font:inherit;font-size:11px;padding:5px 12px;cursor:pointer;margin-bottom:10px;}
+.connect-btn{display:block;background:var(--accent);color:var(--accent-ink);font-weight:700;text-align:center;padding:10px 14px;border-radius:8px;font-size:13px;}
+.connect-btn:hover{opacity:.9;}
+.conn-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.conn-row:last-of-type{border-bottom:none;}
+.conn-row a{font-size:12px;color:var(--muted);}
+.conn-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:8px;}
+.conn-sub{color:var(--muted);font-size:11.5px;}
 .live-btn:hover{background:var(--ok);color:var(--accent-ink);}
 `;
 
@@ -516,9 +570,11 @@ async function onRequestGetAdmin(context) {
         return loginPageResponse();
     }
 
-    const [sessions, appointments] = await Promise.all([
+    const [sessions, appointments, connections, whatsappConnections] = await Promise.all([
         fetchChatSessions(env),
-        fetchAppointments(env)
+        fetchAppointments(env),
+        listConnections(env),
+        listWhatsappConnections(env)
     ]);
 
     const html = `<!DOCTYPE html>
@@ -577,12 +633,6 @@ async function onRequestGetAdmin(context) {
             <h2>Conversaciones recientes <span class="count">\u00faltimas 4</span></h2>
             <div id="convo-recent"></div>
           </div>
-        </div>
-        <div class="stack">
-          <div class="next-appt">
-            <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Pr\u00f3xima cita</h2>
-            <div id="next-appt"></div>
-          </div>
           <div class="card">
             <h2>Accesos r\u00e1pidos</h2>
             <div class="stack" style="gap:8px;">
@@ -591,9 +641,16 @@ async function onRequestGetAdmin(context) {
               <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">\u2192 Cloudflare (Worker)</a>
               <a href="https://analytics.google.com" target="_blank" rel="noopener">\u2192 Google Analytics</a>
               <a href="/" target="_blank" rel="noopener">\u2192 Ver el sitio</a>
-              <a href="/admin/meta/connect">\u2192 Conectar Instagram/Facebook</a>
             </div>
           </div>
+        </div>
+        <div class="stack">
+          <div class="next-appt">
+            <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Pr\u00f3xima cita</h2>
+            <div id="next-appt"></div>
+          </div>
+          ${connectionsCardHtml(connections)}
+          ${whatsappConnectionsCardHtml(whatsappConnections)}
         </div>
       </div>
     </section>
@@ -690,7 +747,29 @@ async function onRequestGetPagespeed(context) {
         return new Response('No autorizado', { status: 401 });
     }
     const url = new URL(request.url);
-    const targetUrl = url.searchParams.get('url') || 'https://atiendemelapyme.cl/';
+    const requestedUrl = url.searchParams.get('url');
+    // Solo se audita el propio sitio -- sin esto, este endpoint es un proxy
+    // SSRF que permite al Worker hacer fetch() a cualquier URL arbitraria
+    // que indique quien tenga sesion de admin.
+    let targetUrl = 'https://atiendemelapyme.cl/';
+    if (requestedUrl) {
+        try {
+            const parsed = new URL(requestedUrl);
+            if (parsed.protocol === 'https:' && parsed.hostname === 'atiendemelapyme.cl') {
+                targetUrl = parsed.toString();
+            } else {
+                return new Response(JSON.stringify({ error: 'Solo se permite auditar https://atiendemelapyme.cl' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' }
+                });
+            }
+        } catch {
+            return new Response(JSON.stringify({ error: 'url invalida' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json; charset=utf-8' }
+            });
+        }
+    }
     const [mobile, desktop] = await Promise.all([
         runPSI(targetUrl, 'mobile', env),
         runPSI(targetUrl, 'desktop', env)

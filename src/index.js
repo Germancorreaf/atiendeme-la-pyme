@@ -1,10 +1,10 @@
 import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.js';
 import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 import { onRequestPost as instagramPost, onRequestGet as instagramGet } from './api/instagram.js';
-import { onRequestPost as manychatPost, onRequestGet as manychatGet } from './api/chat-manychat.js';
 import { onRequestPost as whatsappPost, onRequestGet as whatsappGet } from './api/whatsapp.js';
 import { onRequestPost as metaWebhookPost, onRequestGet as metaWebhookGet } from './api/meta-webhook.js';
-import { onRequestGetConnect as metaConnectGet, onRequestGetCallback as metaCallbackGet } from './api/meta-connect.js';
+import { onRequestGetConnect as metaConnectGet, onRequestGetCallback as metaCallbackGet, onRequestGetConnectFacebook as metaConnectFacebookGet, onRequestGetCallbackFacebook as metaCallbackFacebookGet, onRequestPostConnectFacebookConfirm as metaConnectFacebookConfirmPost, onRequestGetDeleteConnection as metaDeleteConnectionGet } from './api/meta-connect.js';
+import { onRequestGetConnect as whatsappConnectGet, onRequestPostExchange as whatsappConnectExchangePost, onRequestGetDeleteConnection as whatsappDeleteConnectionGet } from './api/whatsapp-connect.js';
 import { onRequestGetAdmin, onRequestGetPagespeed, onRequestPostAdminLogin, onRequestPostAdminLogout } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
@@ -633,12 +633,6 @@ export default {
             if (pathname === '/api/schedule' && request.method === 'GET') {
                 return await scheduleGet({ request, env });
             }
-            if (pathname === '/api/chat-manychat' && request.method === 'POST') {
-                return await manychatPost({ request, env });
-            }
-            if (pathname === '/api/chat-manychat' && request.method === 'GET') {
-                return await manychatGet({ request, env });
-            }
             if (pathname === '/webhook/instagram' && request.method === 'POST') {
                 return await instagramPost({ request, env });
             }
@@ -662,6 +656,27 @@ export default {
             }
             if (pathname === '/admin/meta/callback' && request.method === 'GET') {
                 return await metaCallbackGet({ request, env });
+            }
+            if (pathname === '/admin/meta/connect-facebook' && request.method === 'GET') {
+                return await metaConnectFacebookGet({ request, env });
+            }
+            if (pathname === '/admin/meta/callback-facebook' && request.method === 'GET') {
+                return await metaCallbackFacebookGet({ request, env });
+            }
+            if (pathname === '/admin/meta/connect-facebook/confirm' && request.method === 'POST') {
+                return await metaConnectFacebookConfirmPost({ request, env });
+            }
+            if (pathname === '/admin/meta/connections/delete' && request.method === 'GET') {
+                return await metaDeleteConnectionGet({ request, env });
+            }
+            if (pathname === '/admin/whatsapp/connect' && request.method === 'GET') {
+                return await whatsappConnectGet({ request, env });
+            }
+            if (pathname === '/admin/whatsapp/connect/exchange' && request.method === 'POST') {
+                return await whatsappConnectExchangePost({ request, env });
+            }
+            if (pathname === '/admin/whatsapp/connections/delete' && request.method === 'GET') {
+                return await whatsappDeleteConnectionGet({ request, env });
             }
             if (pathname === '/privacidad' || pathname === '/privacidad/') {
                 return new Response(PRIVACY_POLICY, {

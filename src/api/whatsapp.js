@@ -14,6 +14,7 @@
 import { callClaude } from '../lib/anthropic.js';
 import { getRandomGreeting, buildSystemPrompt } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
+import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -59,6 +60,7 @@ export async function onRequestPost(context) {
 
           const from = message.from;
           if (!isSafeWhatsappId(from)) continue;
+          if (!phoneNumberId) continue;
 
           const rlCheck = await checkAllLimits(`whatsapp:${from}`, env.RATE_LIMIT_KV, {
             maxRequests: 30,
@@ -68,7 +70,21 @@ export async function onRequestPost(context) {
           });
           if (!rlCheck.allowed) continue;
 
-          const sessionId = `whatsapp_${from}`;
+          // Busca la conexión de este número (cliente conectado vía
+          // Embedded Signup, ver whatsapp-connect.js); si no hay ninguna,
+          // cae al número de prueba fijo por variables de entorno
+          // (WHATSAPP_ACCESS_TOKEN), para no romper ese número original.
+          const connection = await getConnectionByPhoneNumberId(phoneNumberId, env);
+          const accessToken = connection?.access_token || env.WHATSAPP_ACCESS_TOKEN;
+          if (!accessToken) {
+            console.error(`WhatsApp: sin token para phone_number_id ${phoneNumberId}, se ignora el mensaje`);
+            continue;
+          }
+
+          // Namespace por número de negocio: un mismo cliente final puede
+          // escribirle a más de un negocio conectado, y no deben mezclarse
+          // el historial ni el contexto entre bots distintos.
+          const sessionId = `whatsapp_${phoneNumberId}_${from}`;
           const userMessage = message.text.body;
 
           const history = await getConversationHistory(sessionId, env);
@@ -77,7 +93,7 @@ export async function onRequestPost(context) {
             : await getClaudeReply(userMessage, history, context);
 
           await saveMessage(sessionId, from, userMessage, reply, env);
-          await sendMessage(from, reply, phoneNumberId, env);
+          await sendMessage(from, reply, phoneNumberId, accessToken);
         }
       }
     }
@@ -179,19 +195,18 @@ async function saveMessage(sessionId, from, userMessage, botResponse, env) {
   }
 }
 
-async function sendMessage(to, messageText, phoneNumberId, env) {
-  const numberId = phoneNumberId || env.WHATSAPP_PHONE_NUMBER_ID;
-  if (!numberId || !env.WHATSAPP_ACCESS_TOKEN) {
-    console.error('WhatsApp send skipped: falta WHATSAPP_PHONE_NUMBER_ID o WHATSAPP_ACCESS_TOKEN');
+async function sendMessage(to, messageText, phoneNumberId, accessToken) {
+  if (!phoneNumberId || !accessToken) {
+    console.error('WhatsApp send skipped: falta phoneNumberId o accessToken');
     return;
   }
 
   try {
-    const response = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${numberId}/messages`, {
+    const response = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`
+        Authorization: `Bearer ${accessToken}`
       },
       body: JSON.stringify({
         messaging_product: 'whatsapp',

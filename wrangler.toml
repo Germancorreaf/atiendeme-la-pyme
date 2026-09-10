@@ -8,6 +8,19 @@ compatibility_date = "2024-01-01"
 [vars]
 META_APP_ID = "4305884926391021"
 INSTAGRAM_APP_ID = "2244834902982613"
+# ID de la configuracion de "Facebook Login for Business" (Casos de uso >
+# Inicio de sesion con Facebook para empresas > Configuraciones). No es
+# secreto -- se usa igual en la URL del dialogo de OAuth del lado del
+# cliente. Variante "Token de acceso de usuario", permisos: pages_show_list,
+# pages_messaging, pages_manage_metadata, business_management,
+# whatsapp_business_management, whatsapp_business_messaging (+ whatsapp sin
+# usar todavia). "Production Config" (9 sept 2026) -- reemplaza a la
+# config anterior (id 1096469376260304, "App Review Test Config"), que
+# quedo con un permiso fantasma "instagram_manage_comments" (deprecado)
+# pegado a sus datos guardados y que la UI de Meta no permitia purgar via
+# checkboxes, causando "Invalid Scopes: instagram_manage_comments" en el
+# connect de Facebook Page. La config vieja se dejo sin usar, no se borro.
+META_LOGIN_CONFIG_ID = "1482045480428287"
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
 id = "71b78676d0a74b47bac411a8782e5184"

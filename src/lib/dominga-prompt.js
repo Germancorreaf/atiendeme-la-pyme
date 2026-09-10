@@ -1,8 +1,8 @@
 // src/lib/dominga-prompt.js
 // Fuente única de verdad para el saludo inicial y el system prompt de Dominga.
-// Usado por src/api/chat.js, src/api/chat-manychat.js y src/api/instagram.js
-// para evitar que cada canal mantenga su propia copia (y se desincronicen,
-// p. ej. los precios).
+// Usado por src/api/chat.js, src/api/whatsapp.js, src/api/meta-webhook.js e
+// src/api/instagram.js para evitar que cada canal mantenga su propia copia
+// (y se desincronicen, p. ej. los precios).
 
 const INITIAL_GREETINGS = [
   {
@@ -90,7 +90,7 @@ function formatPartsAsISODate(parts) {
  * @param {object} opts
  * @param {boolean} opts.canScheduleViaJSON - true en el chat web, donde el
  *   frontend sabe interpretar el JSON {"action":"schedule",...}. En canales
- *   como Instagram/ManyChat donde nadie parsea ese JSON, se pide en texto.
+ *   como Instagram/WhatsApp donde nadie parsea ese JSON, se pide en texto.
  * @param {boolean} opts.brief - respuestas más cortas para canales tipo Instagram.
  */
 export function buildSystemPrompt({ canScheduleViaJSON = true, brief = false } = {}) {

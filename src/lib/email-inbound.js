@@ -12,23 +12,16 @@
 import PostalMime from 'postal-mime';
 import { callClaude } from './anthropic.js';
 import { buildEmailSystemPrompt } from './dominga-prompt.js';
+import { renderEmailShell, escapeHtml, COLORS } from './email-template.js';
 
 const RESEND_API = 'https://api.resend.com/emails';
-
-function escapeHtml(str = '') {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
 
 function buildMailtoLink(toEmail, subject, body) {
   const params = new URLSearchParams({ subject, body });
   return `mailto:${encodeURIComponent(toEmail)}?${params.toString().replace(/\+/g, '%20')}`;
 }
 
-async function notifyGerman({ fromEmail, fromName, subject, originalText, draftText, env }) {
+export async function notifyGerman({ fromEmail, fromName, subject, originalText, draftText, env }) {
   const notifyTo = env.DRAFT_NOTIFICATION_EMAIL;
   if (!notifyTo) {
     console.error('[EMAIL-INBOUND] Falta DRAFT_NOTIFICATION_EMAIL, no se puede notificar el borrador');
@@ -39,22 +32,26 @@ async function notifyGerman({ fromEmail, fromName, subject, originalText, draftT
   const replySubject = subject && !/^re:/i.test(subject) ? `Re: ${subject}` : (subject || 'Re: tu consulta');
   const mailtoLink = buildMailtoLink(fromEmail, replySubject, draftText);
 
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"></head>
-<body style="font-family:-apple-system,Arial,sans-serif;line-height:1.6;color:#222;max-width:640px;margin:0 auto;padding:20px;">
-  <h2 style="margin:0 0 4px;">📩 Nuevo correo en hola@atiendemelapyme.cl</h2>
-  <p style="color:#666;margin:0 0 24px;">De: <strong>${escapeHtml(fromDisplay)}</strong><br>Asunto: ${escapeHtml(subject || '(sin asunto)')}</p>
+  const bodyHtml = `
+    <div class="greeting">📩 <strong>Nuevo correo en hola@atiendemelapyme.cl</strong></div>
+    <p style="color:${COLORS.textMuted};margin:0 0 24px;">De: <strong style="color:${COLORS.text};">${escapeHtml(fromDisplay)}</strong><br>Asunto: ${escapeHtml(subject || '(sin asunto)')}</p>
 
-  <div style="border-left:3px solid #ccc;padding:10px 16px;background:#fafafa;margin-bottom:24px;white-space:pre-wrap;color:#444;">${escapeHtml(originalText || '(sin contenido de texto)')}</div>
+    <div class="quote-title">Correo original</div>
+    <div class="quote">${escapeHtml(originalText || '(sin contenido de texto)')}</div>
 
-  <h3 style="margin:0 0 8px;color:#E8A33D;">✍️ Borrador de Dominga</h3>
-  <div style="border:1px solid #E8A33D;border-radius:6px;padding:16px;white-space:pre-wrap;margin-bottom:24px;">${escapeHtml(draftText)}</div>
+    <div class="highlight-title">✍️ Borrador de Dominga</div>
+    <div class="highlight">${escapeHtml(draftText)}</div>
 
-  <a href="${mailtoLink}" style="display:inline-block;background:#E8A33D;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">Revisar y responder →</a>
-  <p style="color:#999;font-size:12px;margin-top:24px;">Este botón abre tu correo con la respuesta de Dominga ya escrita. Revísala, ajústala si quieres, y presiona enviar.</p>
-</body>
-</html>`;
+    <div class="button-center">
+      <a href="${mailtoLink}" class="button">Revisar y responder →</a>
+    </div>
+    <p style="color:${COLORS.textMuted};font-size:12px;text-align:center;margin-top:18px;">Este botón abre tu correo con la respuesta de Dominga ya escrita. Revísala, ajústala si quieres, y presiona enviar.</p>
+`;
+
+  const html = renderEmailShell({
+    tag: '[BORRADOR DE CORREO]',
+    bodyHtml
+  });
 
   try {
     const response = await fetch(RESEND_API, {

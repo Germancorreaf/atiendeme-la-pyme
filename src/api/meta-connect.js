@@ -52,6 +52,14 @@ const STATE_COOKIE_PATH = '/admin/meta';
 // con Facebook para empresas > Configuraciones) en vez de scopes sueltos --
 // así es como Meta requiere este login desde 2023+. Cookie de estado y
 // redirect_uri propios para no pisar el flujo de Instagram de arriba.
+//
+// Este flujo es también el que ejercita instagram_basic: al listar las
+// Páginas del usuario en /me/accounts se expande el campo
+// instagram_business_account para leer (y guardar, si hay una vinculada)
+// la cuenta de Instagram conectada a cada Página. instagram_basic debe
+// estar incluido en los permisos del config_id de Meta (Casos de uso >
+// Inicio de sesión con Facebook para empresas > Configuraciones) para que
+// esta expansión no falle.
 const FACEBOOK_STATE_COOKIE_NAME = 'atp_meta_oauth_state_fb';
 
 function callbackUrl(request) {
@@ -371,8 +379,13 @@ export async function onRequestGetCallbackFacebook(context) {
     }
 
     // 4. Páginas que administra esta persona, con su Page Access Token.
+    // Se expande el campo instagram_business_account para mostrar (y
+    // guardar) qué cuenta de Instagram, si alguna, está vinculada a cada
+    // Página -- esto es lo que ejercita el permiso instagram_basic (antes
+    // pedido en la config de login pero nunca usado por ningún llamado
+    // real; Meta exige ver una llamada real, no solo el permiso otorgado).
     const accountsUrl = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/me/accounts`);
-    accountsUrl.searchParams.set('fields', 'id,name,access_token');
+    accountsUrl.searchParams.set('fields', 'id,name,access_token,instagram_business_account{id,username,profile_picture_url}');
     accountsUrl.searchParams.set('access_token', longLivedUserToken);
     const accountsRes = await fetch(accountsUrl.toString());
     const accountsData = await accountsRes.json();
@@ -406,18 +419,30 @@ export async function onRequestGetCallbackFacebook(context) {
     if (env.RATE_LIMIT_KV) {
       await env.RATE_LIMIT_KV.put(
         `metaselect:${selectionToken}`,
-        JSON.stringify(selectable.map((p) => ({ id: p.id, name: p.name, access_token: p.access_token }))),
+        JSON.stringify(selectable.map((p) => ({
+          id: p.id,
+          name: p.name,
+          access_token: p.access_token,
+          ig_business_account_id: p.instagram_business_account?.id || null,
+          ig_username: p.instagram_business_account?.username || null
+        }))),
         { expirationTtl: 600 }
       );
     } else {
       throw new Error('Falta el binding RATE_LIMIT_KV en el Worker (se usa para guardar la selección de Páginas de forma temporal).');
     }
 
-    const checklistHtml = selectable.map((page, i) => `
+    const checklistHtml = selectable.map((page, i) => {
+      const igLine = page.instagram_business_account?.username
+        ? `<div style="color:#43D17C;font-size:12px;margin-left:26px;">Instagram vinculado: @${escapeHtml(page.instagram_business_account.username)}</div>`
+        : `<div style="color:#8A8A8A;font-size:12px;margin-left:26px;">Sin Instagram vinculado a esta Página</div>`;
+      return `
         <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #2A2A2A;">
           <input type="checkbox" name="page_id" value="${escapeHtml(page.id)}" id="page-${i}" checked style="width:16px;height:16px;">
           <span>${escapeHtml(page.name)}</span>
-        </label>`).join('');
+        </label>
+        ${igLine}`;
+    }).join('');
 
     return htmlResponse(
       `<h1>Elegí qué Página conectar</h1>
@@ -483,8 +508,8 @@ export async function onRequestPostConnectFacebookConfirm(context) {
         page_id: page.id,
         page_name: `Facebook: ${page.name}`,
         page_access_token: page.access_token,
-        ig_business_account_id: null,
-        ig_username: null
+        ig_business_account_id: page.ig_business_account_id || null,
+        ig_username: page.ig_username || null
       }, env);
 
       const subRes = await fetch(

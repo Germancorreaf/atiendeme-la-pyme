@@ -47,7 +47,7 @@ button:hover{background:#1ebe5b;}
 button:disabled{opacity:.6;cursor:default;}
 .status{margin-top:16px;font-size:13px;color:#8A8A82;}</style></head>
 <body><div class="card">${body}</div></body></html>`,
-    { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow' } }
+    { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' } }
   );
 }
 

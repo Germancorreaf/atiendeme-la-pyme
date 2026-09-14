@@ -14,22 +14,28 @@ describe('sendError', () => {
     expect(res.status).toBe(500);
   });
 
+  it('hides internal details from the client on 5xx errors', async () => {
+    const res = sendError(new ApiError('Missing ANTHROPIC_API_KEY environment variable', 500));
+    const body = await res.json();
+    expect(body).toEqual({ error: 'Error interno del servidor', status: 500 });
+  });
+
   it('redacts Bearer tokens from the client-facing message', async () => {
-    const res = sendError(new ApiError('failed: Authorization Bearer sk-abc123XYZ', 500));
+    const res = sendError(new ApiError('failed: Authorization Bearer sk-abc123XYZ', 400));
     const body = await res.json();
     expect(body.error).not.toContain('sk-abc123XYZ');
     expect(body.error).toContain('[REDACTED_TOKEN]');
   });
 
   it('redacts api keys from the client-facing message', async () => {
-    const res = sendError(new ApiError('bad request: api_key=super-secret-value', 500));
+    const res = sendError(new ApiError('bad request: api_key=super-secret-value', 400));
     const body = await res.json();
     expect(body.error).not.toContain('super-secret-value');
     expect(body.error).toContain('[REDACTED_KEY]');
   });
 
   it('redacts email addresses from the client-facing message', async () => {
-    const res = sendError(new ApiError('duplicate for cliente@empresa.cl', 500));
+    const res = sendError(new ApiError('duplicate for cliente@empresa.cl', 409));
     const body = await res.json();
     expect(body.error).not.toContain('cliente@empresa.cl');
     expect(body.error).toContain('[REDACTED_EMAIL]');

@@ -93,6 +93,9 @@ a{color:#43D17C;}h1{margin-top:0;font-size:20px;}</style></head>
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'X-Robots-Tag': 'noindex, nofollow',
+        'Cache-Control': 'no-store',
+        'X-Frame-Options': 'DENY',
+        'X-Content-Type-Options': 'nosniff',
         ...extraHeaders
       }
     }
@@ -406,7 +409,7 @@ export async function onRequestGetCallbackFacebook(context) {
     const skipped = accountsData.data.filter((page) => !page.access_token).map((page) => page.name);
 
     if (selectable.length === 0) {
-      throw new Error('Ninguna Página trajo permisos suficientes para conectarse (no llegó access_token para ninguna). Revisá los permisos otorgados durante el login.');
+      throw new Error('Ninguna Página trajo permisos suficientes para conectarse (no llegó access_token para ninguna). Revisa los permisos otorgados durante el login.');
     }
 
     // No conectamos todo automáticamente: la cuenta de Facebook puede
@@ -445,9 +448,9 @@ export async function onRequestGetCallbackFacebook(context) {
     }).join('');
 
     return htmlResponse(
-      `<h1>Elegí qué Página conectar</h1>
+      `<h1>Elige qué Página conectar</h1>
       ${businessName ? `<p style="color:#8A8A8A;font-size:13px;">Business Portfolio: ${escapeHtml(businessName)}</p>` : ''}
-      <p>Tu cuenta de Facebook administra ${selectable.length === 1 ? 'esta Página' : 'estas Páginas'}. Elegí cuál conectar al bot (podés desmarcar las que no correspondan):</p>
+      <p>Tu cuenta de Facebook administra ${selectable.length === 1 ? 'esta Página' : 'estas Páginas'}. Elige cuál conectar al bot (puedes desmarcar las que no correspondan):</p>
       <form method="POST" action="/admin/meta/connect-facebook/confirm">
         <input type="hidden" name="selection_token" value="${escapeHtml(selectionToken)}">
         ${checklistHtml}
@@ -484,7 +487,7 @@ export async function onRequestPostConnectFacebookConfirm(context) {
   const kvKey = `metaselect:${selectionToken}`;
   const storedRaw = await env.RATE_LIMIT_KV.get(kvKey);
   if (!storedRaw) {
-    return htmlResponse('<h1>Selección expirada</h1><p>Pasaron más de 10 minutos o ya se usó esta selección. Conectá de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 400);
+    return htmlResponse('<h1>Selección expirada</h1><p>Pasaron más de 10 minutos o ya se usó esta selección. Conecta de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 400);
   }
   // Un solo uso: se borra apenas se lee, se haya podido conectar algo o no.
   await env.RATE_LIMIT_KV.delete(kvKey);
@@ -493,12 +496,12 @@ export async function onRequestPostConnectFacebookConfirm(context) {
   try {
     pages = JSON.parse(storedRaw);
   } catch {
-    return htmlResponse('<h1>Error</h1><p>La selección guardada quedó corrupta. Conectá de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 500);
+    return htmlResponse('<h1>Error</h1><p>La selección guardada quedó corrupta. Conecta de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 500);
   }
 
   const toConnect = pages.filter((p) => selectedIds.has(String(p.id)));
   if (toConnect.length === 0) {
-    return htmlResponse('<h1>No se seleccionó ninguna Página</h1><p>No se conectó nada. Si querés conectar alguna, empezá de nuevo.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p><p><a href="/admin">Volver al dashboard</a></p>');
+    return htmlResponse('<h1>No se seleccionó ninguna Página</h1><p>No se conectó nada. Si quieres conectar alguna, empieza de nuevo.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p><p><a href="/admin">Volver al dashboard</a></p>');
   }
 
   const connected = [];

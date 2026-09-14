@@ -11,6 +11,13 @@
 // escalamiento (ver src/lib/escalation.js), cuando el widget abre una
 // conexión y el equipo puede "tomar" la conversación en vivo.
 
+// Mismo tope que validateContent() del chat REST.
+const MAX_MESSAGE_LENGTH = 5000;
+
+function isValidText(text) {
+  return typeof text === 'string' && text.trim().length > 0 && text.length <= MAX_MESSAGE_LENGTH;
+}
+
 export class ChatRoom {
   constructor(state, env) {
     this.state = state;
@@ -70,12 +77,12 @@ export class ChatRoom {
       return;
     }
 
-    if (attachment.role === 'admin' && data.type === 'admin_message' && typeof data.text === 'string') {
+    if (attachment.role === 'admin' && data.type === 'admin_message' && isValidText(data.text)) {
       this.broadcastToRole('visitor', { type: 'human_message', text: data.text });
       await this.persistMessage(attachment.sessionId, 'assistant', data.text);
     }
 
-    if (attachment.role === 'visitor' && data.type === 'visitor_message' && typeof data.text === 'string') {
+    if (attachment.role === 'visitor' && data.type === 'visitor_message' && isValidText(data.text)) {
       this.broadcastToRole('admin', { type: 'visitor_message', text: data.text });
       await this.persistMessage(attachment.sessionId, 'user', data.text);
     }

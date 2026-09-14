@@ -106,6 +106,16 @@ describe('POST /admin/login', () => {
     expect(res.headers.get('Location')).toBe('/admin');
   });
 
+  it('ignores protocol-relative "next" values that would leave the site', async () => {
+    for (const next of ['//evil.example.com', '/\\evil.example.com']) {
+      const res = await onRequestPostAdminLogin({
+        request: loginRequest(baseEnv.ADMIN_DASHBOARD_PASSWORD, { next }),
+        env: baseEnv,
+      });
+      expect(res.headers.get('Location')).toBe('/admin');
+    }
+  });
+
   it('fails closed (500) when the server secrets are not configured', async () => {
     const res = await onRequestPostAdminLogin({
       request: loginRequest('anything'),

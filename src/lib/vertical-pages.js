@@ -241,11 +241,9 @@ ${SHARED_HEADER_NAV}
 }
 
 export function getVerticalPage(slug) {
-  const v = VERTICALS[slug];
+  // hasOwn: sin esto "/constructor" o "/__proto__" encontraban propiedades
+  // heredadas de Object y el Worker respondía 500 en vez de 404.
+  const v = Object.hasOwn(VERTICALS, slug) ? VERTICALS[slug] : null;
   if (!v) return null;
   return renderVerticalPage({ ...v, slug });
-}
-
-export function getVerticalSlugs() {
-  return Object.keys(VERTICALS);
 }

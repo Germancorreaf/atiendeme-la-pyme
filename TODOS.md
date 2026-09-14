@@ -90,6 +90,128 @@
 
 ## Infraestructura
 
+## Revisión de código (2026-09-14) — pendientes para después del App Review de Meta
+
+Hallazgos de una revisión completa del código que **no se implementaron a propósito**: cambian el comportamiento del producto o tocan la integración con Meta/WhatsApp, y Germán prefiere no arriesgar nada mientras la app está en revisión. Retomar cuando el App Review esté aprobado. (La limpieza sin riesgo de esa misma revisión sí se hizo: open redirect del login, errores 5xx sin detalles internos, 404 en `/constructor`, fechas imposibles, voseo en el prompt, código muerto, envío de correos unificado.)
+
+### 🔴 Verificar la firma de Meta en el webhook de WhatsApp
+
+**What:** `src/api/whatsapp.js` (`POST /webhook/whatsapp`) procesa cualquier POST sin validar `X-Hub-Signature-256`. `src/api/meta-webhook.js` ya lo hace bien (`verifySignature` + `timingSafeEqual`); hay que reusar esa misma lógica en WhatsApp.
+
+**Why:** Cualquiera que conozca la URL puede mandar un payload falso con un `phone_number_id` conectado y un `from` arbitrario: el bot llama a Claude (gasto) y envía un WhatsApp desde el número del negocio a ese número (spam desde la cuenta, riesgo de bloqueo de Meta). El rate limit es por `from`, que controla el atacante.
+
+**Context:** Antes de implementarlo, confirmar qué App Secret firma los webhooks de WhatsApp (probablemente `META_APP_SECRET`, la app del Embedded Signup; revisar también el número de prueba que usa `WHATSAPP_ACCESS_TOKEN`). Si se usa el secret equivocado, se rechazan todos los mensajes reales — probar con un mensaje real inmediatamente después del deploy. Agregar tests como los de `test/api/meta-webhook.test.js`.
+
+**Effort:** S
+**Priority:** P1
+**Depends on:** App Review de Meta aprobado.
+
+### Doble agenda si Supabase falla
+
+**What:** `checkAvailability` en `src/api/schedule.js` devuelve `{ available: true }` ante cualquier error (Supabase caído, respuesta no-JSON, credenciales faltantes), así que agenda igual. Tampoco hay restricción única en la tabla `scheduled_appointments` sobre `(appointment_date, appointment_time)`, y dos requests simultáneas pueden pasar el chequeo a la vez.
+
+**Why:** El copy promete "sin dobles reservas".
+
+**Context:** Opciones: fallar cerrado (responder 503 "no pude confirmar disponibilidad") y/o agregar un unique index en Supabase y tratar el error de conflicto como 409. Además, si el evento de Google Calendar se crea pero `saveAppointment` falla, la cita queda en el calendario pero no en la base (no recibe recordatorio).
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None
+
+### El primer mensaje en WhatsApp/Instagram/Messenger ignora lo que escribió el cliente
+
+**What:** En `src/api/whatsapp.js` y `src/api/meta-webhook.js`, si no hay historial se responde con `getRandomGreeting()` en vez de pasar el mensaje a Claude. Si el cliente escribe "¿tienen hora mañana a las 10?", recibe un saludo genérico y su pregunta queda sin respuesta.
+
+**Why:** El chat web evita esto a propósito (ver el comentario en `src/api/chat.js`: "el primer mensaje que llega acá es siempre un mensaje real del usuario, y siempre debe ir a Claude"). Además, los saludos hablan de "tu negocio" como si el cliente fuera un dueño de pyme — sirve para la cuenta de Atiéndeme la Pyme, pero no para los bots de clientes conectados.
+
+**Context:** Tocar solo después del App Review: cambia lo que se ve en los screencasts de mensajería.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** App Review de Meta aprobado.
+
+### Dominga manda a escribir a contacto@ pero el sitio usa hola@
+
+**What:** El system prompt (`src/lib/dominga-prompt.js`, bloque "SI NO SABES") y el patrón de `src/lib/escalation.js` usan `contacto@atiendemelapyme.cl`. La landing, el menú y `llms.txt` usan `hola@atiendemelapyme.cl`, y según `src/lib/email-inbound.js` solo hola@ tiene regla de Email Routing.
+
+**Why:** Si contacto@ no recibe correo, los visitantes que Dominga deriva ahí se pierden.
+
+**Context:** Confirmar si contacto@ recibe correo. Si no, cambiar el prompt y el patrón de escalamiento (y su test en `test/lib/escalation.test.js`) a hola@. `contacto@` también es el remitente por defecto de Resend (`DEFAULT_FROM_EMAIL` en `src/lib/email.js`) — eso puede quedar como está si el dominio está verificado.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** Confirmar qué buzones reciben correo.
+
+### El correo de confirmación de cita promete cosas que no pasan
+
+**What:** En `sendConfirmationEmail` (`src/lib/email.js`):
+- El botón dice "Unirse a Google Meet", pero `createCalendarEvent` no crea link de Meet (no pide `conferenceData`); el link es la página del evento en Google Calendar. Lo mismo en el recordatorio.
+- Dice "DURACIÓN: 20 minutos", pero el evento se crea de 60 (`durationMinutes = 60` por defecto en `src/lib/google-calendar.js`).
+- Dice "También recibirás una invitación directa en tu calendario", pero el evento se crea sin `sendUpdates=all`, así que probablemente Google no le manda la invitación al cliente.
+
+**Why:** Principio de producto: nunca prometer algo que no pasa.
+
+**Context:** Decidir: (a) crear Meet de verdad (`conferenceDataVersion=1` + `createRequest`) y enviar invitación (`sendUpdates=all`), o (b) cambiar el texto del correo. Unificar la duración en una sola constante.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** Decisión de Germán sobre Meet/duración.
+
+### "Desconectar" cuentas con un link GET (CSRF)
+
+**What:** `/admin/meta/connections/delete` y `/admin/whatsapp/connections/delete` borran conexiones con un GET. La cookie de sesión es `SameSite=Lax`, que sí se envía en navegaciones GET desde otro sitio.
+
+**Why:** Un link malicioso abierto con la sesión de admin activa podría desconectar una cuenta de Instagram/Facebook/WhatsApp de un cliente.
+
+**Context:** Cambiar a `POST` (formulario con botón en `src/api/admin.js`, `connectionsCardHtml` y `whatsappConnectionsCardHtml`) y actualizar las rutas en `src/index.js`. Riesgo bajo, pero toca las rutas de Meta: esperar al App Review.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** App Review de Meta aprobado.
+
+### PIN de verificación en dos pasos de WhatsApp: aleatorio débil y no se guarda
+
+**What:** `onRequestPostExchange` en `src/api/whatsapp-connect.js` registra el número con un PIN de 6 dígitos generado con `Math.random()` y no lo guarda en ningún lado.
+
+**Why:** `Math.random` no es criptográficamente seguro, y si más adelante hay que re-registrar el número o migrarlo, nadie conoce el PIN (hay que resetearlo desde Meta Business Manager).
+
+**Context:** Usar `crypto.getRandomValues` y guardar el PIN en `whatsapp_connections` (columna nueva, con el mismo tratamiento que `access_token`), o documentar el proceso de reseteo.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** App Review de Meta aprobado.
+
+### Posible pérdida de mensajes del chat en vivo
+
+**What:** `saveChatSession` en `src/api/chat.js` hace upsert de la columna `messages` completa con el historial que manda el navegador. `ChatRoom.persistMessage` (`src/durable-objects/ChatRoom.js`) agrega los mensajes del chat en vivo a esa misma columna. Si el widget vuelve a llamar a `/api/chat` después de un traspaso sin incluir esos mensajes, el upsert los sobrescribe.
+
+**Why:** Se perdería del dashboard lo que Germán escribió en vivo.
+
+**Context:** Verificar primero si el widget incluye los mensajes humanos en el historial que manda. Si no, hacer que `chat.js` agregue (append) en vez de reemplazar, o guardar los mensajes en vivo en otra columna.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Código duplicado en los webhooks de mensajería
+
+**What:** `getConversationHistory`, `getClaudeReply` y `saveMessage` están casi idénticos en `src/api/whatsapp.js` y `src/api/meta-webhook.js`, y los headers de Supabase se repiten en ~20 lugares. Extraer a un módulo compartido (ej. `src/lib/chatSessions.js`). `saveMessage` además hace leer-y-escribir sin transacción (dos mensajes seguidos pueden pisarse).
+
+**Why:** Mantenibilidad: un arreglo en un canal hoy no llega al otro.
+
+**Context:** No se hizo en la revisión porque los tests no cubren esa parte del flujo y la integración con Meta está en revisión. Agregar tests del camino completo (historial → Claude → guardar → Send API, con `fetch` falso) antes de refactorizar.
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** App Review de Meta aprobado.
+
+### Otros menores
+
+- **Modelo de borradores de correo:** `src/lib/email-inbound.js` usa el modelo por defecto de `src/lib/anthropic.js` (`claude-sonnet-4-5-20250929`); todos los demás canales usan Haiku 4.5. Decidir si actualizarlo.
+- **Admin sin paginación:** `/admin` carga todas las filas de `chat_sessions` y `scheduled_appointments` en la página; con volumen real va a ponerse lento.
+- **Logs con datos personales:** `src/lib/reminder-cron.js` loguea nombre y correo de cada cliente, y los logs de Workers quedan persistidos (`observability.logs.persist = true`).
+- **Webhook legado `/webhook/instagram`:** solo responde la verificación GET. Si la suscripción antigua ya no está en el panel de Meta, borrar `src/api/instagram.js` y su ruta.
+
 ## Completed
 
 ### Chat en vivo: transferencia real a un humano en tiempo real

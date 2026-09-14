@@ -1,4 +1,4 @@
-// functions/lib/anthropic.js
+// src/lib/anthropic.js
 // Wrapper for Anthropic Claude API calls
 
 import { ApiError, fetchWithTimeout } from './errors.js';

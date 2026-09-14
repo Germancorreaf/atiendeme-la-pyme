@@ -13,8 +13,7 @@ import PostalMime from 'postal-mime';
 import { callClaude } from './anthropic.js';
 import { buildEmailSystemPrompt } from './dominga-prompt.js';
 import { renderEmailShell, escapeHtml, COLORS } from './email-template.js';
-
-const RESEND_API = 'https://api.resend.com/emails';
+import { sendViaResend } from './email.js';
 
 function buildMailtoLink(toEmail, subject, body) {
   const params = new URLSearchParams({ subject, body });
@@ -53,32 +52,16 @@ export async function notifyGerman({ fromEmail, fromName, subject, originalText,
     bodyHtml
   });
 
-  try {
-    const response = await fetch(RESEND_API, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: env.RESEND_FROM_EMAIL || 'contacto@atiendemelapyme.cl',
-        to: notifyTo,
-        reply_to: fromEmail,
-        subject: `[Borrador] ${subject || 'Nuevo correo de ' + fromDisplay}`,
-        html
-      })
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('[EMAIL-INBOUND] Resend error:', data);
-      return { success: false, error: data };
-    }
-    return { success: true, emailId: data.id };
-  } catch (err) {
-    console.error('[EMAIL-INBOUND] Error notificando a Germán:', err.message);
-    return { success: false, error: err.message };
-  }
+  return sendViaResend(
+    {
+      to: notifyTo,
+      replyTo: fromEmail,
+      subject: `[Borrador] ${subject || 'Nuevo correo de ' + fromDisplay}`,
+      html
+    },
+    env,
+    '[EMAIL-INBOUND]'
+  );
 }
 
 /**

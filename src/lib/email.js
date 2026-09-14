@@ -5,6 +5,40 @@
 import { renderEmailShell, escapeHtml, COLORS } from './email-template.js';
 
 const RESEND_API = 'https://api.resend.com/emails';
+const DEFAULT_FROM_EMAIL = 'contacto@atiendemelapyme.cl';
+
+/**
+ * Único punto de envío a Resend para todos los correos de la app.
+ * @returns {Promise<{success: true, emailId: string} | {success: false, error: any}>}
+ */
+export async function sendViaResend({ to, subject, html, replyTo }, env, logTag = '[EMAIL]') {
+  try {
+    const response = await fetch(RESEND_API, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: env.RESEND_FROM_EMAIL || DEFAULT_FROM_EMAIL,
+        to,
+        subject,
+        html,
+        ...(replyTo ? { reply_to: replyTo } : {})
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error(`${logTag} Resend error:`, data);
+      return { success: false, error: data };
+    }
+    return { success: true, emailId: data.id };
+  } catch (err) {
+    console.error(`${logTag} Error:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
 
 function formatDateSpanish(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -22,8 +56,8 @@ export async function sendConfirmationEmail(options, env) {
     return null;
   }
 
-  const fromEmail = env.RESEND_FROM_EMAIL || 'contacto@atiendemelapyme.cl';
   const dateFormatted = formatDateSpanish(date);
+  const safeLink = escapeHtml(calendarLink);
 
   const bodyHtml = `
     <div class="greeting">
@@ -50,12 +84,12 @@ export async function sendConfirmationEmail(options, env) {
     </div>
 
     <div class="button-center">
-      <a href="${calendarLink}" class="button">Unirse a Google Meet →</a>
+      <a href="${safeLink}" class="button">Unirse a Google Meet →</a>
     </div>
 
     <div class="fallback">
       Si el botón no funciona, copia este enlace:<br>
-      <a href="${calendarLink}">${calendarLink}</a>
+      <a href="${safeLink}">${safeLink}</a>
     </div>
 
     <div class="note">
@@ -94,35 +128,10 @@ export async function sendConfirmationEmail(options, env) {
     footerNote: 'Recibiste este correo porque agendaste una reunión con nosotros.'
   });
 
-  const payload = {
-    from: fromEmail,
-    to: clientEmail,
-    subject: `Cita confirmada - ${dateFormatted}`,
-    html: htmlContent
-  };
-
-  try {
-    const response = await fetch(RESEND_API, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('[EMAIL] Resend error:', data);
-      return { success: false, error: data };
-    }
-
-    return { success: true, emailId: data.id };
-  } catch (err) {
-    console.error('[EMAIL] Error:', err.message);
-    return { success: false, error: err.message };
-  }
+  return sendViaResend(
+    { to: clientEmail, subject: `Cita confirmada - ${dateFormatted}`, html: htmlContent },
+    env
+  );
 }
 
 const ESCALATION_REASON_LABELS = {
@@ -145,7 +154,6 @@ export async function sendEscalationNotification(options, env) {
     return { success: false, error: 'RESEND_API_KEY o DRAFT_NOTIFICATION_EMAIL no configurado' };
   }
 
-  const fromEmail = env.RESEND_FROM_EMAIL || 'contacto@atiendemelapyme.cl';
   const reasonLabel = ESCALATION_REASON_LABELS[reason] || 'El chat necesita revisión';
 
   const bodyHtml = `
@@ -171,31 +179,7 @@ export async function sendEscalationNotification(options, env) {
     footerNote: sessionId ? `session_id: ${escapeHtml(sessionId)}` : ''
   });
 
-  try {
-    const response = await fetch(RESEND_API, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: notifyTo,
-        subject: `[Chat] ${reasonLabel}`,
-        html
-      })
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('[ESCALATION] Resend error:', data);
-      return { success: false, error: data };
-    }
-    return { success: true, emailId: data.id };
-  } catch (err) {
-    console.error('[ESCALATION] Error notificando:', err.message);
-    return { success: false, error: err.message };
-  }
+  return sendViaResend({ to: notifyTo, subject: `[Chat] ${reasonLabel}`, html }, env, '[ESCALATION]');
 }
 
 export async function sendReminderEmail(options, env) {
@@ -203,7 +187,6 @@ export async function sendReminderEmail(options, env) {
 
   if (!env.RESEND_API_KEY) return null;
 
-  const fromEmail = env.RESEND_FROM_EMAIL || 'contacto@atiendemelapyme.cl';
   const dateFormatted = formatDateSpanish(date);
 
   const bodyHtml = `
@@ -219,7 +202,7 @@ export async function sendReminderEmail(options, env) {
       </div>
     </div>
 
-    ${calendarLink ? `<div class="button-center"><a href="${calendarLink}" class="button">Unirse a Google Meet →</a></div>` : ''}
+    ${calendarLink ? `<div class="button-center"><a href="${escapeHtml(calendarLink)}" class="button">Unirse a Google Meet →</a></div>` : ''}
 
     <p style="color:${COLORS.textMuted};">Si necesitas cambiar la hora, responde este correo.</p>
     <p style="color:${COLORS.textMuted};">¡Nos vemos! 😊</p>
@@ -230,25 +213,9 @@ export async function sendReminderEmail(options, env) {
     bodyHtml
   });
 
-  try {
-    const response = await fetch(RESEND_API, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: clientEmail,
-        subject: `Recordatorio: Tu reunión es mañana`,
-        html: htmlContent
-      })
-    });
-
-    const data = await response.json();
-    return !response.ok ? { success: false, error: data } : { success: true, emailId: data.id };
-  } catch (err) {
-    console.error('[REMINDER] Error:', err.message);
-    return { success: false };
-  }
+  return sendViaResend(
+    { to: clientEmail, subject: 'Recordatorio: Tu reunión es mañana', html: htmlContent },
+    env,
+    '[REMINDER]'
+  );
 }

@@ -91,9 +91,25 @@ button:hover{opacity:.9;}
 .error{color:var(--err);font-size:12.5px;margin:-8px 0 16px;}
 `;
 
+// Solo rutas relativas del mismo sitio: "//evil.com" o "/\\evil.com" también
+// empiezan con "/" pero el navegador los trata como otro dominio.
+function safeNextPath(next) {
+    return typeof next === 'string' && /^\/(?![/\\])/.test(next) ? next : '/admin';
+}
+
+// Las páginas del panel no deben poder embeberse en un iframe ajeno
+// (clickjacking sobre "Desconectar", login, etc.).
+const ADMIN_SECURITY_HEADERS = {
+    'X-Robots-Tag': 'noindex, nofollow',
+    'Cache-Control': 'no-store',
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "frame-ancestors 'none'"
+};
+
 function loginPageHtml(options) {
     const error = options && options.error;
-    const next = (options && options.next) || '/admin';
+    const next = safeNextPath(options && options.next);
     return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -123,8 +139,7 @@ function loginPageResponse(options) {
         status: (options && options.error) ? 401 : 200,
         headers: {
             'Content-Type': 'text/html; charset=utf-8',
-            'X-Robots-Tag': 'noindex, nofollow',
-            'Cache-Control': 'no-store'
+            ...ADMIN_SECURITY_HEADERS
         }
     });
 }
@@ -153,7 +168,7 @@ async function onRequestPostAdminLogin(context) {
     return new Response(null, {
         status: 303,
         headers: {
-            'Location': next.startsWith('/') ? next : '/admin',
+            'Location': safeNextPath(next),
             'Set-Cookie': cookie
         }
     });
@@ -705,8 +720,7 @@ async function onRequestGetAdmin(context) {
         status: 200,
         headers: {
             'Content-Type': 'text/html; charset=utf-8',
-            'X-Robots-Tag': 'noindex, nofollow',
-            'Cache-Control': 'no-store'
+            ...ADMIN_SECURITY_HEADERS
         }
     });
 }

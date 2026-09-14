@@ -4,7 +4,6 @@ import {
   checkRateLimit,
   checkBurstLimit,
   checkAllLimits,
-  resetRateLimit,
 } from '../../src/lib/rateLimit.js';
 
 // Each test gets a unique identifier so entries from one test never leak
@@ -100,18 +99,5 @@ describe('checkAllLimits', () => {
     const second = await checkAllLimits(id, env.RATE_LIMIT_KV, opts);
     expect(second.allowed).toBe(false);
     expect(second.reason).toBe('Burst limit exceeded');
-  });
-});
-
-describe('resetRateLimit', () => {
-  it('clears both the rate and burst keys for an identifier', async () => {
-    const id = uniqueId('reset');
-    await checkRateLimit(id, env.RATE_LIMIT_KV, 1, 60);
-    await checkBurstLimit(id, env.RATE_LIMIT_KV, 1, 5);
-
-    await resetRateLimit(id, env.RATE_LIMIT_KV);
-
-    expect(await env.RATE_LIMIT_KV.get(`rl:${id}`)).toBeNull();
-    expect(await env.RATE_LIMIT_KV.get(`burst:${id}`)).toBeNull();
   });
 });

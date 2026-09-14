@@ -9,7 +9,6 @@ import {
   validateDate,
   validateTime,
   validateName,
-  validateNotes,
 } from '../../src/lib/validator.js';
 
 describe('validateMessages', () => {
@@ -77,6 +76,10 @@ describe('validateContent', () => {
 });
 
 describe('validateSessionId', () => {
+  it('rejects an unbounded id', () => {
+    expect(() => validateSessionId('a'.repeat(65))).toThrow(ValidationError);
+  });
+
   it('accepts a UUID-shaped id', () => {
     const id = '123e4567-e89b-12d3-a456-426614174000';
     expect(validateSessionId(id)).toBe(id);
@@ -130,6 +133,11 @@ describe('validateDate', () => {
   it('rejects an impossible calendar date', () => {
     expect(() => validateDate('2026-13-40')).toThrow(/invalid date/);
   });
+
+  it('rejects a day that does not exist in that month', () => {
+    expect(() => validateDate('2026-02-31')).toThrow(/invalid date/);
+    expect(validateDate('2028-02-29')).toBe('2028-02-29');
+  });
 });
 
 describe('validateTime', () => {
@@ -158,19 +166,5 @@ describe('validateName', () => {
 
   it('rejects a name over 100 chars', () => {
     expect(() => validateName('a'.repeat(101))).toThrow(/too long/);
-  });
-});
-
-describe('validateNotes', () => {
-  it('trims and returns valid notes', () => {
-    expect(validateNotes('  necesita llamar antes  ')).toBe('necesita llamar antes');
-  });
-
-  it('allows empty notes', () => {
-    expect(validateNotes('   ')).toBe('');
-  });
-
-  it('rejects notes over 1000 chars', () => {
-    expect(() => validateNotes('a'.repeat(1001))).toThrow(/too long/);
   });
 });

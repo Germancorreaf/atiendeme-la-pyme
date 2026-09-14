@@ -1,4 +1,4 @@
-// functions/lib/validator.js
+// src/lib/validator.js
 // Central validation for all API inputs
 
 export class ValidationError extends Error {
@@ -72,9 +72,9 @@ export function validateSessionId(sessionId) {
     throw new ValidationError('sessionId is required and must be non-empty string');
   }
 
-  const isValidUUID = /^[a-f0-9-]{36}$/.test(sessionId) || /^[a-f0-9-]{32,}$/.test(sessionId);
-  
-  if (!isValidUUID) {
+  // El sessionId se usa como clave en Supabase y como nombre del Durable
+  // Object del chat en vivo: hex/guiones, entre 32 y 64 caracteres.
+  if (!/^[a-f0-9-]{32,64}$/.test(sessionId)) {
     throw new ValidationError(`sessionId format invalid: "${sessionId.substring(0, 20)}..."`);
   }
 
@@ -110,8 +110,8 @@ export function validateDate(dateStr) {
     throw new ValidationError(`invalid date format: "${dateStr}" (expected YYYY-MM-DD)`);
   }
 
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) {
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  if (isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== dateStr) {
     throw new ValidationError(`invalid date: "${dateStr}" is not a valid date`);
   }
 
@@ -150,20 +150,6 @@ export function validateName(name) {
 
   if (trimmed.length > 100) {
     throw new ValidationError(`name too long (${trimmed.length}/100 chars)`);
-  }
-
-  return trimmed;
-}
-
-export function validateNotes(notes) {
-  if (typeof notes !== 'string') {
-    throw new ValidationError('notes must be a string');
-  }
-
-  const trimmed = notes.trim();
-
-  if (trimmed.length > 1000) {
-    throw new ValidationError(`notes too long (${trimmed.length}/1000 chars)`);
   }
 
   return trimmed;

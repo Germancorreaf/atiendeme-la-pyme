@@ -82,19 +82,3 @@ export async function createCalendarEvent(options, context) {
     throw new ApiError(`Error: ${err.message}`, 500);
   }
 }
-
-export async function cancelCalendarEvent(eventId, context) {
-  if (!eventId) throw new ApiError('Se requiere eventId', 400);
-  try {
-    const accessToken = await getAccessToken(context.env);
-    const res = await fetch(`${CALENDAR_API}/calendars/primary/events/${eventId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    if (!res.ok && res.status !== 204) throw new ApiError('Error cancelando evento', res.status);
-    return { success: true, eventId };
-  } catch (err) {
-    if (err instanceof ApiError) throw err;
-    throw new ApiError(`Error: ${err.message}`, 500);
-  }
-}

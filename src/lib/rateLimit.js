@@ -1,7 +1,5 @@
-// functions/lib/rateLimit.js
+// src/lib/rateLimit.js
 // Rate limiting using Cloudflare KV namespace
-
-import { ApiError } from './errors.js';
 
 const DEFAULT_MAX_REQUESTS = 10;
 const DEFAULT_WINDOW_SECONDS = 60;
@@ -19,36 +17,20 @@ export async function checkRateLimit(
   }
 
   const key = `rl:${identifier}`;
-  
+  // Cloudflare KV rechaza expirationTtl < 60s (el put lanza y el catch de
+  // abajo dejaba pasar la request sin límite).
+  const kvTtl = Math.max(60, windowSeconds);
+
   try {
     const current = await kvNamespace.get(key, 'json');
     const now = Date.now();
     
-    if (!current) {
+    if (!current || now > current.resetAt) {
       await kvNamespace.put(
         key,
-        JSON.stringify({
-          count: 1,
-          resetAt: now + windowSeconds * 1000,
-          requests: [now]
-        }),
-        { expirationTtl: windowSeconds }
+        JSON.stringify({ count: 1, resetAt: now + windowSeconds * 1000 }),
+        { expirationTtl: kvTtl }
       );
-      
-      return { allowed: true };
-    }
-
-    if (now > current.resetAt) {
-      await kvNamespace.put(
-        key,
-        JSON.stringify({
-          count: 1,
-          resetAt: now + windowSeconds * 1000,
-          requests: [now]
-        }),
-        { expirationTtl: windowSeconds }
-      );
-      
       return { allowed: true };
     }
 
@@ -62,14 +44,10 @@ export async function checkRateLimit(
       };
     }
 
-    current.count++;
-    current.requests = (current.requests || []).slice(-9);
-    current.requests.push(now);
-    
     await kvNamespace.put(
       key,
-      JSON.stringify(current),
-      { expirationTtl: windowSeconds }
+      JSON.stringify({ count: current.count + 1, resetAt: current.resetAt }),
+      { expirationTtl: kvTtl }
     );
 
     return { allowed: true };
@@ -177,17 +155,4 @@ export async function checkAllLimits(
   }
 
   return { allowed: true };
-}
-
-export async function resetRateLimit(identifier, kvNamespace) {
-  if (!kvNamespace) return;
-
-  try {
-    await kvNamespace.delete(`rl:${identifier}`);
-    await kvNamespace.delete(`burst:${identifier}`);
-    return { success: true };
-  } catch (err) {
-    console.error('Reset rate limit error:', err.message);
-    return { success: false, error: err.message };
-  }
 }

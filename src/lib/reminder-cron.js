@@ -2,29 +2,7 @@
 // Lógica del cron job para enviar recordatorios 1 día antes
 
 import { sendReminderEmail } from './email.js';
-
-/**
- * Obtiene la fecha de mañana en formato YYYY-MM-DD (zona horaria Chile)
- */
-function getTomorrowDate() {
-  const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const formatter = new Intl.DateTimeFormat('es-CL', {
-    timeZone: 'America/Santiago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-
-  const parts = formatter.formatToParts(tomorrow);
-  const year = parts.find(p => p.type === 'year').value;
-  const month = parts.find(p => p.type === 'month').value;
-  const day = parts.find(p => p.type === 'day').value;
-
-  return `${year}-${month}-${day}`;
-}
+import { getTodayInfo } from './dominga-prompt.js';
 
 /**
  * Busca citas de mañana que no han recibido recordatorio
@@ -35,7 +13,7 @@ async function getAppointmentsForTomorrow(env) {
     return [];
   }
 
-  const tomorrowDate = getTomorrowDate();
+  const { tomorrowISO: tomorrowDate } = getTodayInfo();
 
   try {
     const url = `${env.SUPABASE_URL}/rest/v1/scheduled_appointments?appointment_date=eq.${tomorrowDate}&reminder_sent=eq.false&select=*`;

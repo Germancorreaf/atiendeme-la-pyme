@@ -1,4 +1,4 @@
-// functions/lib/errors.js
+// src/lib/errors.js
 // Centralized error handling and response formatting
 
 export class ApiError extends Error {
@@ -21,12 +21,13 @@ export function sendError(err, requestPath = '') {
   
   console.error(`[${status}] ${requestPath || 'unknown'}: ${safeMessage}`);
   
-  // Importante: al cliente solo le va el mensaje ya redactado. Antes se
-  // devolvía "message" (sin redactar) aquí, lo que filtraba tokens/keys/
-  // emails hacia afuera aunque el log sí los ocultara.
+  // Al cliente solo le va el mensaje ya redactado, y en errores 5xx ni
+  // siquiera eso: son fallas internas (secrets faltantes, respuestas de
+  // Anthropic/Google/Supabase) que no le sirven al visitante y describen la
+  // infraestructura. El detalle completo queda en el log de arriba.
   return new Response(
     JSON.stringify({
-      error: safeMessage,
+      error: status >= 500 ? 'Error interno del servidor' : safeMessage,
       status: status
     }),
     {

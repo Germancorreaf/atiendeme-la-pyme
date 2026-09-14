@@ -125,7 +125,7 @@ Paleta casi monocromática (negro + blanco cálido) con un único acento cálido
 
 ### Hierarchy
 - **Display** (700, `clamp(40px,7vw,84px)`, line-height 0.98): el H1 del hero. Uppercase, letter-spacing -0.03em.
-- **Headline** (700, `clamp(26px,3.6vw,42px)`, line-height 1.08): títulos de sección principales (`.sec-head h2`, `h2.big`). Uppercase en la mayoría de las secciones (hero, CTA final, sección "24/7") — dos secciones más narrativas (`.canales-text h2`, `.convo-left h2`) usan case normal; es una variación real del sistema actual, no un error a unificar sin más contexto.
+- **Headline** (700, `clamp(26px,3.6vw,42px)`, line-height 1.08): títulos de sección principales (`.sec-head h2`, `h2.big`). Uppercase en la mayoría de las secciones (hero, CTA final, sección "24/7") — la sección narrativa de canales (`.canales-text h2`) usa case normal; es una variación real del sistema actual, no un error a unificar sin más contexto.
 - **Title** (700, 20px): títulos de tarjetas de feature.
 - **Body** (400, 14px, line-height 1.6): texto de párrafo. Ancho máximo ~600-720px en bloques de contenido largo.
 - **Label** (400, 11px, letter-spacing 0.14em, uppercase): eyebrows de sección (`.label`), badges, metadatos de navegación.
@@ -181,7 +181,7 @@ Los componentes se sienten **táctiles y directos**: confirman cada acción con 
 - Los ítems de menú están numerados (`01`, `02`...) en Night Ember, con animación de entrada escalonada (delay incremental por ítem).
 
 ### Signature Component: Phone Mockup
-El sitio incluye un mockup de teléfono realista (marco, isla dinámica, botones laterales) que renderiza conversaciones simuladas de WhatsApp e Instagram con los colores reales de cada plataforma (WhatsApp: `#111b21`/`#005c4b`; Instagram: gradiente `#F58529→#DD2A7B→#8134AF`). Es el componente más distintivo del sitio — vale la pena preservarlo como diferenciador si se documentan o construyen nuevas superficies relacionadas con "ver el producto en acción".
+El hero muestra tres iPhones hechos en HTML/CSS (`.hp-stage`, `.hp-phone`): Instagram, WhatsApp (al centro, más grande) y una llamada, con los colores reales de cada app en modo claro (Instagram: burbuja `#3797f0` y avatar en gradiente `#F58529→#DD2A7B→#8134AF`; WhatsApp: fondo `#efeae2`, burbuja propia `#d9fdd3`). Todo está en `em` sobre un `font-size` en unidades de contenedor (`cqw`), así que escala nítido a cualquier ancho. El grupo va siempre centrado; en mobile el teléfono central queda completo y los laterales se recortan parejo. Es el componente más distintivo del sitio y el único mockup de teléfono de la landing (la antigua sección 04 con un teléfono de pestañas se eliminó por redundante, 2026-09-14).
 
 ### Chat Widget (flotante)
 Botón circular flotante (`#atp-chat-btn`) con punto de estado "en línea" parpadeante, que abre un panel de chat (`#atp-chat-panel`) con la misma paleta y bordes duros del resto del sitio — el chat en vivo con Dominga se siente parte del mismo sistema, no un widget de terceros insertado.

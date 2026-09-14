@@ -165,7 +165,7 @@ const VERTICALS = {
       { t: 'Responde preguntas frecuentes', d: 'sobre tratamientos, precios y duración, con la información real de tu centro.' },
       { t: 'Agenda citas directo en tu calendario', d: 'Google Calendar, sin dobles reservas.' },
       { t: 'Envía recordatorios automáticos', d: 'antes de la cita, para reducir las inasistencias.' },
-      { t: 'Califica a quien pregunta', d: 'antes de que tengas que hablar con ella — sabés si es una consulta real o solo curiosidad.' }
+      { t: 'Califica a quien pregunta', d: 'antes de que tengas que hablar con ella — sabes si es una consulta real o solo curiosidad.' }
     ]
   },
   'chatbot-ia-para-clinicas-dentales': {

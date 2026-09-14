@@ -211,6 +211,8 @@ Hallazgos de una revisión completa del código que **no se implementaron a prop
 - **Admin sin paginación:** `/admin` carga todas las filas de `chat_sessions` y `scheduled_appointments` en la página; con volumen real va a ponerse lento.
 - **Logs con datos personales:** `src/lib/reminder-cron.js` loguea nombre y correo de cada cliente, y los logs de Workers quedan persistidos (`observability.logs.persist = true`).
 - **Webhook legado `/webhook/instagram`:** solo responde la verificación GET. Si la suscripción antigua ya no está en el panel de Meta, borrar `src/api/instagram.js` y su ruta.
+- **Términos con "usted" (auditoría web 2026-09-14):** `/terminos` dice "usted acepta estos Términos... Si no está de acuerdo" y la marca usa "tú". No se cambió porque la URL de términos/privacidad está registrada en la app de Meta en revisión; es solo redacción, pasarla a "tú" después del App Review.
+- **robots.txt administrado por Cloudflare:** el dashboard de Cloudflare antepone su bloque "Managed Content" (`Content-Signal: ai-train=no` + `Disallow` para GPTBot, ClaudeBot, Google-Extended, CCBot, etc.). Lighthouse lo marca como "robots.txt no válido" por la directiva `Content-Signal`, que Google ignora sin problema. Los bots de búsqueda con IA (OAI-SearchBot, Claude-SearchBot, PerplexityBot) no están bloqueados, así que el sitio sigue apareciendo en respuestas de IA; solo se bloquea el entrenamiento. Decidir si mantenerlo (se cambia en Cloudflare > AI Crawl Control / robots.txt administrado, no en el código).
 
 ## Completed
 

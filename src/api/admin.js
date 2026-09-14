@@ -422,7 +422,7 @@ function renderConvos(list,mount){
   mount.innerHTML=list.map((s,i)=>{
     const msgs=Array.isArray(s.messages)?s.messages:[];
     const last=msgs[msgs.length-1];
-    const preview=last?esc(last.content).slice(0,160):'(sin mensajes)';
+    const preview=last?esc(String(last.content||'').slice(0,160)):'(sin mensajes)';
     const thread=msgs.map(m=>'<div class="msg '+(m.role==='user'?'user':'bot')+'"><span class="role">'+(m.role==='user'?'Visitante':'Dominga')+'</span><p>'+esc(m.content)+'</p></div>').join('');
     return '<div class="convo" data-i="'+i+'" data-session="'+esc(s.session_id||'')+'">'
       +'<div class="convo-head">'

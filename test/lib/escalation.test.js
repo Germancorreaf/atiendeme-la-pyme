@@ -16,9 +16,10 @@ describe('detectEscalation', () => {
   it('flags when the bot falls back to its honest "no puedo resolver esto" line', () => {
     const result = detectEscalation(
       '¿tienen integración con SAP?',
-      'Esa pregunta la responden mejor en contacto@atiendemelapyme.cl — te contestan al tiro'
+      'Esa pregunta la responden mejor en hola@atiendemelapyme.cl — te contestan al tiro'
     );
     expect(result).toEqual({ escalate: true, reason: 'bot_could_not_resolve' });
+    expect(detectEscalation('x', 'la responden mejor en contacto@atiendemelapyme.cl').escalate).toBe(true);
   });
 
   it('flags when the bot uses the "team will respond" fallback for human requests', () => {

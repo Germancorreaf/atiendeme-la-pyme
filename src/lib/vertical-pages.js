@@ -135,12 +135,24 @@ const SHARED_SCRIPT = `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', 'G-V709QK49JE');
-window.addEventListener('load', function(){
-  var s = document.createElement('script');
-  s.async = true;
-  s.src = 'https://www.googletagmanager.com/gtag/js?id=G-V709QK49JE';
-  document.head.appendChild(s);
-});
+// gtag.js pesa ~170 KB y bloquea el hilo principal ~300 ms en mobile: se carga
+// recién con la primera interacción (scroll, toque, tecla) o a los 6 s de la
+// carga. Los eventos anteriores quedan en dataLayer y se envían al cargar.
+(function(){
+  var loaded = false;
+  var triggers = ['scroll', 'pointerdown', 'keydown', 'touchstart'];
+  function loadGA(){
+    if (loaded) return;
+    loaded = true;
+    triggers.forEach(function(t){ window.removeEventListener(t, loadGA); });
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-V709QK49JE';
+    document.head.appendChild(s);
+  }
+  triggers.forEach(function(t){ window.addEventListener(t, loadGA, { passive: true }); });
+  window.addEventListener('load', function(){ setTimeout(loadGA, 6000); });
+})();
 const menuOverlay = document.getElementById('menuOverlay');
 document.addEventListener('click', (e) => {
   if (e.target.closest('#menuToggle')) { document.body.classList.toggle('menu-open'); syncMenu(); return; }

@@ -106,15 +106,20 @@ Hallazgos de una revisión completa del código que **no se implementaron a prop
 **Priority:** P1
 **Depends on:** App Review de Meta aprobado.
 
-### Doble agenda si Supabase falla
+### Índice único de horarios en Supabase (correrlo a mano)
 
-**What:** `checkAvailability` en `src/api/schedule.js` devuelve `{ available: true }` ante cualquier error (Supabase caído, respuesta no-JSON, credenciales faltantes), así que agenda igual. Tampoco hay restricción única en la tabla `scheduled_appointments` sobre `(appointment_date, appointment_time)`, y dos requests simultáneas pueden pasar el chequeo a la vez.
+**What:** Crear el índice en el SQL Editor de Supabase (proyecto `ewhqshvmrinqsevjfjtz`):
 
-**Why:** El copy promete "sin dobles reservas".
+```sql
+create unique index if not exists scheduled_appointments_unique_slot
+  on public.scheduled_appointments (appointment_date, appointment_time);
+```
 
-**Context:** Opciones: fallar cerrado (responder 503 "no pude confirmar disponibilidad") y/o agregar un unique index en Supabase y tratar el error de conflicto como 409. Además, si el evento de Google Calendar se crea pero `saveAppointment` falla, la cita queda en el calendario pero no en la base (no recibe recordatorio).
+**Why:** `src/api/schedule.js` ya revisa choques de horario (demos de 20 min) y falla cerrado, pero dos pedidos exactamente simultáneos podrían pasar el chequeo a la vez. Con el índice, la base rechaza el segundo (409) y el código ya lo maneja sin crear el evento en Google Calendar.
 
-**Effort:** S
+**Context:** Verificado el 2026-09-14 que no hay horarios duplicados en la tabla, así que el índice se crea sin errores. No se aplicó desde la sesión porque el sistema de permisos bloqueó cambios directos en la base de producción.
+
+**Effort:** XS
 **Priority:** P2
 **Depends on:** None
 
@@ -129,33 +134,6 @@ Hallazgos de una revisión completa del código que **no se implementaron a prop
 **Effort:** S
 **Priority:** P2
 **Depends on:** App Review de Meta aprobado.
-
-### Dominga manda a escribir a contacto@ pero el sitio usa hola@
-
-**What:** El system prompt (`src/lib/dominga-prompt.js`, bloque "SI NO SABES") y el patrón de `src/lib/escalation.js` usan `contacto@atiendemelapyme.cl`. La landing, el menú y `llms.txt` usan `hola@atiendemelapyme.cl`, y según `src/lib/email-inbound.js` solo hola@ tiene regla de Email Routing.
-
-**Why:** Si contacto@ no recibe correo, los visitantes que Dominga deriva ahí se pierden.
-
-**Context:** Confirmar si contacto@ recibe correo. Si no, cambiar el prompt y el patrón de escalamiento (y su test en `test/lib/escalation.test.js`) a hola@. `contacto@` también es el remitente por defecto de Resend (`DEFAULT_FROM_EMAIL` en `src/lib/email.js`) — eso puede quedar como está si el dominio está verificado.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** Confirmar qué buzones reciben correo.
-
-### El correo de confirmación de cita promete cosas que no pasan
-
-**What:** En `sendConfirmationEmail` (`src/lib/email.js`):
-- El botón dice "Unirse a Google Meet", pero `createCalendarEvent` no crea link de Meet (no pide `conferenceData`); el link es la página del evento en Google Calendar. Lo mismo en el recordatorio.
-- Dice "DURACIÓN: 20 minutos", pero el evento se crea de 60 (`durationMinutes = 60` por defecto en `src/lib/google-calendar.js`).
-- Dice "También recibirás una invitación directa en tu calendario", pero el evento se crea sin `sendUpdates=all`, así que probablemente Google no le manda la invitación al cliente.
-
-**Why:** Principio de producto: nunca prometer algo que no pasa.
-
-**Context:** Decidir: (a) crear Meet de verdad (`conferenceDataVersion=1` + `createRequest`) y enviar invitación (`sendUpdates=all`), o (b) cambiar el texto del correo. Unificar la duración en una sola constante.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** Decisión de Germán sobre Meet/duración.
 
 ### "Desconectar" cuentas con un link GET (CSRF)
 
@@ -181,18 +159,6 @@ Hallazgos de una revisión completa del código que **no se implementaron a prop
 **Priority:** P3
 **Depends on:** App Review de Meta aprobado.
 
-### Posible pérdida de mensajes del chat en vivo
-
-**What:** `saveChatSession` en `src/api/chat.js` hace upsert de la columna `messages` completa con el historial que manda el navegador. `ChatRoom.persistMessage` (`src/durable-objects/ChatRoom.js`) agrega los mensajes del chat en vivo a esa misma columna. Si el widget vuelve a llamar a `/api/chat` después de un traspaso sin incluir esos mensajes, el upsert los sobrescribe.
-
-**Why:** Se perdería del dashboard lo que Germán escribió en vivo.
-
-**Context:** Verificar primero si el widget incluye los mensajes humanos en el historial que manda. Si no, hacer que `chat.js` agregue (append) en vez de reemplazar, o guardar los mensajes en vivo en otra columna.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Código duplicado en los webhooks de mensajería
 
 **What:** `getConversationHistory`, `getClaudeReply` y `saveMessage` están casi idénticos en `src/api/whatsapp.js` y `src/api/meta-webhook.js`, y los headers de Supabase se repiten en ~20 lugares. Extraer a un módulo compartido (ej. `src/lib/chatSessions.js`). `saveMessage` además hace leer-y-escribir sin transacción (dos mensajes seguidos pueden pisarse).
@@ -207,14 +173,30 @@ Hallazgos de una revisión completa del código que **no se implementaron a prop
 
 ### Otros menores
 
-- **Modelo de borradores de correo:** `src/lib/email-inbound.js` usa el modelo por defecto de `src/lib/anthropic.js` (`claude-sonnet-4-5-20250929`); todos los demás canales usan Haiku 4.5. Decidir si actualizarlo.
-- **Admin sin paginación:** `/admin` carga todas las filas de `chat_sessions` y `scheduled_appointments` en la página; con volumen real va a ponerse lento.
-- **Logs con datos personales:** `src/lib/reminder-cron.js` loguea nombre y correo de cada cliente, y los logs de Workers quedan persistidos (`observability.logs.persist = true`).
+- **Modelo de borradores de correo:** `src/lib/email-inbound.js` usa el modelo por defecto de `src/lib/anthropic.js` (`claude-sonnet-4-5-20250929`). Sigue activo y sin fecha de retiro (revisado 2026-09-14); cambiarlo es decisión de costo/calidad, sin urgencia.
 - **Webhook legado `/webhook/instagram`:** solo responde la verificación GET. Si la suscripción antigua ya no está en el panel de Meta, borrar `src/api/instagram.js` y su ruta.
 - **Términos con "usted" (auditoría web 2026-09-14):** `/terminos` dice "usted acepta estos Términos... Si no está de acuerdo" y la marca usa "tú". No se cambió porque la URL de términos/privacidad está registrada en la app de Meta en revisión; es solo redacción, pasarla a "tú" después del App Review.
 - **robots.txt administrado por Cloudflare:** el dashboard de Cloudflare antepone su bloque "Managed Content" (`Content-Signal: ai-train=no` + `Disallow` para GPTBot, ClaudeBot, Google-Extended, CCBot, etc.). Lighthouse lo marca como "robots.txt no válido" por la directiva `Content-Signal`, que Google ignora sin problema. Los bots de búsqueda con IA (OAI-SearchBot, Claude-SearchBot, PerplexityBot) no están bloqueados, así que el sitio sigue apareciendo en respuestas de IA; solo se bloquea el entrenamiento. Decidir si mantenerlo (se cambia en Cloudflare > AI Crawl Control / robots.txt administrado, no en el código).
 
 ## Completed
+
+### Pendientes no-Meta de la revisión de código (hecho 2026-09-14)
+
+**What:** Se resolvió todo lo que no toca la integración con Meta:
+- **Agenda sin doble reserva:** `checkAvailability` falla cerrado (503 si Supabase no responde), detecta choques con demos de 20 min, reserva la fila antes de crear el evento y la libera si Google Calendar falla. Rechaza fechas pasadas.
+- **Correo de confirmación honesto:** el evento se crea con Google Meet (reintenta sin Meet si la cuenta no puede) y con `sendUpdates=all`, así que la invitación sí llega. Duración unificada en `DEMO_DURATION_MINUTES = 20`. El botón dice "Unirse a Google Meet" solo si el link es de Meet; si no, "Ver cita en Google Calendar".
+- **Dominga deriva a hola@** (buzón público con Email Routing); la detección de escalamiento acepta hola@ y contacto@.
+- **Chat web sin pérdida de historial:** `/api/chat` agrega el mensaje nuevo y la respuesta al historial guardado en vez de reemplazarlo. Antes, un visitante que recargaba la página borraba su conversación anterior y los mensajes del chat en vivo. `escalated` ya no se desmarca con el siguiente mensaje. El widget también guarda en su historial lo que el visitante escribe durante el chat en vivo.
+- **Admin:** máximo 500 filas incrustadas por tabla, con los totales reales en las estadísticas.
+- **Logs:** el cron de recordatorios ya no loguea nombre ni correo, y omite reservas provisionales (`pending:`).
+- **Google Analytics:** se carga con la primera interacción o a los 6 s (antes bloqueaba ~300 ms el hilo principal en mobile).
+- **wrangler.toml:** se quitó el `[env.production]` vacío que generaba la advertencia en cada deploy.
+
+**Why:** Pedido explícito de Germán: hacer todo lo que no implique cambios en Meta mientras la app está en revisión de Tech Provider.
+
+**Effort:** M
+**Priority:** P1 (hecho)
+**Depends on:** None
 
 ### Chat en vivo: transferencia real a un humano en tiempo real
 

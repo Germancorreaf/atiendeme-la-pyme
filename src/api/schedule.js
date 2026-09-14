@@ -1,9 +1,30 @@
-import { createCalendarEvent } from '../lib/google-calendar.js';
+import { createCalendarEvent, DEMO_DURATION_MINUTES } from '../lib/google-calendar.js';
+import { getTodayInfo } from '../lib/dominga-prompt.js';
 import { sendConfirmationEmail } from '../lib/email.js';
 import { ApiError, sendError, sendSuccess, parseJSON } from '../lib/errors.js';
 import { checkRateLimit } from '../lib/rateLimit.js';
 import { validateDate, validateTime, validateEmail, validateName, ValidationError } from '../lib/validator.js';
 
+function supabaseHeaders(env, extra = {}) {
+  return {
+    'apikey': env.SUPABASE_SERVICE_KEY,
+    'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+    'Content-Type': 'application/json',
+    ...extra
+  };
+}
+
+function toMinutes(hhmm) {
+  const [h, m] = String(hhmm).slice(0, 5).split(':').map(Number);
+  return h * 60 + m;
+}
+
+/**
+ * Revisa si el horario choca con otra cita del mismo día (se consideran
+ * citas de DEMO_DURATION_MINUTES). Falla cerrado: si no se puede consultar,
+ * devuelve { error } en vez de asumir que está libre — el copy promete
+ * "sin dobles reservas".
+ */
 async function checkAvailability(date, time, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
     console.warn('Supabase not configured, skipping availability check');
@@ -11,91 +32,89 @@ async function checkAvailability(date, time, env) {
   }
 
   try {
-    const url = `${env.SUPABASE_URL}/rest/v1/scheduled_appointments?appointment_date=eq.${date}&appointment_time=eq.${time}&select=*`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const responseText = await response.text();
-
+    const response = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/scheduled_appointments?appointment_date=eq.${date}&select=appointment_time`,
+      { headers: supabaseHeaders(env) }
+    );
     if (!response.ok) {
-      console.error(`Availability check failed: ${response.status} - ${responseText}`);
-      return { available: true };
+      console.error(`Availability check failed: ${response.status} - ${await response.text()}`);
+      return { available: false, error: true };
     }
+    const rows = await response.json();
+    if (!Array.isArray(rows)) return { available: false, error: true };
 
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      console.error('Failed to parse availability response:', responseText);
-      return { available: true };
-    }
-
-    const isAvailable = Array.isArray(data) && data.length === 0;
-
-    return {
-      available: isAvailable,
-      conflicting: data[0] || null
-    };
+    const requested = toMinutes(time);
+    const clash = rows.some((r) => Math.abs(toMinutes(r.appointment_time) - requested) < DEMO_DURATION_MINUTES);
+    return { available: !clash };
   } catch (err) {
     console.error('Availability check error:', err.message);
-    return { available: true };
+    return { available: false, error: true };
   }
 }
 
-async function saveAppointment(eventId, name, email, date, time, calendarLink, env) {
+/**
+ * Reserva el horario en Supabase ANTES de crear el evento en Google Calendar,
+ * con un event_id provisional. Si la tabla tiene el índice único
+ * (appointment_date, appointment_time), una segunda reserva simultánea recibe
+ * 409 y no se crea un evento duplicado en el calendario.
+ * @returns {Promise<{ id: string } | { conflict: true } | { skipped: true }>}
+ */
+async function reserveSlot({ name, email, date, time }, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
     console.warn('Supabase not configured, skipping appointment save');
-    return null;
+    return { skipped: true };
   }
 
-  try {
-    const payload = {
-      event_id: eventId,
+  const response = await fetch(`${env.SUPABASE_URL}/rest/v1/scheduled_appointments`, {
+    method: 'POST',
+    headers: supabaseHeaders(env, { Prefer: 'return=representation' }),
+    body: JSON.stringify({
+      event_id: `pending:${crypto.randomUUID()}`,
       client_name: name,
       client_email: email,
       appointment_date: date,
-      appointment_time: time,
-      calendar_link: calendarLink
-    };
+      appointment_time: time
+    })
+  });
 
-    const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/scheduled_appointments`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': env.SUPABASE_SERVICE_KEY,
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`
-        },
-        body: JSON.stringify(payload)
-      }
-    );
+  if (response.status === 409) return { conflict: true };
+  if (!response.ok) {
+    throw new ApiError(`Appointment reserve failed [${response.status}]: ${await response.text()}`, 503);
+  }
+  const rows = await response.json();
+  return { id: rows[0]?.id };
+}
 
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      console.error(`Appointment save failed [${response.status}]: ${responseText}`);
-      return null;
-    }
-
-    return { success: true };
-  } catch (err) {
-    console.error('Appointment save error:', err.message);
-    return null;
+async function confirmSlot(id, eventId, calendarLink, env) {
+  const response = await fetch(`${env.SUPABASE_URL}/rest/v1/scheduled_appointments?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: supabaseHeaders(env, { Prefer: 'return=minimal' }),
+    body: JSON.stringify({ event_id: eventId, calendar_link: calendarLink, updated_at: new Date().toISOString() })
+  });
+  if (!response.ok) {
+    // La cita ya existe en el calendario y la reserva en la tabla; solo falta
+    // el link. Se loguea para revisarlo a mano, sin fallarle al visitante.
+    console.error(`Appointment confirm failed [${response.status}]: ${await response.text()}`);
   }
 }
+
+async function releaseSlot(id, env) {
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/scheduled_appointments?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: supabaseHeaders(env)
+    });
+  } catch (err) {
+    console.error('Appointment release error:', err.message);
+  }
+}
+
+const SLOT_TAKEN_MESSAGE = (date, time) =>
+  `La cita para ${date} a las ${time} ya está agendada. Por favor elige otro horario.`;
 
 export async function onRequestPost(context) {
   try {
     const body = await parseJSON(context.request);
-    const { sessionId } = body;
 
     let date, time, name, email;
     try {
@@ -110,8 +129,10 @@ export async function onRequestPost(context) {
       throw err;
     }
 
-    // Nota: checkRateLimit espera (identifier, kv, maxRequests, windowSeconds)
-    // como argumentos posicionales, no un objeto de opciones.
+    if (date < getTodayInfo().todayISO) {
+      throw new ApiError('Esa fecha ya pasó. Por favor elige una fecha desde hoy en adelante.', 400);
+    }
+
     // Se limita tanto por email (evita spam a una misma casilla) como por IP
     // (evita que alguien rote emails de terceros para bombardearlos de
     // confirmaciones, ya que el email destino lo controla quien llama).
@@ -135,34 +156,39 @@ export async function onRequestPost(context) {
     }
 
     const availability = await checkAvailability(date, time, context.env);
-
+    if (availability.error) {
+      throw new ApiError('No pudimos confirmar la disponibilidad en este momento. Intenta de nuevo en unos minutos.', 503);
+    }
     if (!availability.available) {
-      throw new ApiError(
-        `La cita para ${date} a las ${time} ya está agendada. Por favor elige otro horario.`,
-        409
-      );
+      throw new ApiError(SLOT_TAKEN_MESSAGE(date, time), 409);
     }
 
-    const eventResult = await createCalendarEvent(
-      {
-        title: `Cita - ${name}`,
-        date,
-        time,
-        attendeeEmail: email,
-        description: `Cita agendada por ${name} (${email})`
-      },
-      context
-    );
+    const reservation = await reserveSlot({ name, email, date, time }, context.env);
+    if (reservation.conflict) {
+      throw new ApiError(SLOT_TAKEN_MESSAGE(date, time), 409);
+    }
 
-    await saveAppointment(
-      eventResult.eventId,
-      name,
-      email,
-      date,
-      time,
-      eventResult.htmlLink,
-      context.env
-    );
+    let eventResult;
+    try {
+      eventResult = await createCalendarEvent(
+        {
+          title: `Demo Atiéndeme la Pyme - ${name}`,
+          date,
+          time,
+          attendeeEmail: email,
+          description: `Cita agendada por ${name} (${email}) desde el chat de atiendemelapyme.cl`
+        },
+        context
+      );
+    } catch (err) {
+      if (reservation.id) await releaseSlot(reservation.id, context.env);
+      throw err;
+    }
+
+    // El link que recibe el cliente: la videollamada si se pudo crear, si no
+    // el evento en Google Calendar.
+    const joinLink = eventResult.meetLink || eventResult.htmlLink;
+    if (reservation.id) await confirmSlot(reservation.id, eventResult.eventId, joinLink, context.env);
 
     const emailResult = await sendConfirmationEmail(
       {
@@ -170,7 +196,7 @@ export async function onRequestPost(context) {
         clientEmail: email,
         date,
         time,
-        calendarLink: eventResult.htmlLink
+        calendarLink: joinLink
       },
       context.env
     );
@@ -191,7 +217,7 @@ export async function onRequestPost(context) {
         time,
         clientName: name,
         clientEmail: email,
-        calendarLink: eventResult.htmlLink
+        calendarLink: joinLink
       }
     });
 

@@ -20,7 +20,9 @@ const HUMAN_REQUEST_PATTERNS = [
 const BOT_FALLBACK_PATTERNS = [
   /el equipo te responde/i,
   /te dejo anotado tu mensaje/i,
-  /responden mejor en contacto@atiendemelapyme\.cl/i,
+  // hola@ es el buzón público (sitio, llms.txt, Email Routing); contacto@ se
+  // mantiene por respuestas antiguas guardadas en el historial.
+  /responden mejor en (hola|contacto)@atiendemelapyme\.cl/i,
 ];
 
 /**

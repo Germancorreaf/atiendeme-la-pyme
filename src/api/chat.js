@@ -41,29 +41,53 @@ function extractLeadContact(messages) {
   return null;
 }
 
-async function saveChatSession(sessionId, messages, leadContact, escalation, context) {
-  if (!context.env.SUPABASE_URL || !context.env.SUPABASE_SERVICE_KEY) {
+/**
+ * Agrega los mensajes nuevos al historial guardado en vez de reemplazarlo.
+ *
+ * Antes se hacía upsert de `messages` con el historial que manda el navegador,
+ * que vive solo en memoria: si el visitante recargaba la página y volvía a
+ * escribir (el sessionId persiste en localStorage), se borraba la conversación
+ * anterior, y también los mensajes del chat en vivo que guarda ChatRoom.
+ * `escalated` queda marcado aunque el siguiente intercambio sea normal.
+ */
+async function saveChatSession(sessionId, newMessages, escalation, context) {
+  const { env } = context;
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
     console.warn('Supabase not configured, skipping session save');
     return null;
   }
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': env.SUPABASE_SERVICE_KEY,
+    'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`
+  };
 
   try {
+    const existingRes = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodeURIComponent(sessionId)}&select=messages,lead_contact,escalated,escalation_reason`,
+      { headers }
+    );
+    if (!existingRes.ok) {
+      // Sin poder leer lo guardado, escribir borraría el historial existente.
+      console.error(`Supabase read failed [${existingRes.status}], session not saved`);
+      return null;
+    }
+    const rows = await existingRes.json();
+    const existing = Array.isArray(rows) && rows[0] ? rows[0] : {};
+    const messages = [...(Array.isArray(existing.messages) ? existing.messages : []), ...newMessages];
+    const leadContact = extractLeadContact(messages);
+
     const response = await fetch(
-      `${context.env.SUPABASE_URL}/rest/v1/chat_sessions?on_conflict=session_id`,
+      `${env.SUPABASE_URL}/rest/v1/chat_sessions?on_conflict=session_id`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': context.env.SUPABASE_SERVICE_KEY,
-          'Authorization': `Bearer ${context.env.SUPABASE_SERVICE_KEY}`,
-          'Prefer': 'resolution=merge-duplicates'
-        },
+        headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
         body: JSON.stringify({
           session_id: sessionId,
-          messages: messages,
-          lead_contact: leadContact?.contact || null,
-          escalated: escalation?.escalate || false,
-          escalation_reason: escalation?.reason || null,
+          messages,
+          lead_contact: leadContact?.contact || existing.lead_contact || null,
+          escalated: Boolean(existing.escalated) || Boolean(escalation?.escalate),
+          escalation_reason: escalation?.reason || existing.escalation_reason || null,
           updated_at: new Date().toISOString()
         })
       }
@@ -77,7 +101,7 @@ async function saveChatSession(sessionId, messages, leadContact, escalation, con
       return null;
     }
 
-    return { success: true };
+    return { success: true, leadContact };
   } catch (err) {
     console.error('Supabase save error:', err.message);
     return null;
@@ -153,22 +177,20 @@ export async function onRequestPost(context) {
       maxTokens: 1024
     });
 
-    const updatedMessages = [
-      ...limitedMessages,
-      { role: 'assistant', content: reply }
-    ];
-    const leadContact = extractLeadContact(updatedMessages);
-
     const lastUserMessage = [...limitedMessages].reverse().find((m) => m.role === 'user');
     const escalation = detectEscalation(lastUserMessage?.content || '', reply);
 
-    await saveChatSession(
+    // Solo se agregan al historial guardado el mensaje nuevo y la respuesta.
+    const saved = await saveChatSession(
       validSessionId,
-      updatedMessages,
-      leadContact,
+      [
+        ...(lastUserMessage ? [lastUserMessage] : []),
+        { role: 'assistant', content: reply }
+      ],
       escalation,
       context
     );
+    const leadContact = saved?.leadContact || extractLeadContact([...limitedMessages, { role: 'assistant', content: reply }]);
 
     if (escalation.escalate) {
       // No usa waitUntil: este handler no recibe un ExecutionContext (ver

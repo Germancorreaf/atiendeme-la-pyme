@@ -16,7 +16,7 @@ async function getAppointmentsForTomorrow(env) {
   const { tomorrowISO: tomorrowDate } = getTodayInfo();
 
   try {
-    const url = `${env.SUPABASE_URL}/rest/v1/scheduled_appointments?appointment_date=eq.${tomorrowDate}&reminder_sent=eq.false&select=*`;
+    const url = `${env.SUPABASE_URL}/rest/v1/scheduled_appointments?appointment_date=eq.${tomorrowDate}&reminder_sent=eq.false&event_id=not.like.pending:*&select=*`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -90,7 +90,6 @@ export async function processReminders(env) {
   let failed = 0;
 
   for (const appointment of appointments) {
-    console.log(`Processing reminder for ${appointment.client_name} (${appointment.client_email})`);
 
     const emailResult = await sendReminderEmail(
       {
@@ -106,10 +105,10 @@ export async function processReminders(env) {
     if (emailResult && emailResult.success) {
       await markReminderSent(appointment.id, env);
       sent++;
-      console.log(`Reminder sent successfully to ${appointment.client_email}`);
+      console.log(`Reminder sent for appointment ${appointment.id}`);
     } else {
       failed++;
-      console.error(`Failed to send reminder to ${appointment.client_email}`);
+      console.error(`Failed to send reminder for appointment ${appointment.id}`);
     }
   }
 

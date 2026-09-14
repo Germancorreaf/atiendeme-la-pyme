@@ -184,20 +184,28 @@ function onRequestPostAdminLogout() {
     });
 }
 
+// Tope de filas que se incrustan en el HTML del dashboard: sin esto, con volumen
+// real la página cargaría la tabla completa en cada visita.
+const ADMIN_ROW_LIMIT = 500;
+
 async function fetchTable(env, path) {
-    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return [];
+    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return { rows: [], total: 0 };
     try {
-        const res = await fetch(`${env.SUPABASE_URL}/rest/v1/${path}`, {
+        const res = await fetch(`${env.SUPABASE_URL}/rest/v1/${path}&limit=${ADMIN_ROW_LIMIT}`, {
             headers: {
                 apikey: env.SUPABASE_SERVICE_KEY,
-                Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`
+                Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+                Prefer: 'count=exact'
             }
         });
-        if (!res.ok) return [];
-        return await res.json();
+        if (!res.ok) return { rows: [], total: 0 };
+        const rows = await res.json();
+        // Content-Range: "0-499/1234" -> total real de filas en la tabla.
+        const total = Number((res.headers.get('Content-Range') || '').split('/')[1]);
+        return { rows, total: Number.isFinite(total) ? total : rows.length };
     } catch (err) {
         console.error('Admin fetch error:', path, err.message);
-        return [];
+        return { rows: [], total: 0 };
     }
 }
 
@@ -205,8 +213,11 @@ function fetchChatSessions(env) {
     return fetchTable(env, 'chat_sessions?select=*&order=updated_at.desc');
 }
 
-function fetchAppointments(env) {
-    return fetchTable(env, 'scheduled_appointments?select=*&order=appointment_date.asc,appointment_time.asc');
+async function fetchAppointments(env) {
+    // Las más recientes primero para que el tope no deje fuera las próximas;
+    // el dashboard las usa en orden cronológico.
+    const result = await fetchTable(env, 'scheduled_appointments?select=*&order=appointment_date.desc,appointment_time.desc');
+    return { ...result, rows: result.rows.reverse() };
 }
 
 // Serializa datos para inyectar en <script> de forma segura
@@ -375,9 +386,11 @@ function isAfterHours(iso){
   }catch{return false;}
 }
 const afterHours=sessions.filter(s=>isAfterHours(s.updated_at));
-$('#st-conv').textContent=sessions.length;
+const totals=window.__DATA__.totals||{};
+$('#st-conv').textContent=Math.max(totals.sessions||0,sessions.length);
+if((totals.sessions||0)>sessions.length){$('#st-conv').nextElementSibling.textContent='total \\u00b7 detalle de las \\u00faltimas '+sessions.length;}
 $('#st-leads').textContent=leads.length;
-$('#st-appts').textContent=appts.length;
+$('#st-appts').textContent=Math.max(totals.appointments||0,appts.length);
 $('#st-upcoming').textContent=upcoming.length;
 $('#st-escalated').textContent=escalated.length;
 $('#st-afterhours').textContent=afterHours.length;
@@ -585,7 +598,7 @@ async function onRequestGetAdmin(context) {
         return loginPageResponse();
     }
 
-    const [sessions, appointments, connections, whatsappConnections] = await Promise.all([
+    const [sessionsResult, appointmentsResult, connections, whatsappConnections] = await Promise.all([
         fetchChatSessions(env),
         fetchAppointments(env),
         listConnections(env),
@@ -711,7 +724,11 @@ async function onRequestGetAdmin(context) {
     <button class="live-chat-send" id="live-chat-send">Enviar</button>
   </div>
 </div>
-<script>window.__DATA__=${safeJson({ sessions, appointments })};</script>
+<script>window.__DATA__=${safeJson({
+    sessions: sessionsResult.rows,
+    appointments: appointmentsResult.rows,
+    totals: { sessions: sessionsResult.total, appointments: appointmentsResult.total }
+})};</script>
 <script>${ADMIN_SCRIPT}${ADMIN_SCRIPT_2}${ADMIN_SCRIPT_LIVE}</script>
 </body>
 </html>`;

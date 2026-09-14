@@ -44,8 +44,6 @@ class_name = "ChatRoom"
 
 [triggers]
 crons = ["0 13 * * *"]
-[env.production]
-vars = { }
 
 [observability]
 enabled = true

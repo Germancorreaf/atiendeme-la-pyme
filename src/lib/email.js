@@ -40,6 +40,12 @@ export async function sendViaResend({ to, subject, html, replyTo }, env, logTag 
   }
 }
 
+// El link de la cita es la videollamada de Meet cuando se pudo crear; si no,
+// el evento en Google Calendar. El texto del botón tiene que decir la verdad.
+function joinButtonLabel(link) {
+  return /^https:\/\/meet\.google\.com\//.test(link || '') ? 'Unirse a Google Meet →' : 'Ver cita en Google Calendar →';
+}
+
 function formatDateSpanish(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
   const date = new Date(year, month - 1, day);
@@ -84,7 +90,7 @@ export async function sendConfirmationEmail(options, env) {
     </div>
 
     <div class="button-center">
-      <a href="${safeLink}" class="button">Unirse a Google Meet →</a>
+      <a href="${safeLink}" class="button">${joinButtonLabel(calendarLink)}</a>
     </div>
 
     <div class="fallback">
@@ -202,7 +208,7 @@ export async function sendReminderEmail(options, env) {
       </div>
     </div>
 
-    ${calendarLink ? `<div class="button-center"><a href="${escapeHtml(calendarLink)}" class="button">Unirse a Google Meet →</a></div>` : ''}
+    ${calendarLink ? `<div class="button-center"><a href="${escapeHtml(calendarLink)}" class="button">${joinButtonLabel(calendarLink)}</a></div>` : ''}
 
     <p style="color:${COLORS.textMuted};">Si necesitas cambiar la hora, responde este correo.</p>
     <p style="color:${COLORS.textMuted};">¡Nos vemos! 😊</p>

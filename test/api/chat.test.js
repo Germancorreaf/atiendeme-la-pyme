@@ -70,7 +70,7 @@ describe('POST /api/chat escalation flow (integration)', () => {
     globalThis.fetch = originalFetch;
   });
 
-  function fakeExternalServices(botReplyText, { onSupabaseInsert, onResendSend } = {}) {
+  function fakeExternalServices(botReplyText, { onSupabaseInsert, onResendSend, existingRows = [] } = {}) {
     globalThis.fetch = async (url, opts) => {
       const href = typeof url === 'string' ? url : url.toString();
 
@@ -82,6 +82,9 @@ describe('POST /api/chat escalation flow (integration)', () => {
       }
 
       if (href.includes('supabase.co') && href.includes('chat_sessions')) {
+        if ((opts?.method || 'GET') === 'GET') {
+          return new Response(JSON.stringify(existingRows), { status: 200 });
+        }
         onSupabaseInsert?.(JSON.parse(opts.body));
         return new Response('[]', { status: 200 });
       }
@@ -145,6 +148,37 @@ describe('POST /api/chat escalation flow (integration)', () => {
     expect(savedBody.escalated).toBe(true);
     expect(savedBody.escalation_reason).toBe('user_requested_human');
     expect(notifiedTo).toBe('german@example.com');
+  });
+
+  it('appends to the stored conversation instead of overwriting it (e.g. after a page reload)', async () => {
+    let savedBody = null;
+    const stored = [
+      { role: 'user', content: 'hola, tienen hora?' },
+      { role: 'assistant', content: 'Sí, mañana 10:00' },
+      { role: 'assistant', content: 'Hola, soy Javiera del equipo' },
+    ];
+    fakeExternalServices('¡Claro! ¿A qué hora te acomoda?', {
+      onSupabaseInsert: (body) => { savedBody = body; },
+      existingRows: [{ messages: stored, lead_contact: 'ana@example.com', escalated: true, escalation_reason: 'user_requested_human' }],
+    });
+
+    const res = await onRequestPost({
+      request: postRequest({
+        // El navegador recargó: solo trae el mensaje nuevo en memoria.
+        messages: [{ role: 'user', content: 'quiero agendar' }],
+        sessionId: '123e4567-e89b-12d3-a456-426614174000',
+      }),
+      env: baseEnv,
+    });
+
+    expect(res.status).toBe(200);
+    expect(savedBody.messages).toHaveLength(5);
+    expect(savedBody.messages.slice(0, 3)).toEqual(stored);
+    expect(savedBody.messages[3]).toEqual({ role: 'user', content: 'quiero agendar' });
+    expect(savedBody.lead_contact).toBe('ana@example.com');
+    // Un intercambio normal no "des-escala" una conversación ya escalada.
+    expect(savedBody.escalated).toBe(true);
+    expect(savedBody.escalation_reason).toBe('user_requested_human');
   });
 });
 

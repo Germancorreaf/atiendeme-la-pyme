@@ -183,6 +183,16 @@ Los componentes se sienten **táctiles y directos**: confirman cada acción con 
 ### Signature Component: Phone Mockup
 El hero muestra tres iPhones hechos en HTML/CSS (`.hp-stage`, `.hp-phone`): Instagram, WhatsApp (al centro, más grande) y una llamada, con los colores reales de cada app en modo claro (Instagram: burbuja `#3797f0` y avatar en gradiente `#F58529→#DD2A7B→#8134AF`; WhatsApp: fondo `#efeae2`, burbuja propia `#d9fdd3`). Todo está en `em` sobre un `font-size` en unidades de contenedor (`cqw`), así que escala nítido a cualquier ancho. El grupo va siempre centrado; en mobile el teléfono central queda completo y los laterales se recortan parejo. Es el componente más distintivo del sitio y el único mockup de teléfono de la landing (la antigua sección 04 con un teléfono de pestañas se eliminó por redundante, 2026-09-14).
 
+### Panel interno (dashboard `/admin`) — plantilla para clientes
+Superficie de trabajo (modo "Operate"): misma identidad (fondo casi negro, Night Ember como único acento, ángulos rectos, Space Grotesk para títulos y cifras, JetBrains Mono para todo lo demás), pero con menos expresión que la landing: bordes de 1px en vez de sombras duras, sin cursores parpadeantes salvo el punto "en vivo".
+
+- **Orden de la información (Inicio):** 1) "Requiere tu atención" (esperan a una persona · citas de hoy y mañana · contactos nuevos), 2) "Últimos 7 días" con "Fuera de horario" como métrica destacada en Night Ember (es el posicionamiento del producto), 3) "Canales conectados". Conversaciones y Agenda tienen vista propia. "Sistema" (PageSpeed y accesos internos) es solo de Atiéndeme la Pyme: al replicar el panel para un cliente se quita esa vista completa.
+- **Navegación:** barra lateral en computador; barra fija inferior de 4 pestañas bajo 860px.
+- **Escala tipográfica compacta (fija, no fluida):** 10–13px datos y etiquetas · 15–19px títulos de sección · 24–30px título de página · 28–34px cifras.
+- **Tokens propios del panel:** `--surface #111111`, `--surface-2 #171717`, `--hover #1C1C1C`, `--line #242424`, `--line-strong #363636`, `--muted #A3A39B` (texto secundario, contraste ≥4.5:1), `--faint #75756E` (solo placeholders/estados vacíos), hover del acento `#F0B052`, burbuja de Dominga `#1B1509` con borde `#3A2B10`. Estados: `--ok` (contacto, en vivo), `--alert` (escalada).
+- **Panel flotante de chat en vivo:** única pieza con sombra difuminada (`0 12px 32px rgba(0,0,0,.5)`), porque flota sobre el contenido.
+- **Las tarjetas de conexión con Meta/WhatsApp** conservan su HTML, textos y rutas (flujo en App Review); solo heredan los estilos del panel.
+
 ### Chat Widget (flotante)
 Botón circular flotante (`#atp-chat-btn`) con punto de estado "en línea" parpadeante, que abre un panel de chat (`#atp-chat-panel`) con la misma paleta y bordes duros del resto del sitio — el chat en vivo con Dominga se siente parte del mismo sistema, no un widget de terceros insertado.
 

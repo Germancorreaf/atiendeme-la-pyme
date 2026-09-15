@@ -228,297 +228,626 @@ function safeJson(data) {
         .replace(/\u2029/g, '\\u2029');
 }
 
+// ---------------------------------------------------------------------------
+// Dashboard. Estructura pensada como plantilla para el panel de cada cliente:
+//   Inicio        -> lo que requiere acción, últimos 7 días, canales conectados
+//   Conversaciones, Agenda
+//   Sistema       -> solo para la administración de Atiéndeme la Pyme
+//                    (PageSpeed, accesos internos). Para el panel de un
+//                    cliente se quita esta vista completa.
+// Las tarjetas de conexión con Meta/WhatsApp (connectionsCardHtml y
+// whatsappConnectionsCardHtml) no se tocan: el flujo está en App Review.
+// ---------------------------------------------------------------------------
+
+const ICONS = {
+    home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/>',
+    chat: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
+    calendar: '<rect x="3.5" y="5" width="17" height="15.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',
+    system: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><rect x="14" y="4.5" width="4" height="5"/><rect x="6" y="14.5" width="4" height="5"/>',
+    refresh: '<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/>',
+    logout: '<path d="M14 4h6v16h-6"/><path d="M10 8l-4 4 4 4M6 12h10"/>',
+    external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v6H4V6h6"/>'
+};
+
+function icon(name, size = 18) {
+    return `<svg class="ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" aria-hidden="true">${ICONS[name]}</svg>`;
+}
+
 const ADMIN_STYLES = `
-:root{--bg:#0A0A0A;--panel:#141414;--panel2:#1A1A1A;--line:#262626;--text:#EDEDE8;--muted:#8A8A82;--accent:#E8A33D;--accent-ink:#0A0A0A;--ok:#43D17C;}
+:root{
+  --bg:#0A0A0A;--surface:#111111;--surface-2:#171717;--hover:#1C1C1C;
+  --line:#242424;--line-strong:#363636;
+  --text:#EDEDE8;--muted:#A3A39B;--faint:#75756E;
+  --accent:#E8A33D;--ink:#0A0A0A;--ok:#43D17C;--alert:#FF5F57;
+  --display:'Space Grotesk','Arial Black',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;line-height:1.55;}
-a{color:var(--accent);text-decoration:none;}
-.layout{display:flex;min-height:100vh;max-width:1280px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line);}
-/* ---- sidebar ---- */
-.side{width:210px;flex-shrink:0;border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;}
-.brand{font-weight:700;font-size:14px;margin-bottom:22px;letter-spacing:.02em;}
-.brand span{color:var(--accent);}
-.nav-btn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;color:var(--muted);font:inherit;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background .15s,color .15s;}
-.nav-btn:hover{background:var(--panel);color:var(--text);}
-.nav-btn.active{background:var(--accent);color:var(--accent-ink);font-weight:700;}
-.nav-btn .ico{width:16px;text-align:center;}
-.side-foot{margin-top:auto;color:var(--muted);font-size:11px;line-height:1.7;}
-/* ---- main ---- */
-.main{flex:1;padding:26px 28px;max-width:1200px;min-width:0;}
-.head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
-h1{font-size:20px;}
-.head .sub{color:var(--muted);font-size:12px;}
-.refresh{background:var(--panel);border:1px solid var(--line);color:var(--text);font:inherit;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;}
-.refresh:hover{border-color:var(--accent);color:var(--accent);}
-/* ---- stat cards ---- */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,220px));justify-content:start;gap:12px;margin-bottom:20px;}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative;overflow:hidden;}
-.stat.hero{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
-.stat .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
-.stat.hero .label{color:rgba(10,10,10,.65);}
-.stat .num{font-size:30px;font-weight:700;margin-top:6px;}
-.stat .hint{font-size:11px;color:var(--muted);margin-top:4px;}
-.stat.hero .hint{color:rgba(10,10,10,.65);}
-/* ---- grid ---- */
-.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start;}
-@media(max-width:1050px){.grid{grid-template-columns:1fr;}.side{display:none;}.mobile-nav{display:flex!important;flex-wrap:wrap;}}
-@media(max-width:520px){.main{padding:16px 14px;}.stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;}.stat{padding:12px;}.stat .num{font-size:24px;}.card{padding:14px;}.head h1{font-size:17px;}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0;overflow-wrap:anywhere;}
-.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
-.card h2 .count{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;}
-.stack{display:flex;flex-direction:column;gap:14px;min-width:0;}
-/* ---- chart ---- */
-.chart{display:flex;align-items:flex-end;gap:6px;height:110px;padding-top:6px;}
-.chart .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
-.chart .bar{width:100%;max-width:34px;background:var(--accent);border-radius:6px 6px 0 0;min-height:3px;opacity:.9;transition:opacity .15s;}
-.chart .bar.zero{background:var(--panel2);}
-.chart .col:hover .bar{opacity:1;}
-.chart .lbl{font-size:10px;color:var(--muted);}
-.chart .val{font-size:10px;color:var(--text);}
-/* ---- next appointment ---- */
-.next-appt{background:linear-gradient(135deg,var(--panel2),var(--panel));border:1px solid var(--accent);border-radius:12px;padding:18px;min-width:0;overflow-wrap:anywhere;}
-.next-appt .when{color:var(--accent);font-weight:700;font-size:15px;}
-.next-appt .who{margin-top:6px;font-size:14px;}
-.next-appt .mail{color:var(--muted);font-size:12px;}
-.next-appt .cta{display:inline-block;margin-top:12px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:12px;padding:9px 16px;border-radius:8px;}
-/* ---- search ---- */
-.search{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;padding:10px 12px;margin-bottom:12px;}
-.search:focus{outline:none;border-color:var(--accent);}
-/* ---- conversation cards ---- */
-.convo{background:var(--panel2);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden;}
-.convo-head{padding:12px 14px;cursor:pointer;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;}
-.convo-head:hover{background:#1f1f1f;}
-.convo-title{font-weight:700;}
-.convo-title.anon{color:var(--muted);font-weight:400;}
-.convo-meta{color:var(--muted);font-size:11px;}
-.convo-preview{flex-basis:100%;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.badge{font-size:10px;border:1px solid var(--line);border-radius:20px;padding:2px 9px;color:var(--muted);}
-.badge.lead{border-color:var(--ok);color:var(--ok);}
-.badge.escalated{border-color:#E85D3D;color:#E85D3D;}
-.thread{display:none;border-top:1px solid var(--line);padding:12px 14px;max-height:420px;overflow-y:auto;}
-.convo.open .thread{display:block;}
-.msg{margin-bottom:10px;padding:9px 12px;border-radius:8px;max-width:92%;}
-.msg.user{background:#1c1c1c;}
-.msg.bot{background:#211a09;margin-left:auto;}
-.msg .role{font-size:10px;color:var(--accent);display:block;margin-bottom:3px;}
-.msg p{font-size:12.5px;white-space:pre-wrap;}
-/* ---- agenda ---- */
-.day{margin-bottom:16px;}
-.day h3{color:var(--accent);font-size:12px;margin-bottom:8px;display:flex;gap:8px;align-items:baseline;}
-.day h3 .dow{color:var(--muted);font-weight:400;text-transform:capitalize;}
-.appt{display:flex;gap:12px;align-items:center;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;margin-bottom:6px;flex-wrap:wrap;}
-.appt.past{opacity:.45;}
-.appt .time{color:var(--accent);font-weight:700;min-width:52px;}
-.appt .mail{color:var(--muted);font-size:11.5px;}
-.appt .cal{margin-left:auto;font-size:11.5px;}
-.filter-row{display:flex;gap:8px;margin-bottom:12px;}
-.chip{background:var(--panel2);border:1px solid var(--line);border-radius:20px;color:var(--muted);font:inherit;font-size:11.5px;padding:6px 14px;cursor:pointer;}
-.chip.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700;}
-.empty{color:var(--muted);padding:16px 0;}
+html{scrollbar-color:var(--line-strong) var(--bg);}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+::selection{background:var(--accent);color:var(--ink);}
+a{color:var(--accent);text-decoration:none;text-underline-offset:3px;}
+a:hover{text-decoration:underline;}
+button{font:inherit;color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.num-tab{font-variant-numeric:tabular-nums;}
+
+/* ---- estructura ---- */
+.layout{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh;max-width:1360px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+.side{border-right:1px solid var(--line);padding:24px 16px 20px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:-.01em;margin:0 8px 28px;}
+.brand-mark{display:inline-flex;align-items:flex-end;gap:3px;font-size:20px;line-height:1;}
+.brand-mark i{display:inline-block;width:6px;height:15px;background:var(--accent);margin-bottom:2px;}
+.nav{display:flex;flex-direction:column;gap:2px;}
+.nav-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-left:2px solid transparent;color:var(--muted);padding:10px 12px;cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+.nav-btn:hover{background:var(--surface);color:var(--text);}
+.nav-btn[aria-current="page"]{color:var(--text);background:var(--surface);border-left-color:var(--accent);}
+.nav-btn[aria-current="page"] .ico{color:var(--accent);}
+.nav-count{margin-left:auto;min-width:22px;padding:1px 6px;text-align:center;font-size:11px;background:var(--alert);color:var(--ink);font-weight:700;}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:14px;padding:0 4px;}
+.status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11.5px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex-shrink:0;}
+.logout{display:flex;align-items:center;gap:10px;background:none;border:1px solid var(--line);color:var(--muted);padding:9px 12px;cursor:pointer;width:100%;}
+.logout:hover{border-color:var(--line-strong);color:var(--text);}
+
+.main{padding:32px 36px 64px;min-width:0;}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:32px;}
+h1{font-family:var(--display);font-size:30px;line-height:1.1;letter-spacing:-.02em;font-weight:700;}
+.page-sub{color:var(--muted);margin-top:6px;}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line-strong);color:var(--text);padding:9px 14px;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s,background .15s;}
+.btn:hover{border-color:var(--accent);color:var(--accent);text-decoration:none;}
+.btn:disabled{opacity:.5;cursor:default;border-color:var(--line-strong);color:var(--muted);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--ink);font-weight:700;}
+.btn-primary:hover{color:var(--ink);background:#F0B052;border-color:#F0B052;}
+.btn-sm{padding:6px 10px;font-size:12px;}
+
+.section{margin-top:44px;}
+.section:first-of-type{margin-top:0;}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+h2{font-family:var(--display);font-size:19px;letter-spacing:-.01em;font-weight:700;}
+.section-note{color:var(--muted);font-size:12px;}
+
 .view{display:none;}
 .view.active{display:block;}
-.mobile-nav{display:none;gap:8px;margin-bottom:16px;}
+
+/* ---- requiere tu atención ---- */
+.attention{display:grid;grid-template-columns:1.25fr 1fr 1fr;border:1px solid var(--line);background:var(--surface);}
+.lane{min-width:0;border-right:1px solid var(--line);display:flex;flex-direction:column;}
+.lane:last-child{border-right:0;}
+.lane-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);}
+.lane-title{font-weight:700;font-size:13px;}
+.lane-count{font-family:var(--display);font-size:20px;font-weight:700;line-height:1;}
+.lane-count.hot{color:var(--alert);}
+.lane-count.zero{color:var(--faint);}
+.item{padding:13px 16px;border-bottom:1px solid var(--line);min-width:0;}
+.item:last-child{border-bottom:0;}
+.item-top{display:flex;align-items:baseline;gap:8px;min-width:0;}
+.item-title{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.item-time{margin-left:auto;color:var(--muted);font-size:11.5px;white-space:nowrap;}
+.item-meta{color:var(--muted);font-size:12px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.item-quote{color:var(--text);font-size:12.5px;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.item-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.appt-time{font-family:var(--display);font-size:18px;font-weight:700;color:var(--accent);min-width:58px;}
+.appt-day{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:10px 16px 0;}
+.lane-empty{padding:18px 16px;color:var(--muted);font-size:12.5px;line-height:1.6;}
+.lane-empty strong{display:block;color:var(--text);font-weight:700;margin-bottom:2px;}
+.lane-more{margin-top:auto;padding:11px 16px;border-top:1px solid var(--line);}
+.link-btn{background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-underline-offset:3px;}
+.link-btn:hover{text-decoration:underline;}
+
+.tag{display:inline-block;font-size:10.5px;line-height:1.5;padding:0 6px;border:1px solid var(--line-strong);color:var(--muted);white-space:nowrap;}
+.tag.alert{border-color:var(--alert);color:var(--alert);}
+.tag.ok{border-color:var(--ok);color:var(--ok);}
+.tag.accent{border-color:var(--accent);color:var(--accent);}
+
+/* ---- últimos 7 días ---- */
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);background:var(--surface);}
+.metric{padding:18px 18px 16px;border-right:1px solid var(--line);min-width:0;}
+.metric:last-child{border-right:0;}
+.metric-label{color:var(--muted);font-size:12px;}
+.metric-value{font-family:var(--display);font-size:34px;font-weight:700;line-height:1.1;margin-top:6px;letter-spacing:-.02em;}
+.metric.key .metric-value{color:var(--accent);}
+.metric-foot{color:var(--muted);font-size:11.5px;margin-top:4px;}
+.metric-foot .up{color:var(--ok);}
+.metric-foot .down{color:var(--alert);}
+.chart-wrap{border:1px solid var(--line);border-top:0;background:var(--surface);padding:18px 18px 14px;}
+.chart-legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:11.5px;margin-bottom:14px;}
+.chart-legend span{display:inline-flex;align-items:center;gap:7px;}
+.swatch{width:10px;height:10px;display:inline-block;}
+.swatch.after{background:var(--accent);}
+.swatch.office{background:var(--line-strong);}
+.chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;height:150px;}
+.bar-col{display:flex;flex-direction:column;align-items:center;height:100%;gap:6px;min-width:0;}
+.bar-track{flex:1;min-height:0;width:100%;display:flex;align-items:flex-end;justify-content:center;}
+.bar-val{font-size:11px;color:var(--text);}
+.bar{width:100%;max-width:44px;display:flex;flex-direction:column-reverse;min-height:2px;background:var(--surface-2);}
+.bar i{display:block;width:100%;}
+.bar i.office{background:var(--line-strong);}
+.bar i.after{background:var(--accent);}
+.bar-lbl{font-size:11px;color:var(--muted);text-transform:capitalize;}
+.bar-lbl.today{color:var(--text);font-weight:700;}
+.chart-note{color:var(--muted);font-size:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);}
+.chart-note strong{color:var(--text);}
+
+/* ---- canales (tarjetas existentes de conexión) ---- */
+.channels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;}
+.card{background:var(--surface);border:1px solid var(--line);padding:18px;min-width:0;overflow-wrap:anywhere;}
+.card h2{font-family:var(--display);font-size:16px;margin-bottom:12px;}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.empty{color:var(--muted);padding:6px 0;}
+.connect-btn{display:block;background:var(--accent);color:var(--ink);font-weight:700;text-align:center;padding:10px 14px;border:1px solid var(--accent);}
+.connect-btn:hover{background:#F0B052;text-decoration:none;}
+.conn-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.conn-row:last-of-type{border-bottom:none;}
+.conn-row a{font-size:12px;color:var(--muted);white-space:nowrap;flex-shrink:0;}
+.conn-row a:hover{color:var(--alert);}
+.conn-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:8px;}
+.conn-sub{color:var(--muted);font-size:11.5px;}
+
+/* ---- conversaciones ---- */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+.search{flex:1 1 260px;min-width:0;background:var(--surface);border:1px solid var(--line-strong);color:var(--text);font:inherit;padding:10px 12px;}
+.search::placeholder{color:var(--faint);}
+.search:focus{outline:none;border-color:var(--accent);}
+.filters{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{background:var(--surface);border:1px solid var(--line-strong);color:var(--muted);padding:7px 11px;cursor:pointer;font-size:12px;white-space:nowrap;}
+.chip:hover{color:var(--text);}
+.chip[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--ink);font-weight:700;}
+.chip .n{opacity:.7;margin-left:4px;}
+.list{border:1px solid var(--line);background:var(--surface);}
+.convo{border-bottom:1px solid var(--line);}
+.convo:last-child{border-bottom:0;}
+.convo summary{list-style:none;cursor:pointer;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;}
+.convo summary::-webkit-details-marker{display:none;}
+.convo summary:hover{background:var(--hover);}
+.convo[open] summary{background:var(--surface-2);}
+.convo-line{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap;}
+.convo-title{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.convo-title.anon{color:var(--muted);font-weight:400;}
+.convo-time{color:var(--muted);font-size:11.5px;text-align:right;white-space:nowrap;}
+.convo-preview{grid-column:1 / -1;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.thread{border-top:1px solid var(--line);padding:16px;max-height:460px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;background:var(--bg);}
+.thread-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+.msg{max-width:78%;padding:9px 12px;border:1px solid var(--line);}
+.msg.user{align-self:flex-start;background:var(--surface-2);}
+.msg.bot{align-self:flex-end;background:#1B1509;border-color:#3A2B10;}
+.msg .role{display:block;font-size:10.5px;color:var(--muted);margin-bottom:3px;}
+.msg.bot .role{color:var(--accent);}
+.msg p{white-space:pre-wrap;font-size:12.5px;}
+.list-empty{padding:28px 16px;color:var(--muted);text-align:center;}
+
+/* ---- agenda ---- */
+.day{border:1px solid var(--line);background:var(--surface);margin-bottom:14px;}
+.day-head{display:flex;align-items:baseline;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);}
+.day-head h3{font-family:var(--display);font-size:15px;}
+.day-head .date{color:var(--muted);font-size:12px;}
+.appt{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);}
+.appt:last-child{border-bottom:0;}
+.appt.past{opacity:.5;}
+.appt .who{min-width:0;}
+.appt .name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.appt .mail{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.appt .side-info{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
+
+/* ---- sistema ---- */
+.system-note{color:var(--muted);font-size:12px;border:1px dashed var(--line-strong);padding:10px 14px;margin-bottom:24px;}
+.psi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px;}
+.psi-scores{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:6px 0 12px;}
+.psi-score{text-align:center;}
+.psi-score b{display:block;font-family:var(--display);font-size:28px;}
+.psi-score span{font-size:10.5px;color:var(--muted);}
+.vitals{display:flex;flex-wrap:wrap;gap:6px;}
+.links-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));border:1px solid var(--line);background:var(--surface);}
+.links-list a{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--text);}
+.links-list a:hover{background:var(--hover);color:var(--accent);text-decoration:none;}
+
 /* ---- chat en vivo ---- */
-.live-chat-panel{position:fixed;bottom:24px;right:24px;z-index:999;width:340px;max-width:calc(100vw - 32px);height:460px;max-height:70vh;background:var(--panel);border:1px solid var(--accent);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;flex-direction:column;overflow:hidden;}
+.live-chat-panel{position:fixed;bottom:24px;right:24px;z-index:50;width:360px;max-width:calc(100vw - 32px);height:480px;max-height:72vh;background:var(--surface);border:1px solid var(--accent);box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;flex-direction:column;}
 .live-chat-panel.open{display:flex;}
 .live-chat-header{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);}
 .live-chat-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex-shrink:0;animation:blink 1.2s steps(1) infinite;}
-.live-chat-title{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;}
+@keyframes blink{50%{opacity:0;}}
+.live-chat-title{font-weight:700;font-size:12px;}
 .live-chat-session{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
-.live-chat-close{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:2px 6px;}
+.live-chat-close{background:none;border:0;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 6px;}
 .live-chat-close:hover{color:var(--text);}
 .live-chat-messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
-.live-msg{max-width:88%;padding:8px 11px;border-radius:8px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;}
-.live-msg.visitor{align-self:flex-start;background:var(--panel2);border:1px solid var(--line);}
-.live-msg.admin{align-self:flex-end;background:var(--accent);color:var(--accent-ink);}
-.live-msg.sys{align-self:center;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;}
+.live-msg{max-width:88%;padding:8px 11px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;}
+.live-msg.visitor{align-self:flex-start;background:var(--surface-2);border:1px solid var(--line);}
+.live-msg.admin{align-self:flex-end;background:var(--accent);color:var(--ink);}
+.live-msg.sys{align-self:center;color:var(--muted);font-size:10.5px;}
 .live-chat-input-row{display:flex;gap:6px;padding:10px;border-top:1px solid var(--line);}
-.live-chat-input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);font:inherit;font-size:12.5px;padding:8px 10px;}
+.live-chat-input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line-strong);color:var(--text);font:inherit;font-size:12.5px;padding:9px 10px;}
 .live-chat-input:focus{outline:none;border-color:var(--accent);}
-.live-chat-send{background:var(--accent);color:var(--accent-ink);border:none;border-radius:6px;font-weight:700;font-size:12px;padding:0 14px;cursor:pointer;}
-.live-btn{background:none;border:1px solid var(--ok);color:var(--ok);border-radius:20px;font:inherit;font-size:11px;padding:5px 12px;cursor:pointer;margin-bottom:10px;}
-.connect-btn{display:block;background:var(--accent);color:var(--accent-ink);font-weight:700;text-align:center;padding:10px 14px;border-radius:8px;font-size:13px;}
-.connect-btn:hover{opacity:.9;}
-.conn-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
-.conn-row:last-of-type{border-bottom:none;}
-.conn-row a{font-size:12px;color:var(--muted);}
-.conn-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:8px;}
-.conn-sub{color:var(--muted);font-size:11.5px;}
-.live-btn:hover{background:var(--ok);color:var(--accent-ink);}
+.live-chat-send{background:var(--accent);color:var(--ink);border:0;font-weight:700;font-size:12px;padding:0 14px;cursor:pointer;}
+.live-btn{display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid var(--ok);color:var(--ok);padding:6px 10px;font-size:12px;cursor:pointer;}
+.live-btn:hover{background:var(--ok);color:var(--ink);}
+
+/* ---- barra superior y navegación mobile ---- */
+.topbar{display:none;}
+.tabbar{display:none;}
+
+@media (max-width:1100px){
+  .attention{grid-template-columns:1fr 1fr;}
+  .lane:first-child{grid-column:1 / -1;border-right:0;border-bottom:1px solid var(--line);}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .metric:nth-child(2){border-right:0;}
+  .metric:nth-child(-n+2){border-bottom:1px solid var(--line);}
+}
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr;border:0;}
+  .side{display:none;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:40;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 16px;}
+  .topbar .brand{margin:0;}
+  .main{padding:22px 16px calc(96px + env(safe-area-inset-bottom));}
+  h1{font-size:24px;}
+  .page-head{margin-bottom:24px;}
+  .page-head .btn{display:none;}
+  .section{margin-top:36px;}
+  .attention{grid-template-columns:1fr;}
+  .lane{border-right:0;border-bottom:1px solid var(--line);}
+  .lane:last-child{border-bottom:0;}
+  .channels,.psi-grid{grid-template-columns:1fr;}
+  .metric-value{font-size:28px;}
+  .chart{gap:6px;height:128px;}
+  .tabbar{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--surface);border-top:1px solid var(--line-strong);padding-bottom:env(safe-area-inset-bottom);}
+  .tabbar .nav-btn{flex-direction:column;gap:3px;align-items:center;justify-content:center;border-left:0;border-top:2px solid transparent;padding:9px 4px 8px;font-size:10.5px;position:relative;}
+  .tabbar .nav-btn[aria-current="page"]{border-top-color:var(--accent);background:none;}
+  .tabbar .nav-count{position:absolute;top:5px;left:calc(50% + 6px);min-width:18px;padding:0 4px;font-size:10px;margin:0;}
+  .appt{grid-template-columns:56px minmax(0,1fr);}
+  .appt .side-info{grid-column:2;justify-content:flex-start;}
+  .convo summary{grid-template-columns:minmax(0,1fr);}
+  .convo-time{text-align:left;}
+  .msg{max-width:92%;}
+  .live-chat-panel{left:8px;right:8px;width:auto;max-width:none;bottom:calc(68px + env(safe-area-inset-bottom));height:70vh;}
+}
 `;
 
 const ADMIN_SCRIPT = `
 const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TZ='America/Santiago';
-const fmtDT=(iso)=>{try{return new Date(iso).toLocaleString('es-CL',{dateStyle:'medium',timeStyle:'short',timeZone:TZ});}catch{return iso||'';}};
-const todayStr=()=>new Date().toLocaleDateString('en-CA',{timeZone:TZ});
-const dowOf=(d)=>{try{return new Date(d+'T12:00:00').toLocaleDateString('es-CL',{weekday:'long',timeZone:TZ});}catch{return'';}};
+const DAY_MS=86400000;
+const data=window.__DATA__||{};
+const sessions=(data.sessions||[]).slice().sort((a,b)=>String(b.updated_at||'').localeCompare(String(a.updated_at||'')));
+const appts=(data.appointments||[]).slice().sort((a,b)=>(a.appointment_date+(a.appointment_time||'')).localeCompare(b.appointment_date+(b.appointment_time||'')));
+const totals=data.totals||{};
 
-// ---------- navegacion ----------
-function show(view){
-  $$('.view').forEach(v=>v.classList.toggle('active',v.dataset.view===view));
-  $$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
-  history.replaceState(null,'','#'+view);
+// ---------- fechas en America/Santiago ----------
+const ymd=(d)=>new Date(d).toLocaleDateString('en-CA',{timeZone:TZ});
+const today=ymd(Date.now());
+const tomorrow=ymd(Date.now()+DAY_MS);
+const hhmm=(t)=>String(t||'').slice(0,5);
+function longDate(dateStr,opts){try{return new Date(dateStr+'T12:00:00').toLocaleDateString('es-CL',Object.assign({timeZone:TZ},opts));}catch(e){return dateStr;}}
+function dayLabel(dateStr){
+  if(dateStr===today)return 'Hoy';
+  if(dateStr===tomorrow)return 'Mañana';
+  const l=longDate(dateStr,{weekday:'long',day:'numeric',month:'long'}).replace(',','');
+  return l.charAt(0).toUpperCase()+l.slice(1);
 }
-$$('.nav-btn').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
-
-// ---------- stats ----------
-const sessions=window.__DATA__.sessions||[];
-const appts=window.__DATA__.appointments||[];
-const leads=sessions.filter(s=>s.lead_contact);
-const today=todayStr();
-const upcoming=appts.filter(a=>a.appointment_date>=today);
-const escalated=sessions.filter(s=>s.escalated);
-// Fuera de horario: heurística simple sobre el timestamp del último mensaje
-// (America/Santiago) — lunes a viernes 9:00-19:00 se considera horario
-// hábil; todo lo demás (noche, madrugada, fin de semana) cuenta como fuera
-// de horario. No requiere una columna nueva: se calcula desde updated_at.
+function ago(iso){
+  if(!iso)return '';
+  const t=new Date(iso).getTime();if(isNaN(t))return '';
+  const min=Math.round((Date.now()-t)/60000);
+  if(min<1)return 'recién';
+  if(min<60)return 'hace '+min+' min';
+  const h=Math.round(min/60);
+  if(h<24&&ymd(t)===today)return 'hace '+h+' h';
+  const time=new Date(t).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
+  if(ymd(t)===ymd(Date.now()-DAY_MS))return 'ayer '+time;
+  return new Date(t).toLocaleDateString('es-CL',{day:'numeric',month:'short',timeZone:TZ})+' '+time;
+}
+// Fuera de horario: lunes a viernes 9:00-19:00 (America/Santiago) es horario hábil.
 function isAfterHours(iso){
   if(!iso)return false;
   try{
-    const d=new Date(iso);
-    const parts=new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',hour12:false,weekday:'short'}).formatToParts(d);
-    const hour=Number(parts.find(p=>p.type==='hour').value);
-    const weekday=parts.find(p=>p.type==='weekday').value;
-    const isWeekend=weekday==='Sat'||weekday==='Sun';
-    return isWeekend||hour<9||hour>=19;
-  }catch{return false;}
-}
-const afterHours=sessions.filter(s=>isAfterHours(s.updated_at));
-const totals=window.__DATA__.totals||{};
-$('#st-conv').textContent=Math.max(totals.sessions||0,sessions.length);
-if((totals.sessions||0)>sessions.length){$('#st-conv').nextElementSibling.textContent='total \\u00b7 detalle de las \\u00faltimas '+sessions.length;}
-$('#st-leads').textContent=leads.length;
-$('#st-appts').textContent=Math.max(totals.appointments||0,appts.length);
-$('#st-upcoming').textContent=upcoming.length;
-$('#st-escalated').textContent=escalated.length;
-$('#st-afterhours').textContent=afterHours.length;
-if(sessions.length){
-  const resolvedPct=Math.round((sessions.length-escalated.length)/sessions.length*100);
-  $('#st-escalated-hint').textContent=resolvedPct+'% resueltas solo por Dominga';
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',hour12:false,weekday:'short'}).formatToParts(new Date(iso));
+    const hour=Number(parts.find(p=>p.type==='hour').value)%24;
+    const wd=parts.find(p=>p.type==='weekday').value;
+    return wd==='Sat'||wd==='Sun'||hour<9||hour>=19;
+  }catch(e){return false;}
 }
 
-// ---------- proxima cita ----------
-(function(){
-  const el=$('#next-appt');
-  if(!upcoming.length){el.innerHTML='<p class="empty">No hay citas pr\\u00f3ximas.</p>';return;}
-  const n=upcoming[0];
-  const dow=dowOf(n.appointment_date);
-  el.innerHTML='<div class="when">'+esc(dow)+' '+esc(n.appointment_date)+' \\u00b7 '+esc((n.appointment_time||'').slice(0,5))+'</div>'
-    +'<div class="who">'+esc(n.client_name)+'</div>'
-    +'<div class="mail">'+esc(n.client_email)+'</div>'
-    +(n.calendar_link?'<a class="cta" href="'+esc(n.calendar_link)+'" target="_blank" rel="noopener">Abrir en Calendar \\u2192</a>':'');
-})();
-
-// ---------- grafico: conversaciones ultimos 7 dias ----------
-(function(){
-  const days=[];
-  for(let i=6;i>=0;i--){
-    const d=new Date();d.setDate(d.getDate()-i);
-    days.push(d.toLocaleDateString('en-CA',{timeZone:TZ}));
+// ---------- canal y contacto ----------
+function channelOf(s){
+  const id=String(s.session_id||'');
+  if(id.indexOf('whatsapp_')===0)return 'WhatsApp';
+  if(id.indexOf('instagram_')===0)return 'Instagram';
+  if(id.indexOf('messenger_')===0)return 'Messenger';
+  return 'Sitio web';
+}
+const isWebSession=(s)=>channelOf(s)==='Sitio web';
+function contactOf(s){
+  const c=String(s.lead_contact||'');
+  const ch=channelOf(s);
+  if(!c)return null;
+  if(c.indexOf('@')>0)return {label:c,href:'mailto:'+c,action:'Escribir correo'};
+  const digits=c.replace(/[^0-9]/g,'');
+  if(ch==='WhatsApp'||c.charAt(0)==='+'||(digits.length>=9&&digits.length<=12&&ch==='Sitio web')){
+    const wa=digits.length===9?'56'+digits:digits;
+    return {label:ch==='WhatsApp'?'+'+wa:c,href:'https://wa.me/'+wa,action:'Abrir WhatsApp'};
   }
-  const counts=days.map(day=>sessions.filter(s=>(s.updated_at||'').slice(0,10)===day).length);
-  const max=Math.max(...counts,1);
-  $('#chart').innerHTML=days.map((day,i)=>{
-    const h=Math.round(counts[i]/max*80);
-    const lbl=new Date(day+'T12:00:00').toLocaleDateString('es-CL',{weekday:'short',timeZone:TZ});
-    return '<div class="col"><span class="val">'+(counts[i]||'')+'</span><div class="bar'+(counts[i]?'':' zero')+'" style="height:'+Math.max(h,3)+'px"></div><span class="lbl">'+esc(lbl)+'</span></div>';
-  }).join('');
+  // Instagram/Messenger: el id no es un contacto; se responde desde la app.
+  return {label:ch==='Instagram'?'Usuario de Instagram':'Usuario de Messenger',href:null,action:null};
+}
+function titleOf(s){const c=contactOf(s);return c?c.label:'Visitante anónimo';}
+const lastUserMsg=(s)=>{const m=(Array.isArray(s.messages)?s.messages:[]).filter(x=>x.role==='user');return m.length?m[m.length-1].content:'';};
+const lastMsg=(s)=>{const m=Array.isArray(s.messages)?s.messages:[];return m.length?m[m.length-1].content:'';};
+const REASONS={user_requested_human:'Pidió hablar con una persona',bot_could_not_resolve:'Dominga no supo responder'};
+
+// ---------- navegación ----------
+const VIEWS=['inicio','conversaciones','agenda','sistema'];
+function show(view){
+  if(view==='rendimiento')view='sistema';
+  if(VIEWS.indexOf(view)<0)view='inicio';
+  $$('.view').forEach(v=>v.classList.toggle('active',v.dataset.view===view));
+  $$('.nav-btn[data-view]').forEach(b=>{if(b.dataset.view===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  history.replaceState(null,'','#'+view);
+  window.scrollTo(0,0);
+}
+$$('.nav-btn[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+$$('[data-refresh]').forEach(b=>b.addEventListener('click',()=>location.reload()));
+
+// ---------- ventanas de tiempo ----------
+const since7=Date.now()-7*DAY_MS, since14=Date.now()-14*DAY_MS;
+const inWindow=(iso,from,to)=>{const t=new Date(iso||0).getTime();return t>=from&&t<(to||Infinity);};
+const recent=sessions.filter(s=>inWindow(s.updated_at,since7));
+const previous=sessions.filter(s=>inWindow(s.updated_at,since14,since7));
+const escalatedRecent=recent.filter(s=>s.escalated);
+
+// ---------- encabezado ----------
+(function(){
+  $('#today-label').textContent=longDate(today,{weekday:'long',day:'numeric',month:'long'}).replace(',','');
+  const last=sessions[0];
+  $('#last-activity').textContent=last?'Última conversación '+ago(last.updated_at):'Todavía no hay conversaciones';
+  const n=escalatedRecent.length;
+  $$('[data-escalated-count]').forEach(el=>{el.textContent=n;el.hidden=!n;});
 })();
+
+// ---------- requiere tu atención ----------
+function laneCount(el,n,hot){el.textContent=n;el.classList.toggle('hot',!!(hot&&n));el.classList.toggle('zero',!n);}
+(function(){
+  // 1) esperan a una persona
+  const mount=$('#lane-escalated');
+  laneCount($('#count-escalated'),escalatedRecent.length,true);
+  if(!escalatedRecent.length){
+    mount.innerHTML='<div class="lane-empty"><strong>Nadie espera a una persona.</strong>Cuando alguien pida hablar contigo o Dominga no sepa responder, aparece aquí.</div>';
+  }else{
+    mount.innerHTML=escalatedRecent.slice(0,3).map(s=>{
+      const quote=lastUserMsg(s);
+      return '<div class="item">'
+        +'<div class="item-top"><span class="item-title">'+esc(titleOf(s))+'</span><span class="item-time">'+esc(ago(s.updated_at))+'</span></div>'
+        +'<div class="item-meta">'+esc(channelOf(s))+' · '+esc(REASONS[s.escalation_reason]||'Necesita revisión')+'</div>'
+        +(quote?'<div class="item-quote">“'+esc(quote)+'”</div>':'')
+        +'<div class="item-actions">'
+        +(isWebSession(s)?'<button class="live-btn" data-session="'+esc(s.session_id)+'"><span class="dot"></span>Tomar en vivo</button>':'')
+        +'<button class="btn btn-sm" data-open-convo="'+esc(s.session_id)+'">Ver conversación</button>'
+        +'</div></div>';
+    }).join('')
+    +(escalatedRecent.length>3?'<div class="lane-more"><button class="link-btn" data-goto-filter="escaladas">Ver las '+escalatedRecent.length+' escaladas →</button></div>':'');
+  }
+
+  // 2) citas de hoy y mañana
+  const apptMount=$('#lane-appts');
+  const soon=appts.filter(a=>a.appointment_date===today||a.appointment_date===tomorrow);
+  laneCount($('#count-appts'),soon.length,false);
+  if(!soon.length){
+    const next=appts.find(a=>a.appointment_date>tomorrow);
+    apptMount.innerHTML='<div class="lane-empty"><strong>Sin citas hoy ni mañana.</strong>'
+      +(next?'La próxima es el '+esc(dayLabel(next.appointment_date))+' a las '+esc(hhmm(next.appointment_time))+' con '+esc(next.client_name)+'.':'Las citas que agenda Dominga aparecen aquí.')+'</div>';
+  }else{
+    let html='';let lastDay='';
+    soon.forEach(a=>{
+      if(a.appointment_date!==lastDay){html+='<div class="appt-day">'+esc(dayLabel(a.appointment_date))+'</div>';lastDay=a.appointment_date;}
+      const meet=/^https:[/][/]meet[.]google[.]com[/]/.test(a.calendar_link||'');
+      html+='<div class="item"><div class="item-top"><span class="appt-time num-tab">'+esc(hhmm(a.appointment_time))+'</span><span class="item-title">'+esc(a.client_name)+'</span></div>'
+        +'<div class="item-meta">'+esc(a.client_email)+'</div>'
+        +(a.calendar_link?'<div class="item-actions"><a class="btn btn-sm" href="'+esc(a.calendar_link)+'" target="_blank" rel="noopener">'+(meet?'Unirse a Meet':'Ver en Calendar')+'</a></div>':'')
+        +'</div>';
+    });
+    apptMount.innerHTML=html;
+  }
+
+  // 3) contactos nuevos (últimos 7 días)
+  const leadMount=$('#lane-leads');
+  const leads=recent.filter(s=>{const c=contactOf(s);return c&&c.href;});
+  laneCount($('#count-leads'),leads.length,false);
+  if(!leads.length){
+    leadMount.innerHTML='<div class="lane-empty"><strong>Sin contactos nuevos esta semana.</strong>Cuando alguien deje su correo o teléfono en el chat, lo ves aquí para seguirlo.</div>';
+  }else{
+    leadMount.innerHTML=leads.slice(0,3).map(s=>{
+      const c=contactOf(s);
+      return '<div class="item"><div class="item-top"><span class="item-title">'+esc(c.label)+'</span><span class="item-time">'+esc(ago(s.updated_at))+'</span></div>'
+        +'<div class="item-meta">'+esc(channelOf(s))+' · '+esc(lastUserMsg(s)||lastMsg(s))+'</div>'
+        +'<div class="item-actions"><a class="btn btn-sm" href="'+esc(c.href)+'" target="_blank" rel="noopener">'+esc(c.action)+'</a>'
+        +'<button class="btn btn-sm" data-open-convo="'+esc(s.session_id)+'">Ver conversación</button></div></div>';
+    }).join('')
+    +(leads.length>3?'<div class="lane-more"><button class="link-btn" data-goto-filter="contacto">Ver los '+leads.length+' contactos →</button></div>':'');
+  }
+})();
+
+// ---------- últimos 7 días ----------
+(function(){
+  const after=recent.filter(s=>isAfterHours(s.updated_at));
+  const contacts=recent.filter(s=>{const c=contactOf(s);return c&&c.href;});
+  const booked=appts.filter(a=>inWindow(a.created_at||(a.appointment_date+'T12:00:00'),since7));
+  const delta=(now,before)=>{
+    if(!before)return now?'sin datos de la semana anterior':'igual que la semana anterior';
+    const d=now-before;
+    if(!d)return 'igual que la semana anterior';
+    return '<span class="'+(d>0?'up':'down')+'">'+(d>0?'+':'')+d+'</span> vs. semana anterior';
+  };
+  const pct=recent.length?Math.round(after.length/recent.length*100):0;
+  $('#m-convos').textContent=recent.length;
+  $('#m-convos-foot').innerHTML=delta(recent.length,previous.length);
+  $('#m-after').textContent=after.length;
+  $('#m-after-foot').textContent=recent.length?pct+'% del total, de noche o fin de semana':'de noche o fin de semana';
+  $('#m-contacts').textContent=contacts.length;
+  $('#m-contacts-foot').textContent='dejaron correo o teléfono';
+  $('#m-booked').textContent=booked.length;
+  $('#m-booked-foot').textContent='agendadas por Dominga';
+
+  const days=[];
+  for(let i=6;i>=0;i--)days.push(ymd(Date.now()-i*DAY_MS));
+  const rows=days.map(d=>{
+    const list=recent.filter(s=>ymd(s.updated_at)===d);
+    const a=list.filter(s=>isAfterHours(s.updated_at)).length;
+    return {d,total:list.length,after:a,office:list.length-a};
+  });
+  const max=Math.max(1,...rows.map(r=>r.total));
+  $('#chart').innerHTML=rows.map(r=>{
+    const h=Math.round(r.total/max*100);
+    const afterPct=r.total?Math.round(r.after/r.total*100):0;
+    const label=r.d===today?'hoy':longDate(r.d,{weekday:'short'}).replace('.','');
+    return '<div class="bar-col" title="'+esc(longDate(r.d,{weekday:'long',day:'numeric',month:'short'}))+': '+r.total+' conversaciones, '+r.after+' fuera de horario">'
+      +'<span class="bar-val num-tab">'+(r.total||'')+'</span>'
+      +'<div class="bar-track"><div class="bar" style="height:'+Math.max(h,2)+'%">'
+      +(r.after?'<i class="after" style="height:'+afterPct+'%"></i>':'')
+      +(r.office?'<i class="office" style="height:'+(100-afterPct)+'%"></i>':'')
+      +'</div></div><span class="bar-lbl'+(r.d===today?' today':'')+'">'+esc(label)+'</span></div>';
+  }).join('');
+  const resolved=recent.length?Math.round((recent.length-escalatedRecent.length)/recent.length*100):null;
+  $('#chart-note').innerHTML=resolved===null
+    ?'Todavía no hay conversaciones en los últimos 7 días.'
+    :'Dominga resolvió sola <strong>'+resolved+'%</strong> de las conversaciones de la semana, sin necesitar a una persona.';
+})();
+
+// ---------- abrir una conversación desde otra vista ----------
+function openConversation(sessionId){
+  setFilter('todas');
+  $('#convo-search').value='';
+  renderConvos();
+  show('conversaciones');
+  const el=$$('.convo').find(d=>d.dataset.session===sessionId);
+  if(el){el.open=true;el.scrollIntoView({block:'start'});el.querySelector('summary').focus();}
+}
+document.addEventListener('click',(e)=>{
+  const open=e.target.closest('[data-open-convo]');
+  if(open){openConversation(open.dataset.openConvo);return;}
+  const goto=e.target.closest('[data-goto-filter]');
+  if(goto){setFilter(goto.dataset.gotoFilter);renderConvos();show('conversaciones');}
+});
 `;
 
 const ADMIN_SCRIPT_2 = `
 // ---------- conversaciones ----------
-function renderConvos(list,mount){
-  if(!list.length){mount.innerHTML='<p class="empty">Sin resultados.</p>';return;}
-  mount.innerHTML=list.map((s,i)=>{
-    const msgs=Array.isArray(s.messages)?s.messages:[];
-    const last=msgs[msgs.length-1];
-    const preview=last?esc(String(last.content||'').slice(0,160)):'(sin mensajes)';
-    const thread=msgs.map(m=>'<div class="msg '+(m.role==='user'?'user':'bot')+'"><span class="role">'+(m.role==='user'?'Visitante':'Dominga')+'</span><p>'+esc(m.content)+'</p></div>').join('');
-    return '<div class="convo" data-i="'+i+'" data-session="'+esc(s.session_id||'')+'">'
-      +'<div class="convo-head">'
-      +(s.lead_contact?'<span class="convo-title">'+esc(s.lead_contact)+'</span><span class="badge lead">lead</span>':'<span class="convo-title anon">An\\u00f3nimo</span>')
-      +(s.escalated?'<span class="badge escalated" title="'+esc(s.escalation_reason||'')+'">escalado</span>':'')
-      +'<span class="convo-meta">'+msgs.length+' msjs \\u00b7 '+fmtDT(s.updated_at)+'</span>'
-      +'<span class="convo-preview">'+preview+'</span>'
-      +'</div><div class="thread">'
-      +(s.escalated&&s.session_id?'<button class="live-btn" data-session="'+esc(s.session_id)+'">\\u{1F534} Tomar en vivo</button>':'')
-      +thread+'</div></div>';
-  }).join('');
-  $$('.convo-head',mount).forEach(h=>h.addEventListener('click',()=>h.parentElement.classList.toggle('open')));
+const FILTERS={
+  todas:()=>true,
+  escaladas:(s)=>!!s.escalated,
+  contacto:(s)=>{const c=contactOf(s);return !!(c&&c.href);},
+  fuera:(s)=>isAfterHours(s.updated_at)
+};
+let convoFilter='todas';
+function setFilter(name){
+  convoFilter=FILTERS[name]?name:'todas';
+  $$('#convo-filters .chip').forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.filter===convoFilter)));
 }
-const convoMount=$('#convo-list');
-$('#convo-count').textContent=sessions.length+' totales';
-renderConvos(sessions,convoMount);
-renderConvos(sessions.slice(0,4),$('#convo-recent'));
-$('#convo-search').addEventListener('input',(e)=>{
-  const q=e.target.value.toLowerCase().trim();
-  if(!q){renderConvos(sessions,convoMount);return;}
-  renderConvos(sessions.filter(s=>{
-    if((s.lead_contact||'').toLowerCase().includes(q))return true;
-    return (Array.isArray(s.messages)?s.messages:[]).some(m=>(m.content||'').toLowerCase().includes(q));
-  }),convoMount);
+$$('#convo-filters .chip').forEach(c=>{
+  const n=sessions.filter(FILTERS[c.dataset.filter]).length;
+  c.querySelector('.n').textContent=n;
+  c.addEventListener('click',()=>{setFilter(c.dataset.filter);renderConvos();});
 });
+function renderConvos(){
+  const mount=$('#convo-list');
+  const q=$('#convo-search').value.toLowerCase().trim();
+  const list=sessions.filter(FILTERS[convoFilter]).filter(s=>{
+    if(!q)return true;
+    if((s.lead_contact||'').toLowerCase().indexOf(q)>=0)return true;
+    return (Array.isArray(s.messages)?s.messages:[]).some(m=>String(m.content||'').toLowerCase().indexOf(q)>=0);
+  });
+  if(!list.length){
+    mount.innerHTML='<div class="list-empty">'+(q||convoFilter!=='todas'?'No hay conversaciones con ese filtro.':'Todavía no hay conversaciones. Cuando alguien le escriba a Dominga, aparece aquí.')+'</div>';
+    return;
+  }
+  mount.innerHTML=list.map(s=>{
+    const msgs=Array.isArray(s.messages)?s.messages:[];
+    const c=contactOf(s);
+    const thread=msgs.map(m=>'<div class="msg '+(m.role==='user'?'user':'bot')+'"><span class="role">'+(m.role==='user'?'Cliente':'Dominga o equipo')+'</span><p>'+esc(m.content)+'</p></div>').join('');
+    return '<details class="convo" data-session="'+esc(s.session_id||'')+'">'
+      +'<summary>'
+      +'<div class="convo-line"><span class="convo-title'+(c?'':' anon')+'">'+esc(titleOf(s))+'</span>'
+      +'<span class="tag">'+esc(channelOf(s))+'</span>'
+      +(s.escalated?'<span class="tag alert" title="'+esc(REASONS[s.escalation_reason]||'')+'">escalada</span>':'')
+      +(c&&c.href?'<span class="tag ok">contacto</span>':'')
+      +(isAfterHours(s.updated_at)?'<span class="tag accent">fuera de horario</span>':'')
+      +'</div>'
+      +'<span class="convo-time">'+esc(ago(s.updated_at))+' · '+msgs.length+' msjs</span>'
+      +'<span class="convo-preview">'+esc(String(lastMsg(s)).slice(0,180))+'</span>'
+      +'</summary>'
+      +'<div class="thread">'
+      +((s.escalated&&isWebSession(s))||(c&&c.href)?'<div class="thread-actions">'
+        +(s.escalated&&isWebSession(s)?'<button class="live-btn" data-session="'+esc(s.session_id)+'"><span class="dot"></span>Tomar en vivo</button>':'')
+        +(c&&c.href?'<a class="btn btn-sm" href="'+esc(c.href)+'" target="_blank" rel="noopener">'+esc(c.action)+'</a>':'')
+        +'</div>':'')
+      +thread+'</div></details>';
+  }).join('');
+}
+$('#convo-total').textContent=(totals.sessions>sessions.length?totals.sessions+' en total · se muestran las últimas '+sessions.length:sessions.length+' en total');
+$('#convo-search').addEventListener('input',renderConvos);
+setFilter('todas');
+renderConvos();
 
 // ---------- agenda ----------
-let agendaMode='upcoming';
+let agendaMode='proximas';
 function renderAgenda(){
   const mount=$('#agenda-list');
-  const source=agendaMode==='upcoming'?upcoming:appts;
-  if(!source.length){mount.innerHTML='<p class="empty">No hay citas'+(agendaMode==='upcoming'?' pr\\u00f3ximas':'')+'.</p>';return;}
-  const byDate={};
-  source.forEach(a=>{(byDate[a.appointment_date]=byDate[a.appointment_date]||[]).push(a);});
-  mount.innerHTML=Object.keys(byDate).sort().map(date=>{
-    const rows=byDate[date].map(a=>'<div class="appt'+(date<today?' past':'')+'">'
-      +'<span class="time">'+esc((a.appointment_time||'').slice(0,5))+'</span>'
-      +'<span>'+esc(a.client_name)+'</span>'
-      +'<span class="mail">'+esc(a.client_email)+'</span>'
-      +(a.reminder_sent?'<span class="badge">recordatorio \\u2713</span>':'')
-      +(a.calendar_link?'<a class="cal" href="'+esc(a.calendar_link)+'" target="_blank" rel="noopener">Calendar \\u2192</a>':'')
-      +'</div>').join('');
-    return '<div class="day"><h3>'+esc(date)+' <span class="dow">'+esc(dowOf(date))+'</span>'+(date===today?' <span class="badge lead">hoy</span>':'')+'</h3>'+rows+'</div>';
+  const source=agendaMode==='proximas'?appts.filter(a=>a.appointment_date>=today):appts.slice().reverse();
+  if(!source.length){
+    mount.innerHTML='<div class="list">'+'<div class="list-empty">'+(agendaMode==='proximas'?'No hay citas próximas. Cuando Dominga agende una, aparece aquí.':'Todavía no hay citas agendadas.')+'</div></div>';
+    return;
+  }
+  const byDate=[];const idx={};
+  source.forEach(a=>{if(!(a.appointment_date in idx)){idx[a.appointment_date]=byDate.length;byDate.push({date:a.appointment_date,items:[]});}byDate[idx[a.appointment_date]].items.push(a);});
+  mount.innerHTML=byDate.map(g=>{
+    const rows=g.items.map(a=>{
+      const meet=/^https:[/][/]meet[.]google[.]com[/]/.test(a.calendar_link||'');
+      return '<div class="appt'+(g.date<today?' past':'')+'">'
+        +'<span class="appt-time num-tab">'+esc(hhmm(a.appointment_time))+'</span>'
+        +'<div class="who"><div class="name">'+esc(a.client_name)+'</div><div class="mail">'+esc(a.client_email)+'</div></div>'
+        +'<div class="side-info">'
+        +(a.reminder_sent?'<span class="tag ok">recordatorio enviado</span>':(g.date>=today?'<span class="tag">recordatorio pendiente</span>':''))
+        +(a.calendar_link?'<a class="btn btn-sm" href="'+esc(a.calendar_link)+'" target="_blank" rel="noopener">'+(meet?'Unirse a Meet':'Ver en Calendar')+'</a>':'')
+        +'</div></div>';
+    }).join('');
+    const label=dayLabel(g.date);
+    const isRel=label==='Hoy'||label==='Mañana';
+    return '<div class="day"><div class="day-head"><h3>'+esc(label)+'</h3>'+(isRel?'<span class="date">'+esc(longDate(g.date,{weekday:'long',day:'numeric',month:'long'}).replace(',',''))+'</span>':'')+'</div>'+rows+'</div>';
   }).join('');
 }
-$$('.chip').forEach(c=>c.addEventListener('click',()=>{
+$$('#agenda-filters .chip').forEach(c=>c.addEventListener('click',()=>{
   agendaMode=c.dataset.mode;
-  $$('.chip').forEach(x=>x.classList.toggle('active',x===c));
+  $$('#agenda-filters .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===c)));
   renderAgenda();
 }));
+$('#agenda-total').textContent=(totals.appointments||appts.length)+' citas en total';
 renderAgenda();
 
-// ---------- pagespeed ----------
-function scoreColor(n){if(n==null)return'var(--muted)';if(n>=90)return'#43D17C';if(n>=50)return'var(--accent)';return'#E85D3D';}
-function psiCol(label,data){
-  if(!data)return'';
-  if(data.error)return '<div class="card" style="flex:1;min-width:220px;"><h2 style="font-size:12px;">'+label+'</h2><p class="empty">'+esc(data.error)+'</p></div>';
-  const rows=[['Performance',data.performance],['Accesibilidad',data.accessibility],['Buenas pr\\u00e1cticas',data.bestPractices],['SEO',data.seo]];
-  const scores=rows.map(([lbl,val])=>'<div style="text-align:center;flex:1;"><div style="font-size:26px;font-weight:700;color:'+scoreColor(val)+'">'+(val??'\\u2013')+'</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">'+lbl+'</div></div>').join('');
-  const vitals=[['LCP',data.lcp],['CLS',data.cls],['TBT',data.tbt],['FCP',data.fcp],['Speed Index',data.speedIndex]]
-    .filter(([,v])=>v).map(([lbl,v])=>'<div class="badge" style="margin:2px 4px 0 0;display:inline-block;">'+lbl+': '+esc(v)+'</div>').join('');
-  return '<div class="card" style="flex:1;min-width:260px;">'
-    +'<h2 style="font-size:12px;">'+label+'</h2>'
-    +'<div style="display:flex;gap:6px;margin-bottom:12px;">'+scores+'</div>'
-    +'<div>'+vitals+'</div>'
-    +'</div>';
+// ---------- sistema: pagespeed ----------
+function scoreColor(n){if(n==null)return'var(--muted)';if(n>=90)return'var(--ok)';if(n>=50)return'var(--accent)';return'var(--alert)';}
+function psiCol(label,d){
+  if(!d)return'';
+  if(d.error)return '<div class="card"><h2>'+esc(label)+'</h2><p class="empty">'+esc(d.error)+'</p></div>';
+  const rows=[['Rendimiento',d.performance],['Accesibilidad',d.accessibility],['Buenas prácticas',d.bestPractices],['SEO',d.seo]];
+  const scores=rows.map(r=>'<div class="psi-score"><b class="num-tab" style="color:'+scoreColor(r[1])+'">'+(r[1]??'–')+'</b><span>'+r[0]+'</span></div>').join('');
+  const vitals=[['LCP',d.lcp],['CLS',d.cls],['TBT',d.tbt],['FCP',d.fcp],['Speed Index',d.speedIndex]].filter(v=>v[1]).map(v=>'<span class="tag">'+v[0]+': '+esc(v[1])+'</span>').join('');
+  return '<div class="card"><h2>'+esc(label)+'</h2><div class="psi-scores">'+scores+'</div><div class="vitals">'+vitals+'</div></div>';
 }
 $('#psi-run').addEventListener('click',async()=>{
   const btn=$('#psi-run');const status=$('#psi-status');const out=$('#psi-results');
-  btn.disabled=true;status.textContent='Corriendo Lighthouse en mobile y desktop\\u2026';
-  out.innerHTML='<p class="empty">Analizando\\u2026 esto puede tardar hasta 30 segundos.</p>';
+  btn.disabled=true;status.textContent='Corriendo Lighthouse en celular y computador…';
+  out.innerHTML='<p class="empty">Analizando… puede tardar hasta 30 segundos.</p>';
   try{
     const res=await fetch('/api/admin/pagespeed?url='+encodeURIComponent('https://atiendemelapyme.cl/'));
-    const data=await res.json();
-    out.innerHTML='<div style="display:flex;gap:14px;flex-wrap:wrap;">'+psiCol('\\u{1F4F1} Mobile',data.mobile)+psiCol('\\u{1F5A5}\\uFE0F Desktop',data.desktop)+'</div>';
-    status.textContent='\\u00daltimo an\\u00e1lisis: '+new Date(data.checkedAt).toLocaleTimeString('es-CL',{timeZone:TZ});
+    const d=await res.json();
+    out.innerHTML='<div class="psi-grid">'+psiCol('Celular',d.mobile)+psiCol('Computador',d.desktop)+'</div>';
+    status.textContent='Último análisis: '+new Date(d.checkedAt).toLocaleTimeString('es-CL',{timeZone:TZ});
   }catch(err){
-    out.innerHTML='<p class="empty">Error al consultar PageSpeed: '+esc(err.message)+'</p>';
+    out.innerHTML='<p class="empty">No se pudo consultar PageSpeed: '+esc(err.message)+'</p>';
     status.textContent='';
   }finally{btn.disabled=false;}
 });
 
-// vista inicial segun hash
+// vista inicial según el hash
 show((location.hash||'#inicio').slice(1));
 `;
 
@@ -540,32 +869,32 @@ function addLiveMsg(text,cls){
 }
 
 function openLiveChat(sessionId){
-  if(liveSocket&&liveSessionId===sessionId){livePanel.classList.add('open');return;}
+  if(liveSocket&&liveSessionId===sessionId){livePanel.classList.add('open');liveInput.focus();return;}
   closeLiveChat();
   liveSessionId=sessionId;
-  liveSessionLabel.textContent=sessionId;
+  const s=sessions.find(x=>x.session_id===sessionId);
+  liveSessionLabel.textContent=s?titleOf(s):sessionId;
   liveMessages.innerHTML='';
   livePanel.classList.add('open');
 
-  const priorSession=sessions.find(s=>s.session_id===sessionId);
-  const priorMsgs=priorSession&&Array.isArray(priorSession.messages)?priorSession.messages:[];
+  const priorMsgs=s&&Array.isArray(s.messages)?s.messages:[];
   if(priorMsgs.length){
-    addLiveMsg('\\u2014 conversaci\\u00f3n previa con Dominga \\u2014','sys');
-    priorMsgs.forEach(m=>addLiveMsg(m.role==='user'?m.content:'\\u{1F916} '+m.content, m.role==='user'?'visitor':'admin'));
-    addLiveMsg('\\u2014 te uniste aqu\\u00ed \\u2014','sys');
+    addLiveMsg('— conversación previa con Dominga —','sys');
+    priorMsgs.forEach(m=>addLiveMsg(m.role==='user'?m.content:'Dominga: '+m.content, m.role==='user'?'visitor':'admin'));
+    addLiveMsg('— te uniste aquí —','sys');
   }
 
-  addLiveMsg('Conectando\\u2026','sys');
+  addLiveMsg('Conectando…','sys');
   const proto=location.protocol==='https:'?'wss:':'ws:';
   liveSocket=new WebSocket(proto+'//'+location.host+'/ws/admin-chat/'+encodeURIComponent(sessionId));
-  liveSocket.addEventListener('open',()=>addLiveMsg('Conectado \\u2014 el visitante ve que te uniste','sys'));
+  liveSocket.addEventListener('open',()=>{addLiveMsg('Conectado — el cliente ve que te uniste','sys');liveInput.focus();});
   liveSocket.addEventListener('message',(evt)=>{
-    let data;
-    try{data=JSON.parse(evt.data);}catch(e){return;}
-    if(data.type==='visitor_message'){addLiveMsg(data.text,'visitor');}
+    let d;
+    try{d=JSON.parse(evt.data);}catch(e){return;}
+    if(d.type==='visitor_message'){addLiveMsg(d.text,'visitor');}
   });
-  liveSocket.addEventListener('close',()=>{addLiveMsg('Conexi\\u00f3n cerrada','sys');});
-  liveSocket.addEventListener('error',()=>{addLiveMsg('Error de conexi\\u00f3n','sys');});
+  liveSocket.addEventListener('close',()=>{addLiveMsg('Conexión cerrada','sys');});
+  liveSocket.addEventListener('error',()=>{addLiveMsg('Error de conexión','sys');});
 }
 
 function closeLiveChat(){
@@ -585,12 +914,25 @@ function sendLiveMsg(){
 
 document.addEventListener('click',(e)=>{
   const btn=e.target.closest('.live-btn');
-  if(btn){openLiveChat(btn.dataset.session);return;}
+  if(btn){e.preventDefault();openLiveChat(btn.dataset.session);return;}
   if(e.target.closest('#live-chat-close')){closeLiveChat();return;}
   if(e.target.closest('#live-chat-send')){sendLiveMsg();return;}
 });
 liveInput.addEventListener('keydown',(e)=>{if(e.key==='Enter')sendLiveMsg();});
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&livePanel.classList.contains('open'))closeLiveChat();});
 `;
+
+function navButtons(extraClass = '') {
+    const items = [
+        ['inicio', 'home', 'Inicio'],
+        ['conversaciones', 'chat', 'Conversaciones'],
+        ['agenda', 'calendar', 'Agenda'],
+        ['sistema', 'system', 'Sistema']
+    ];
+    return items.map(([view, ico, label]) =>
+        `<button class="nav-btn${extraClass}" data-view="${view}"${view === 'inicio' ? ' aria-current="page"' : ''}>${icon(ico)}<span>${label}</span>${view === 'conversaciones' ? '<span class="nav-count num-tab" data-escalated-count hidden></span>' : ''}</button>`
+    ).join('');
+}
 
 async function onRequestGetAdmin(context) {
     const { request, env } = context;
@@ -605,122 +947,174 @@ async function onRequestGetAdmin(context) {
         listWhatsappConnections(env)
     ]);
 
+    const brand = `<div class="brand"><span class="brand-mark">a<i></i></span>Atiéndeme la Pyme</div>`;
+
     const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard \u2014 Ati\u00e9ndeme la Pyme</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard — Atiéndeme la Pyme</title>
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@700&display=swap">
 <style>${ADMIN_STYLES}</style>
 </head>
 <body>
+<header class="topbar">
+  ${brand}
+  <button class="btn btn-sm" data-refresh aria-label="Actualizar datos">${icon('refresh', 16)}</button>
+</header>
 <div class="layout">
-  <aside class="side">
-    <div class="brand">Ati\u00e9ndeme<span>_</span>la Pyme</div>
-    <button class="nav-btn active" data-view="inicio"><span class="ico">\u25A6</span> Inicio</button>
-    <button class="nav-btn" data-view="conversaciones"><span class="ico">\u2709</span> Conversaciones</button>
-    <button class="nav-btn" data-view="agenda"><span class="ico">\u25F4</span> Agenda</button>
-    <button class="nav-btn" data-view="rendimiento"><span class="ico">\u26A1</span> Rendimiento</button>
-    <form method="POST" action="/admin/logout" style="margin-top:auto;">
-      <button type="submit" class="nav-btn" style="width:100%;">← Cerrar sesión</button>
-    </form>
-    <div class="side-foot" style="margin-top:12px;">Panel interno<br>atiendemelapyme.cl</div>
+  <aside class="side" aria-label="Navegación principal">
+    ${brand}
+    <nav class="nav">${navButtons()}</nav>
+    <div class="side-foot">
+      <div class="status"><span class="dot"></span><span>Dominga en línea</span></div>
+      <form method="POST" action="/admin/logout">
+        <button type="submit" class="logout">${icon('logout', 16)}Cerrar sesión</button>
+      </form>
+    </div>
   </aside>
-  <main class="main">
-    <div class="head">
-      <div>
-        <h1>Dashboard</h1>
-        <div class="sub">Resumen de Dominga: conversaciones, leads y citas.</div>
-      </div>
-      <button class="refresh" onclick="location.reload()">\u21BB Actualizar</button>
-    </div>
-    <div class="mobile-nav">
-      <button class="nav-btn active" data-view="inicio">Inicio</button>
-      <button class="nav-btn" data-view="conversaciones">Chats</button>
-      <button class="nav-btn" data-view="agenda">Agenda</button>
-      <button class="nav-btn" data-view="rendimiento">Rendimiento</button>
-    </div>
-    <div class="stats">
-      <div class="stat hero"><div class="label">Conversaciones</div><div class="num" id="st-conv">\u2013</div><div class="hint">total registradas</div></div>
-      <div class="stat"><div class="label">Leads con contacto</div><div class="num" id="st-leads">\u2013</div><div class="hint">dejaron email/tel\u00e9fono</div></div>
-      <div class="stat"><div class="label">Citas totales</div><div class="num" id="st-appts">\u2013</div><div class="hint">hist\u00f3rico agendado</div></div>
-      <div class="stat"><div class="label">Citas pr\u00f3ximas</div><div class="num" id="st-upcoming">\u2013</div><div class="hint">desde hoy en adelante</div></div>
-      <div class="stat"><div class="label">Escalados a humano</div><div class="num" id="st-escalated">\u2013</div><div class="hint" id="st-escalated-hint">pidieron persona o Dominga no supo</div></div>
-      <div class="stat"><div class="label">Fuera de horario</div><div class="num" id="st-afterhours">\u2013</div><div class="hint">\u00faltimo mensaje fuera de 9-19h L-V</div></div>
-    </div>
 
-    <section class="view active" data-view="inicio">
-      <div class="grid">
-        <div class="stack">
-          <div class="card">
-            <h2>Actividad \u00b7 \u00faltimos 7 d\u00edas <span class="count">conversaciones</span></h2>
-            <div class="chart" id="chart"></div>
+  <main class="main">
+    <section class="view active" data-view="inicio" aria-labelledby="h-inicio">
+      <div class="page-head">
+        <div>
+          <h1 id="h-inicio">Hoy, <span id="today-label"></span></h1>
+          <p class="page-sub" id="last-activity"></p>
+        </div>
+        <button class="btn" data-refresh>${icon('refresh', 16)}Actualizar</button>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h2>Requiere tu atención</h2>
+          <span class="section-note">Últimos 7 días</span>
+        </div>
+        <div class="attention">
+          <div class="lane">
+            <div class="lane-head"><span class="lane-title">Esperan a una persona</span><span class="lane-count num-tab" id="count-escalated"></span></div>
+            <div id="lane-escalated"></div>
           </div>
-          <div class="card">
-            <h2>Conversaciones recientes <span class="count">\u00faltimas 4</span></h2>
-            <div id="convo-recent"></div>
+          <div class="lane">
+            <div class="lane-head"><span class="lane-title">Citas de hoy y mañana</span><span class="lane-count num-tab" id="count-appts"></span></div>
+            <div id="lane-appts"></div>
           </div>
-          <div class="card">
-            <h2>Accesos r\u00e1pidos</h2>
-            <div class="stack" style="gap:8px;">
-              <a href="https://calendar.google.com" target="_blank" rel="noopener">\u2192 Google Calendar</a>
-              <a href="https://supabase.com/dashboard/project/ewhqshvmrinqsevjfjtz" target="_blank" rel="noopener">\u2192 Supabase (datos)</a>
-              <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">\u2192 Cloudflare (Worker)</a>
-              <a href="https://analytics.google.com" target="_blank" rel="noopener">\u2192 Google Analytics</a>
-              <a href="/" target="_blank" rel="noopener">\u2192 Ver el sitio</a>
-            </div>
+          <div class="lane">
+            <div class="lane-head"><span class="lane-title">Contactos nuevos</span><span class="lane-count num-tab" id="count-leads"></span></div>
+            <div id="lane-leads"></div>
           </div>
         </div>
-        <div class="stack">
-          <div class="next-appt">
-            <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Pr\u00f3xima cita</h2>
-            <div id="next-appt"></div>
-          </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h2>Últimos 7 días</h2>
+          <span class="section-note">Horario hábil: lunes a viernes, 9:00 a 19:00</span>
+        </div>
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Conversaciones</div><div class="metric-value num-tab" id="m-convos"></div><div class="metric-foot" id="m-convos-foot"></div></div>
+          <div class="metric key"><div class="metric-label">Fuera de horario</div><div class="metric-value num-tab" id="m-after"></div><div class="metric-foot" id="m-after-foot"></div></div>
+          <div class="metric"><div class="metric-label">Contactos</div><div class="metric-value num-tab" id="m-contacts"></div><div class="metric-foot" id="m-contacts-foot"></div></div>
+          <div class="metric"><div class="metric-label">Citas</div><div class="metric-value num-tab" id="m-booked"></div><div class="metric-foot" id="m-booked-foot"></div></div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-legend"><span><i class="swatch after"></i>Fuera de horario</span><span><i class="swatch office"></i>En horario</span></div>
+          <div class="chart" id="chart" role="img" aria-label="Conversaciones por día de los últimos 7 días"></div>
+          <p class="chart-note" id="chart-note"></p>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h2>Canales conectados</h2>
+        </div>
+        <div class="channels">
           ${connectionsCardHtml(connections)}
           ${whatsappConnectionsCardHtml(whatsappConnections)}
         </div>
       </div>
     </section>
-    <section class="view" data-view="conversaciones">
-      <div class="card">
-        <h2>Conversaciones <span class="count" id="convo-count"></span></h2>
-        <input class="search" id="convo-search" type="search" placeholder="Buscar por contacto o contenido del mensaje\u2026">
-        <div id="convo-list"></div>
-      </div>
-    </section>
-    <section class="view" data-view="agenda">
-      <div class="card">
-        <h2>Agenda</h2>
-        <div class="filter-row">
-          <button class="chip active" data-mode="upcoming">Pr\u00f3ximas</button>
-          <button class="chip" data-mode="all">Todas</button>
+
+    <section class="view" data-view="conversaciones" aria-labelledby="h-convos">
+      <div class="page-head">
+        <div>
+          <h1 id="h-convos">Conversaciones</h1>
+          <p class="page-sub" id="convo-total"></p>
         </div>
-        <div id="agenda-list"></div>
       </div>
-    </section>
-    <section class="view" data-view="rendimiento">
-      <div class="card">
-        <h2>Rendimiento del sitio <span class="count">Google PageSpeed Insights</span></h2>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
-          <button class="refresh" id="psi-run" style="border-color:var(--accent);color:var(--accent);">\u25B6 Analizar atiendemelapyme.cl</button>
-          <span class="convo-meta" id="psi-status"></span>
+      <div class="toolbar">
+        <input class="search" id="convo-search" type="search" placeholder="Buscar por contacto o mensaje…" aria-label="Buscar conversaciones">
+        <div class="filters" id="convo-filters" role="group" aria-label="Filtrar conversaciones">
+          <button class="chip" data-filter="todas" aria-pressed="true">Todas<span class="n num-tab"></span></button>
+          <button class="chip" data-filter="escaladas" aria-pressed="false">Escaladas<span class="n num-tab"></span></button>
+          <button class="chip" data-filter="contacto" aria-pressed="false">Con contacto<span class="n num-tab"></span></button>
+          <button class="chip" data-filter="fuera" aria-pressed="false">Fuera de horario<span class="n num-tab"></span></button>
         </div>
-        <div id="psi-results"><p class="empty">Presiona "Analizar" para correr Lighthouse sobre el sitio (toma ~15-30s, corre en vivo contra Google).</p></div>
+      </div>
+      <div class="list" id="convo-list"></div>
+    </section>
+
+    <section class="view" data-view="agenda" aria-labelledby="h-agenda">
+      <div class="page-head">
+        <div>
+          <h1 id="h-agenda">Agenda</h1>
+          <p class="page-sub" id="agenda-total"></p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="filters" id="agenda-filters" role="group" aria-label="Filtrar citas">
+          <button class="chip" data-mode="proximas" aria-pressed="true">Próximas</button>
+          <button class="chip" data-mode="todas" aria-pressed="false">Todas</button>
+        </div>
+      </div>
+      <div id="agenda-list"></div>
+    </section>
+
+    <section class="view" data-view="sistema" aria-labelledby="h-sistema">
+      <div class="page-head">
+        <div>
+          <h1 id="h-sistema">Sistema</h1>
+          <p class="page-sub">Herramientas internas de Atiéndeme la Pyme.</p>
+        </div>
+      </div>
+      <p class="system-note">Esta sección no forma parte del panel de un cliente: al replicar el dashboard, se quita completa.</p>
+
+      <div class="section">
+        <div class="section-head"><h2>Rendimiento del sitio</h2><span class="section-note" id="psi-status"></span></div>
+        <button class="btn btn-primary" id="psi-run">Analizar atiendemelapyme.cl</button>
+        <div id="psi-results"><p class="empty" style="margin-top:12px;">Corre Lighthouse (Google PageSpeed) sobre el sitio en celular y computador. Tarda entre 15 y 30 segundos.</p></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h2>Accesos</h2></div>
+        <div class="links-list">
+          <a href="https://calendar.google.com" target="_blank" rel="noopener">Google Calendar${icon('external', 15)}</a>
+          <a href="https://supabase.com/dashboard/project/ewhqshvmrinqsevjfjtz" target="_blank" rel="noopener">Supabase (datos)${icon('external', 15)}</a>
+          <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">Cloudflare (Worker)${icon('external', 15)}</a>
+          <a href="https://analytics.google.com" target="_blank" rel="noopener">Google Analytics${icon('external', 15)}</a>
+          <a href="/" target="_blank" rel="noopener">Ver el sitio${icon('external', 15)}</a>
+        </div>
       </div>
     </section>
   </main>
 </div>
-<div class="live-chat-panel" id="live-chat-panel">
+
+<nav class="tabbar" aria-label="Navegación">${navButtons()}</nav>
+
+<div class="live-chat-panel" id="live-chat-panel" role="dialog" aria-label="Chat en vivo">
   <div class="live-chat-header">
     <span class="live-chat-dot"></span>
     <span class="live-chat-title">En vivo</span>
     <span class="live-chat-session" id="live-chat-session"></span>
     <button class="live-chat-close" id="live-chat-close" aria-label="Cerrar chat en vivo">✕</button>
   </div>
-  <div class="live-chat-messages" id="live-chat-messages"></div>
+  <div class="live-chat-messages" id="live-chat-messages" aria-live="polite"></div>
   <div class="live-chat-input-row">
-    <input type="text" class="live-chat-input" id="live-chat-input" placeholder="Escribe como tú..." autocomplete="off">
+    <input type="text" class="live-chat-input" id="live-chat-input" placeholder="Escribe tu respuesta…" autocomplete="off" aria-label="Mensaje para el cliente">
     <button class="live-chat-send" id="live-chat-send">Enviar</button>
   </div>
 </div>

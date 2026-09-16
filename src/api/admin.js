@@ -257,7 +257,7 @@ const ADMIN_STYLES = `
 :root{
   --bg:#0A0A0A;--surface:#111111;--surface-2:#171717;--hover:#1C1C1C;
   --line:#242424;--line-strong:#363636;
-  --text:#EDEDE8;--muted:#A3A39B;--faint:#75756E;
+  --text:#EDEDE8;--muted:#A3A39B;--faint:#7E7E77;
   --accent:#E8A33D;--ink:#0A0A0A;--ok:#43D17C;--alert:#FF5F57;
   --ch-whatsapp:#25D366;--ch-instagram:#E1306C;--ch-messenger:#0084FF;--ch-web:var(--muted);
   --ch-instagram-grad:linear-gradient(45deg,#F09433,#E6683C,#DC2743,#CC2366,#BC1888);
@@ -272,6 +272,9 @@ a{color:var(--accent);text-decoration:none;text-underline-offset:3px;}
 a:hover{text-decoration:underline;}
 button{font:inherit;color:inherit;}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;scroll-behavior:auto !important;}
+}
 .num-tab{font-variant-numeric:tabular-nums;}
 
 /* ---- estructura ---- */

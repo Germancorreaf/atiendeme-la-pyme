@@ -259,6 +259,8 @@ const ADMIN_STYLES = `
   --line:#242424;--line-strong:#363636;
   --text:#EDEDE8;--muted:#A3A39B;--faint:#75756E;
   --accent:#E8A33D;--ink:#0A0A0A;--ok:#43D17C;--alert:#FF5F57;
+  --ch-whatsapp:#25D366;--ch-instagram:#E1306C;--ch-messenger:#0084FF;--ch-web:var(--muted);
+  --ch-instagram-grad:linear-gradient(45deg,#F09433,#E6683C,#DC2743,#CC2366,#BC1888);
   --display:'Space Grotesk','Arial Black',sans-serif;
   --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 }
@@ -339,6 +341,24 @@ h2{font-family:var(--display);font-size:19px;letter-spacing:-.01em;font-weight:7
 .tag.alert{border-color:var(--alert);color:var(--alert);}
 .tag.ok{border-color:var(--ok);color:var(--ok);}
 .tag.accent{border-color:var(--accent);color:var(--accent);}
+.tag.ch-whatsapp{border-color:var(--ch-whatsapp);color:var(--ch-whatsapp);}
+.tag.ch-instagram{border-color:var(--ch-instagram);color:var(--ch-instagram);}
+.tag.ch-messenger{border-color:var(--ch-messenger);color:var(--ch-messenger);}
+.tag.ch-web{border-color:var(--line-strong);color:var(--muted);}
+
+/* ---- avatar de contacto (foto real o iniciales por color de canal) ---- */
+.avatar-wrap{position:relative;width:30px;height:30px;flex-shrink:0;}
+.avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;}
+.avatar-fallback{display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:12px;color:#fff;text-transform:uppercase;}
+.avatar-fallback.ch-whatsapp{background:var(--ch-whatsapp);}
+.avatar-fallback.ch-instagram{background:var(--ch-instagram-grad);}
+.avatar-fallback.ch-messenger{background:var(--ch-messenger);}
+.avatar-fallback.ch-web{background:var(--line-strong);color:var(--text);}
+.avatar-photo{object-fit:cover;border:1px solid var(--line);}
+.item-row{display:flex;gap:10px;align-items:flex-start;}
+.item-row .item-body{flex:1;min-width:0;}
+.convo-line .avatar-wrap{width:22px;height:22px;}
+.convo-line .avatar-fallback{font-size:10px;}
 
 /* ---- últimos 7 días ---- */
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);background:var(--surface);}
@@ -575,10 +595,28 @@ function contactOf(s){
   // Instagram/Messenger: el id no es un contacto; se responde desde la app.
   return {label:ch==='Instagram'?'Usuario de Instagram':'Usuario de Messenger',href:null,action:null};
 }
-function titleOf(s){const c=contactOf(s);return c?c.label:'Visitante anónimo';}
+function titleOf(s){
+  if(s.sender_name)return channelOf(s)==='Instagram'?'@'+s.sender_name:s.sender_name;
+  const c=contactOf(s);return c?c.label:'Visitante anónimo';
+}
 const lastUserMsg=(s)=>{const m=(Array.isArray(s.messages)?s.messages:[]).filter(x=>x.role==='user');return m.length?m[m.length-1].content:'';};
 const lastMsg=(s)=>{const m=Array.isArray(s.messages)?s.messages:[];return m.length?m[m.length-1].content:'';};
 const REASONS={user_requested_human:'Pidió hablar con una persona',bot_could_not_resolve:'Dominga no supo responder'};
+
+// ---------- color e identidad por canal (WhatsApp/Instagram/Messenger/sitio) ----------
+const CH_CLASS={WhatsApp:'ch-whatsapp',Instagram:'ch-instagram',Messenger:'ch-messenger','Sitio web':'ch-web'};
+function chClass(s){return CH_CLASS[channelOf(s)]||'ch-web';}
+function avatarLetter(s){
+  if(s.sender_name)return s.sender_name.trim().charAt(0).toUpperCase();
+  const c=contactOf(s);
+  if(c&&c.label&&c.label.indexOf('Usuario de')!==0)return c.label.replace('+','').charAt(0);
+  return channelOf(s).charAt(0);
+}
+function avatarHtml(s){
+  const fallback='<span class="avatar avatar-fallback '+chClass(s)+'">'+esc(avatarLetter(s))+'</span>';
+  const photo=s.sender_avatar_url?'<img class="avatar avatar-photo" src="'+esc(s.sender_avatar_url)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'';
+  return '<span class="avatar-wrap">'+fallback+photo+'</span>';
+}
 
 // ---------- navegación ----------
 const VIEWS=['inicio','conversaciones','agenda','sistema'];
@@ -620,14 +658,14 @@ function laneCount(el,n,hot){el.textContent=n;el.classList.toggle('hot',!!(hot&&
   }else{
     mount.innerHTML=escalatedRecent.slice(0,3).map(s=>{
       const quote=lastUserMsg(s);
-      return '<div class="item">'
+      return '<div class="item"><div class="item-row">'+avatarHtml(s)+'<div class="item-body">'
         +'<div class="item-top"><span class="item-title">'+esc(titleOf(s))+'</span><span class="item-time">'+esc(ago(s.updated_at))+'</span></div>'
-        +'<div class="item-meta">'+esc(channelOf(s))+' · '+esc(REASONS[s.escalation_reason]||'Necesita revisión')+'</div>'
+        +'<div class="item-meta"><span class="tag '+chClass(s)+'">'+esc(channelOf(s))+'</span> · '+esc(REASONS[s.escalation_reason]||'Necesita revisión')+'</div>'
         +(quote?'<div class="item-quote">“'+esc(quote)+'”</div>':'')
         +'<div class="item-actions">'
         +(isWebSession(s)?'<button class="live-btn" data-session="'+esc(s.session_id)+'"><span class="dot"></span>Tomar en vivo</button>':'')
         +'<button class="btn btn-sm" data-open-convo="'+esc(s.session_id)+'">Ver conversación</button>'
-        +'</div></div>';
+        +'</div></div></div></div>';
     }).join('')
     +(escalatedRecent.length>3?'<div class="lane-more"><button class="link-btn" data-goto-filter="escaladas">Ver las '+escalatedRecent.length+' escaladas →</button></div>':'');
   }
@@ -662,10 +700,11 @@ function laneCount(el,n,hot){el.textContent=n;el.classList.toggle('hot',!!(hot&&
   }else{
     leadMount.innerHTML=leads.slice(0,3).map(s=>{
       const c=contactOf(s);
-      return '<div class="item"><div class="item-top"><span class="item-title">'+esc(c.label)+'</span><span class="item-time">'+esc(ago(s.updated_at))+'</span></div>'
-        +'<div class="item-meta">'+esc(channelOf(s))+' · '+esc(lastUserMsg(s)||lastMsg(s))+'</div>'
+      return '<div class="item"><div class="item-row">'+avatarHtml(s)+'<div class="item-body">'
+        +'<div class="item-top"><span class="item-title">'+esc(titleOf(s))+'</span><span class="item-time">'+esc(ago(s.updated_at))+'</span></div>'
+        +'<div class="item-meta"><span class="tag '+chClass(s)+'">'+esc(channelOf(s))+'</span> · '+esc(lastUserMsg(s)||lastMsg(s))+'</div>'
         +'<div class="item-actions"><a class="btn btn-sm" href="'+esc(c.href)+'" target="_blank" rel="noopener">'+esc(c.action)+'</a>'
-        +'<button class="btn btn-sm" data-open-convo="'+esc(s.session_id)+'">Ver conversación</button></div></div>';
+        +'<button class="btn btn-sm" data-open-convo="'+esc(s.session_id)+'">Ver conversación</button></div></div></div></div>';
     }).join('')
     +(leads.length>3?'<div class="lane-more"><button class="link-btn" data-goto-filter="contacto">Ver los '+leads.length+' contactos →</button></div>':'');
   }
@@ -770,8 +809,8 @@ function renderConvos(){
     const thread=msgs.map(m=>'<div class="msg '+(m.role==='user'?'user':'bot')+'"><span class="role">'+(m.role==='user'?'Cliente':'Dominga o equipo')+'</span><p>'+esc(m.content)+'</p></div>').join('');
     return '<details class="convo" data-session="'+esc(s.session_id||'')+'">'
       +'<summary>'
-      +'<div class="convo-line"><span class="convo-title'+(c?'':' anon')+'">'+esc(titleOf(s))+'</span>'
-      +'<span class="tag">'+esc(channelOf(s))+'</span>'
+      +'<div class="convo-line">'+avatarHtml(s)+'<span class="convo-title'+((c||s.sender_name)?'':' anon')+'">'+esc(titleOf(s))+'</span>'
+      +'<span class="tag '+chClass(s)+'">'+esc(channelOf(s))+'</span>'
       +(s.escalated?'<span class="tag alert" title="'+esc(REASONS[s.escalation_reason]||'')+'">escalada</span>':'')
       +(c&&c.href?'<span class="tag ok">contacto</span>':'')
       +(isAfterHours(s.updated_at)?'<span class="tag accent">fuera de horario</span>':'')

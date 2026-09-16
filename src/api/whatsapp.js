@@ -52,6 +52,11 @@ export async function onRequestPost(context) {
         const value = change.value || {};
         const messages = value.messages || [];
         const phoneNumberId = value.metadata?.phone_number_id;
+        // El nombre de perfil de WhatsApp viaja junto a los mensajes en
+        // value.contacts (no hace falta llamada aparte a la Graph API).
+        // WhatsApp no expone foto de perfil vía API, así que sender_avatar_url
+        // queda siempre null para este canal.
+        const contactName = value.contacts?.[0]?.profile?.name || null;
 
         for (const message of messages) {
           // Solo procesamos mensajes de texto reales; ignoramos otros tipos
@@ -92,7 +97,7 @@ export async function onRequestPost(context) {
             ? getRandomGreeting()
             : await getClaudeReply(userMessage, history, context);
 
-          await saveMessage(sessionId, from, userMessage, reply, env);
+          await saveMessage(sessionId, from, userMessage, reply, env, contactName);
           await sendMessage(from, reply, phoneNumberId, accessToken);
         }
       }
@@ -149,7 +154,7 @@ async function getClaudeReply(userMessage, history, context) {
   }
 }
 
-async function saveMessage(sessionId, from, userMessage, botResponse, env) {
+async function saveMessage(sessionId, from, userMessage, botResponse, env, contactName) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return;
 
   try {
@@ -170,6 +175,9 @@ async function saveMessage(sessionId, from, userMessage, botResponse, env) {
       { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
       { role: 'assistant', content: botResponse, timestamp: new Date().toISOString() }
     ];
+    // WhatsApp manda el nombre de perfil en casi todos los mensajes; si por
+    // algún motivo no viene en este, no pisamos uno ya guardado.
+    const senderName = contactName || (existing.length > 0 ? existing[0].sender_name : null) || null;
 
     const method = existing.length > 0 ? 'PATCH' : 'POST';
     const url = existing.length > 0
@@ -187,6 +195,7 @@ async function saveMessage(sessionId, from, userMessage, botResponse, env) {
         session_id: sessionId,
         messages,
         lead_contact: from,
+        sender_name: senderName,
         updated_at: new Date().toISOString()
       })
     });

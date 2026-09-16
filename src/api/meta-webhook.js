@@ -153,8 +153,39 @@ async function handleEvent(event, entryId, isInstagram, context) {
     ? getRandomGreeting()
     : await getClaudeReply(userMessage, history, context);
 
-  await saveMessage(sessionId, senderId, userMessage, reply, env);
+  // Solo se pide el perfil (nombre/username + foto) en el primer mensaje de
+  // cada conversación -- evita una llamada extra a la Graph API por cada
+  // mensaje, y saveMessage no pisa un perfil ya guardado si esta llamada
+  // se omite o falla.
+  const profile = history.length === 0
+    ? await fetchProfile(isInstagram, senderId, connection.page_access_token)
+    : null;
+
+  await saveMessage(sessionId, senderId, userMessage, reply, env, profile);
   await sendMessage(isInstagram, connection.page_id, connection.page_access_token, senderId, reply);
+}
+
+// Perfil público del remitente (nombre/username + foto), vía la misma Graph
+// API que ya usamos para enviar el mensaje. Instagram devuelve "username"
+// (lo que se muestra como @usuario en el resto de la app); Messenger solo
+// tiene "name". Si falla (token vencido, ID de prueba, etc.) no debe romper
+// el envío del mensaje -- por eso siempre se atrapa el error acá.
+async function fetchProfile(isInstagram, senderId, accessToken) {
+  const host = isInstagram ? 'graph.instagram.com' : 'graph.facebook.com';
+  const fields = isInstagram ? 'name,username,profile_pic' : 'name,profile_pic';
+  try {
+    const res = await fetch(
+      `https://${host}/${GRAPH_API_VERSION}/${senderId}?fields=${fields}&access_token=${encodeURIComponent(accessToken)}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const name = (isInstagram ? data.username : null) || data.name || null;
+    if (!name && !data.profile_pic) return null;
+    return { name, avatarUrl: data.profile_pic || null };
+  } catch (err) {
+    console.error('Meta profile fetch error:', err.message);
+    return null;
+  }
 }
 
 async function getConversationHistory(sessionId, env) {
@@ -193,7 +224,7 @@ async function getClaudeReply(userMessage, history, context) {
   }
 }
 
-async function saveMessage(sessionId, senderId, userMessage, botResponse, env) {
+async function saveMessage(sessionId, senderId, userMessage, botResponse, env, profile) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return;
 
   try {
@@ -226,6 +257,9 @@ async function saveMessage(sessionId, senderId, userMessage, botResponse, env) {
         session_id: sessionId,
         messages,
         lead_contact: senderId,
+        // profile solo viene poblado en el primer mensaje (ver handleEvent);
+        // si es null, se omiten estas claves y no se pisa lo ya guardado.
+        ...(profile ? { sender_name: profile.name, sender_avatar_url: profile.avatarUrl } : {}),
         updated_at: new Date().toISOString()
       })
     });

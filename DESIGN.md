@@ -42,6 +42,24 @@ typography:
     fontWeight: 400
     lineHeight: 1.4
     letterSpacing: "0.14em"
+  caption:
+    fontFamily: "'JetBrains Mono', ui-monospace, monospace"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: 1.4
+    letterSpacing: "normal"
+  page-title:
+    fontFamily: "'Space Grotesk', sans-serif"
+    fontSize: "clamp(32px, 6vw, 58px)"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "-0.02em"
+  nav-item:
+    fontFamily: "'Space Grotesk', sans-serif"
+    fontSize: "1.9rem"
+    fontWeight: 700
+    lineHeight: 1.1
+    letterSpacing: "-0.01em"
 rounded:
   none: "0px"
   circle: "50%"
@@ -116,6 +134,10 @@ Paleta casi monocromática (negro + blanco cálido) con un único acento cálido
 ### Named Rules
 **The One Accent Rule.** Night Ember es el único color con carga emocional en todo el sitio. No se introducen colores nuevos para nuevas secciones — si algo necesita destacar, se destaca con Night Ember, nunca con un color adicional.
 
+**Excepción: colores de identificación, no de marca propia.** Dos familias de color quedan fuera de la paleta de arriba a propósito, porque no comunican la identidad de Atiéndeme la Pyme sino la de otra cosa que el sitio está representando:
+- **Canal de origen:** el diagrama SVG de canales en la landing (`chansBase`: WhatsApp `#25D366`, Instagram `#E1306C`, Facebook `#1877F2`, Correo `#F59E0B`) usa el color oficial de cada canal para que se identifique de un vistazo — la misma lógica que ya rige los tags/avatares de conversación en `/admin` (ver Panel interno). "Calendario" no tiene color propio y hereda `--accent`.
+- **Réplica de UI ajena (mockup de teléfono):** dentro de `.hp-*` los colores son los reales de la app o el sistema operativo que se está imitando — blanco/negro de fondo de pantalla, `#0a84ff` (azul de sistema iOS), `#ff3b30` (rojo de sistema iOS, botón de colgar), grises de metal del chasis del teléfono, además de los ya listados en Signature Component: Phone Mockup. No se sustituyen por tokens del sistema porque dejarían de parecer la app real.
+
 ## Typography
 
 **Display/Headline Font:** Space Grotesk (bold, con `Arial Black` / `sans-serif` como fallback)
@@ -129,6 +151,9 @@ Paleta casi monocromática (negro + blanco cálido) con un único acento cálido
 - **Title** (700, 20px): títulos de tarjetas de feature.
 - **Body** (400, 14px, line-height 1.6): texto de párrafo. Ancho máximo ~600-720px en bloques de contenido largo.
 - **Label** (400, 11px, letter-spacing 0.14em, uppercase): eyebrows de sección (`.label`), badges, metadatos de navegación.
+- **Caption** (400, 13px): texto pequeño reusado en varios puntos de chrome — logo del nav (`.nav-logo`), links sociales del menú (`.menu-socials-list a`) — un escalón entre Label (11px) y Body (14px).
+- **Page Title** (700, `clamp(32px,6vw,58px)`, line-height 1): H1 de páginas secundarias (Términos y similares) — un escalón entre Headline y Display, propio de páginas legales/utilitarias que no necesitan el impacto del display del hero.
+- **Nav Item** (700, `1.9rem`, se reduce a `1.4rem` en el breakpoint mobile del menú): los ítems numerados del panel de menú lateral (`.menu-list a`).
 
 ### Named Rules
 **The Loud-Quiet Rule.** Los titulares (Space Grotesk, uppercase, bold) gritan; todo lo demás (JetBrains Mono) informa en voz baja. Nunca se usa Space Grotesk para cuerpo de texto largo, ni JetBrains Mono para un H1.
@@ -138,6 +163,8 @@ Paleta casi monocromática (negro + blanco cálido) con un único acento cálido
 Contenedor central `.wrap` de `max-width:1180px`, con bordes verticales de 1px que desaparecen en mobile (`≤1024px`). Las secciones se apilan verticalmente, cada una separada por un borde inferior de 1px (`border-bottom` en `section`), con un pequeño índice numérico (`.sec-num`, ej. "01", "02") anclado en la esquina superior izquierda de cada sección — funciona como numeración de "pasos del sistema", no solo decoración.
 
 Grillas de 2-3 columnas (`repeat(auto-fit,minmax(340px,1fr))` o `repeat(3,1fr)`) para features y layouts de dos paneles (texto + visual), que colapsan a una columna en `≤768px`. Padding de sección estándar: `70px 40px` en desktop, reduciéndose a `40-48px 20px` en mobile, `16-20px` en pantallas muy chicas.
+
+**Fondo de grilla (`.grid-bg`):** capa fija de fondo (`position:fixed;inset:0;z-index:0`) con dos `linear-gradient` de líneas de 1px (horizontal + vertical) en celdas de `64px`, opacidad `.35`, detrás de `.wrap`. Se repite igual en las tres páginas públicas (landing, 404, Términos) — es la textura de fondo del sistema, refuerza la identidad "Always-On Terminal" (retícula técnica, no decoración genérica) y no aparece en el panel `/admin`, que usa superficies planas.
 
 ## Elevation & Depth
 
@@ -180,8 +207,11 @@ Los componentes se sienten **táctiles y directos**: confirman cada acción con 
 - Header fijo con logo (marca `a` + barra de acento) a la izquierda, botón hamburguesa a la derecha. El menú es un panel lateral de ancho fijo (`clamp(300px,36vw,420px)`) que se desliza desde la derecha sobre un overlay oscuro — no un dropdown ni un menú horizontal tradicional.
 - Los ítems de menú están numerados (`01`, `02`...) en Night Ember, con animación de entrada escalonada (delay incremental por ítem).
 
+### Feature Preview Box
+Las tarjetas de features (`.feature`) terminan en un `.preview-box`: un recuadro con encabezado `.preview-dots` que imita la barra de título de una ventana de macOS (tres puntos de 8px — rojo `#FF5F57`, amarillo `#FEBC2E`, verde `#28C840` — sin funcionalidad, puramente el gesto visual "esto es una ventana de sistema"). Refuerza la identidad de terminal/consola del sitio. El rojo coincide con Alert Red pero aquí es cromo decorativo, no un estado de error.
+
 ### Signature Component: Phone Mockup
-El hero muestra tres iPhones hechos en HTML/CSS (`.hp-stage`, `.hp-phone`): Instagram, WhatsApp (al centro, más grande) y una llamada, con los colores reales de cada app en modo claro (Instagram: burbuja `#3797f0` y avatar en gradiente `#F58529→#DD2A7B→#8134AF`; WhatsApp: fondo `#efeae2`, burbuja propia `#d9fdd3`). Todo está en `em` sobre un `font-size` en unidades de contenedor (`cqw`), así que escala nítido a cualquier ancho. El grupo va siempre centrado; en mobile el teléfono central queda completo y los laterales se recortan parejo. Es el componente más distintivo del sitio y el único mockup de teléfono de la landing (la antigua sección 04 con un teléfono de pestañas se eliminó por redundante, 2026-09-14).
+El hero muestra tres iPhones hechos en HTML/CSS (`.hp-stage`, `.hp-phone`): Instagram, WhatsApp (al centro, más grande) y una llamada, con los colores reales de cada app en modo claro (Instagram: burbuja `#3797f0` y avatar en gradiente `#F58529→#DD2A7B→#8134AF`; WhatsApp: fondo `#efeae2`, burbuja propia `#d9fdd3`). Todo está en `em` sobre un `font-size` en unidades de contenedor (`cqw`), así que escala nítido a cualquier ancho. El grupo va siempre centrado; en mobile el teléfono central queda completo y los laterales se recortan parejo. Es el componente más distintivo del sitio y el único mockup de teléfono de la landing (la antigua sección 04 con un teléfono de pestañas se eliminó por redundante, 2026-09-14). La pantalla del chat usa el stack de fuentes del sistema (`-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,...`) en vez de JetBrains Mono/Space Grotesk — es deliberado: dentro del mockup se está imitando la UI nativa real de Instagram/WhatsApp/iOS, así que debe verse como esa app, no como el resto del sitio.
 
 ### Panel interno (dashboard `/admin`) — plantilla para clientes
 Superficie de trabajo (modo "Operate"): misma identidad (fondo casi negro, Night Ember como único acento, ángulos rectos, Space Grotesk para títulos y cifras, JetBrains Mono para todo lo demás), pero con menos expresión que la landing: bordes de 1px en vez de sombras duras, sin cursores parpadeantes salvo el punto "en vivo".

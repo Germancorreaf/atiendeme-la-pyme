@@ -424,6 +424,7 @@ h2{font-family:var(--display);font-size:19px;letter-spacing:-.01em;font-weight:7
 .appt{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);}
 .appt:last-child{border-bottom:0;}
 .appt.past{opacity:.5;}
+.item.past{opacity:.5;}
 .appt .who{min-width:0;}
 .appt .name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .appt .mail{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -518,6 +519,10 @@ const ymd=(d)=>new Date(d).toLocaleDateString('en-CA',{timeZone:TZ});
 const today=ymd(Date.now());
 const tomorrow=ymd(Date.now()+DAY_MS);
 const hhmm=(t)=>String(t||'').slice(0,5);
+// Comparación de reloj de pared en America/Santiago (no la del navegador):
+// compara strings 'YYYY-MM-DDTHH:MM', evita los líos de zona horaria de Date.
+const nowStamp=today+'T'+new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+const isPastAppt=(a)=>(a.appointment_date+'T'+hhmm(a.appointment_time))<nowStamp;
 function longDate(dateStr,opts){try{return new Date(dateStr+'T12:00:00').toLocaleDateString('es-CL',Object.assign({timeZone:TZ},opts));}catch(e){return dateStr;}}
 function dayLabel(dateStr){
   if(dateStr===today)return 'Hoy';
@@ -640,7 +645,7 @@ function laneCount(el,n,hot){el.textContent=n;el.classList.toggle('hot',!!(hot&&
     soon.forEach(a=>{
       if(a.appointment_date!==lastDay){html+='<div class="appt-day">'+esc(dayLabel(a.appointment_date))+'</div>';lastDay=a.appointment_date;}
       const meet=/^https:[/][/]meet[.]google[.]com[/]/.test(a.calendar_link||'');
-      html+='<div class="item"><div class="item-top"><span class="appt-time num-tab">'+esc(hhmm(a.appointment_time))+'</span><span class="item-title">'+esc(a.client_name)+'</span></div>'
+      html+='<div class="item'+(isPastAppt(a)?' past':'')+'"><div class="item-top"><span class="appt-time num-tab">'+esc(hhmm(a.appointment_time))+'</span><span class="item-title">'+esc(a.client_name)+'</span></div>'
         +'<div class="item-meta">'+esc(a.client_email)+'</div>'
         +(a.calendar_link?'<div class="item-actions"><a class="btn btn-sm" href="'+esc(a.calendar_link)+'" target="_blank" rel="noopener">'+(meet?'Unirse a Meet':'Ver en Calendar')+'</a></div>':'')
         +'</div>';
@@ -801,7 +806,7 @@ function renderAgenda(){
   mount.innerHTML=byDate.map(g=>{
     const rows=g.items.map(a=>{
       const meet=/^https:[/][/]meet[.]google[.]com[/]/.test(a.calendar_link||'');
-      return '<div class="appt'+(g.date<today?' past':'')+'">'
+      return '<div class="appt'+(isPastAppt(a)?' past':'')+'">'
         +'<span class="appt-time num-tab">'+esc(hhmm(a.appointment_time))+'</span>'
         +'<div class="who"><div class="name">'+esc(a.client_name)+'</div><div class="mail">'+esc(a.client_email)+'</div></div>'
         +'<div class="side-info">'

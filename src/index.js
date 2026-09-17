@@ -674,78 +674,117 @@ footer .links a:hover{color:var(--accent);background:var(--panel);}
   .menu-list a{font-size:1.4rem;}
 }
 
-/* onboarding */
+/* onboarding: marco del sitio, pero el formulario se lee en letra normal */
+:root{--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}
 .save-pill{color:var(--ok);font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:0;transition:opacity 200ms var(--ease);}
 .save-pill.show{opacity:1;}
-.ob-rule{margin:24px 0 0;max-width:640px;border:1px solid var(--line-hard);border-left:2px solid var(--accent);background:var(--panel);padding:14px 16px;font-size:13px;line-height:1.7;color:var(--muted);}
-.ob-rule b{color:var(--accent);font-weight:400;margin-right:6px;}
-.ob-howto{padding:36px 40px;border-bottom:1px solid var(--line);}
-.ob-howto ol{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:12px;max-width:760px;}
-.ob-howto li,.steps li{display:flex;gap:14px;font-size:13.5px;line-height:1.7;color:var(--muted);}
-.ob-howto .n,.steps .n{color:var(--accent);font-size:11px;letter-spacing:.1em;flex-shrink:0;padding-top:3px;}
-.ob-howto b,.steps b{color:var(--text);font-weight:700;}
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-width:760px;}
-.ob-jump{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line);}
-.ob-jump a{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:14px 18px;border-right:1px solid var(--line);}
-.ob-jump a:hover{color:var(--accent);background:var(--panel);}
+.legal-hero .sub{font-family:var(--sans);font-size:15.5px;line-height:1.7;color:var(--muted);max-width:60ch;}
+.ob-rule{margin:24px 0 0;max-width:62ch;border:1px solid var(--line-hard);border-left:2px solid var(--accent);background:var(--panel);padding:14px 16px;font-family:var(--sans);font-size:14px;line-height:1.65;color:var(--muted);}
+.ob-rule b{color:var(--accent);font-family:'JetBrains Mono',monospace;margin-right:6px;}
+.ob-help{margin:18px 0 0;font-family:var(--sans);font-size:14px;color:var(--muted);}
+.ob-help a{color:var(--accent);text-decoration:underline;text-underline-offset:3px;}
 
-.block{padding:40px;border-bottom:1px solid var(--line);scroll-margin-top:70px;}
-.block .num{display:inline-block;font-size:11px;letter-spacing:.1em;color:var(--muted);border:1px solid var(--line-hard);padding:4px 10px;}
-.block h2{margin:14px 0 0;font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:var(--accent);}
-.block .intro{margin:12px 0 0;max-width:640px;font-size:13.5px;line-height:1.8;color:var(--muted);}
-h3.sub{margin:34px 0 14px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:400;}
+/* navegación de pasos */
+.ob-jump{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line);position:sticky;top:64px;background:var(--bg);z-index:20;}
+.ob-jump button{display:flex;align-items:center;gap:8px;background:none;border:0;border-right:1px solid var(--line);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:14px 16px;transition:color 150ms var(--ease),background 150ms var(--ease);}
+.ob-jump button:hover{color:var(--text);background:var(--panel);}
+.ob-jump button[aria-current="step"]{color:var(--ink);background:var(--accent);font-weight:700;}
+.ob-jump button i{width:7px;height:7px;background:var(--line-hard);opacity:.3;flex-shrink:0;}
+.ob-jump button.has-progress i{background:var(--accent);opacity:1;}
+.ob-jump button.is-done i{background:var(--ok);opacity:1;}
+.ob-jump button[aria-current="step"] i{background:var(--ink);opacity:1;}
+
+.ob-steps-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 40px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+.ob-steps-foot .btn-primary,.ob-steps-foot .btn-ghost{padding:13px 22px;font-size:12px;}
+.ob-steps-foot button:disabled{opacity:.35;cursor:default;}
+.step-progress{flex:1;min-width:180px;display:flex;flex-direction:column;gap:7px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.step-progress .done{color:var(--ok);}
+
+/* secciones */
+.block{padding:40px;border-bottom:1px solid var(--line);font-family:var(--sans);}
+.block .num{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line-hard);padding:4px 10px;}
+.block h2{margin:14px 0 0;font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:var(--accent);}
+.block .intro{margin:12px 0 0;max-width:62ch;font-size:15.5px;line-height:1.7;color:var(--muted);}
+h3.sub{margin:36px 0 14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:400;}
 h3.sub b{color:var(--accent);font-weight:400;}
 
-.checklist{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);}
-.check-item{display:flex;gap:14px;align-items:flex-start;padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer;transition:background 150ms var(--ease);}
-.check-item:hover{background:var(--panel);}
-.check-item input{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:2px 0 0;flex-shrink:0;border:2px solid var(--line-hard);background:var(--bg);cursor:pointer;position:relative;}
-.check-item input:checked{background:var(--accent);border-color:var(--accent);}
-.check-item input:checked::after{content:'';position:absolute;left:4px;top:0;width:4px;height:9px;border:solid var(--ink);border-width:0 2px 2px 0;transform:rotate(45deg);}
-.check-item .label-txt{font-size:13.5px;line-height:1.6;color:var(--text);}
-.check-item input:checked ~ .label-txt{color:var(--muted2);}
-.check-item .sub-note{display:block;color:var(--muted);font-size:12px;margin-top:4px;}
-
-.field-group{margin:0 0 20px;max-width:760px;}
-.field-group .q{display:flex;align-items:baseline;gap:9px;font-size:13.5px;color:var(--text);}
-.field-group .q .filled-dot{width:7px;height:7px;background:var(--line-hard);flex-shrink:0;opacity:.35;transition:background 150ms var(--ease),opacity 150ms var(--ease);}
+/* preguntas y campos */
+.field-group{margin:0 0 22px;max-width:640px;}
+.field-group .q{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;font-size:16px;line-height:1.45;color:var(--text);}
+.field-group .q .filled-dot{width:7px;height:7px;background:var(--line-hard);flex-shrink:0;opacity:.3;transition:background 150ms var(--ease),opacity 150ms var(--ease);}
 .field-group .q .filled-dot.on{background:var(--ok);opacity:1;}
-.field-group .hint{margin:4px 0 8px;font-size:12px;color:var(--muted);}
-.field-group input[type=text],.field-group textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;padding:11px 12px;transition:border-color 150ms var(--ease);}
-.field-group textarea{min-height:84px;resize:vertical;line-height:1.7;}
+.tag-ess{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);padding:1px 6px;}
+.field-group .hint{margin:6px 0 10px;font-size:14px;line-height:1.6;color:var(--muted);}
+.field-group input[type=text],.field-group textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);font-family:var(--sans);font-size:15px;padding:12px 13px;transition:border-color 150ms var(--ease);}
+.field-group textarea{min-height:92px;resize:vertical;line-height:1.6;}
 .field-group input[type=text]:focus,.field-group textarea:focus{outline:none;border-color:var(--accent);}
 .field-group ::placeholder{color:var(--muted2);}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:640px;}
 
-.note{margin:22px 0 0;max-width:640px;font-size:12.5px;line-height:1.8;color:var(--muted);border-left:1px solid var(--line-hard);padding-left:14px;}
+details.what{margin-top:10px;font-size:14px;color:var(--muted);}
+details.what summary{cursor:pointer;color:var(--accent);text-underline-offset:3px;}
+details.what summary:hover{text-decoration:underline;}
+details.what p{margin:8px 0 0;line-height:1.65;max-width:60ch;border-left:1px solid var(--line-hard);padding-left:12px;}
 
+/* opciones rápidas */
+.chips{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0;padding:0;}
+.chips .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);padding:9px 13px;font-size:14px;color:var(--text);cursor:pointer;transition:border-color 150ms var(--ease),background 150ms var(--ease);}
+.chips .chip:hover{border-color:var(--muted);}
+.chips .chip input{appearance:none;-webkit-appearance:none;width:13px;height:13px;border:2px solid var(--line-hard);background:transparent;cursor:pointer;flex-shrink:0;}
+.chips .chip input:checked{background:var(--accent);border-color:var(--accent);}
+.chips .chip:has(input:checked){border-color:var(--accent);background:rgba(232,163,61,.08);}
+
+/* casillas */
+.checklist{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);max-width:760px;}
+.check-item{display:flex;gap:14px;align-items:flex-start;padding:14px 4px;border-bottom:1px solid var(--line);cursor:pointer;transition:background 150ms var(--ease);}
+.check-item:hover{background:var(--panel);}
+.check-item input{appearance:none;-webkit-appearance:none;width:17px;height:17px;margin:2px 0 0;flex-shrink:0;border:2px solid var(--line-hard);background:var(--bg);cursor:pointer;position:relative;}
+.check-item input:checked{background:var(--accent);border-color:var(--accent);}
+.check-item input:checked::after{content:'';position:absolute;left:4px;top:0;width:4px;height:9px;border:solid var(--ink);border-width:0 2px 2px 0;transform:rotate(45deg);}
+.check-item .label-txt{font-size:15px;line-height:1.55;color:var(--text);}
+.check-item input:checked ~ .label-txt{color:var(--muted2);}
+.check-item .sub-note{display:block;color:var(--muted);font-size:13.5px;line-height:1.55;margin-top:5px;}
+
+.note{margin:22px 0 0;max-width:62ch;font-size:14px;line-height:1.7;color:var(--muted);border-left:1px solid var(--line-hard);padding-left:14px;}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-width:62ch;}
+.steps li{display:flex;gap:14px;font-size:15px;line-height:1.6;color:var(--muted);}
+.steps .n{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:11px;letter-spacing:.1em;flex-shrink:0;padding-top:4px;}
+
+/* tabla de páginas */
 .table-scroll{overflow-x:auto;margin-top:6px;}
-table.matrix{width:100%;border-collapse:collapse;font-size:13px;min-width:520px;}
-table.matrix th,table.matrix td{border-bottom:1px solid var(--line);text-align:left;padding:11px 10px;}
-table.matrix th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:400;}
+table.matrix{width:100%;border-collapse:collapse;font-size:14.5px;min-width:520px;}
+table.matrix th,table.matrix td{border-bottom:1px solid var(--line);text-align:left;padding:12px 10px;}
+table.matrix th{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:400;}
 table.matrix td:first-child{color:var(--text);}
-table.matrix input[type=text]{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--muted);font-family:inherit;font-size:12.5px;padding:4px 0;}
+table.matrix input[type=text]{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--muted);font-family:var(--sans);font-size:14px;padding:5px 0;}
 table.matrix input[type=text]:focus{outline:none;border-bottom-color:var(--accent);}
-table.matrix select{background:var(--panel);color:var(--text);border:1px solid var(--line);font-family:inherit;font-size:12px;padding:5px 8px;}
+table.matrix select{background:var(--panel);color:var(--text);border:1px solid var(--line);font-family:var(--sans);font-size:14px;padding:6px 8px;}
 table.matrix select:focus{outline:none;border-color:var(--accent);}
 
-.summary-grid{display:grid;gap:0;margin:18px 0 0;border-top:1px solid var(--line);}
+/* resumen */
+.summary-grid{display:grid;gap:0;margin:20px 0 0;border-top:1px solid var(--line);max-width:640px;}
 .summary-row{border-bottom:1px solid var(--line);padding:14px 4px;}
-.summary-row .name{font-size:13.5px;color:var(--text);}
-.summary-row .stat{font-size:12px;color:var(--muted);}
+.summary-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+.summary-row .name{font-size:15px;color:var(--text);}
+.summary-row .stat{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);}
 .summary-row .stat.done{color:var(--ok);}
-.bar-track{height:3px;background:var(--line);margin-top:9px;}
-.bar-fill{height:100%;background:var(--accent);width:0;transition:width 200ms var(--ease);}
+.bar-track{display:block;height:3px;background:var(--line);margin-top:9px;}
+.bar-fill{display:block;height:100%;background:var(--accent);width:0;transition:width 200ms var(--ease);}
 
-.ob-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:20px;}
-.btn-ghost{background:var(--bg);color:var(--text);border:2px solid var(--line-hard);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:16px 30px;transition:background 150ms var(--ease),color 150ms var(--ease);}
+.ob-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;}
+.btn-ghost{display:inline-block;background:var(--bg);color:var(--text);border:2px solid var(--line-hard);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:16px 30px;transition:background 150ms var(--ease),color 150ms var(--ease);}
 .btn-ghost:hover{background:var(--text);color:var(--ink);}
-.export-out{display:none;width:100%;max-width:860px;min-height:220px;margin-top:18px;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:1.7;padding:14px;white-space:pre-wrap;}
+.export-out{display:none;width:100%;max-width:760px;min-height:220px;margin-top:18px;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:1.7;padding:14px;white-space:pre-wrap;}
+.legal-cta p{font-family:var(--sans);font-size:15px;}
 
 @media (max-width:640px){
-  .ob-howto,.block{padding:28px 20px;}
+  .block{padding:28px 20px;}
+  .ob-steps-foot{padding:18px 20px;}
+  .ob-jump{top:59px;}
+  .ob-jump button{flex:1 1 auto;justify-content:center;padding:12px 10px;font-size:10px;letter-spacing:.06em;}
   .field-row{grid-template-columns:1fr;}
   .ob-actions .btn-primary,.ob-actions .btn-ghost{width:100%;text-align:center;}
+  .ob-steps-foot .btn-primary,.ob-steps-foot .btn-ghost{flex:1;}
 }
 </style>
 </head>
@@ -779,325 +818,294 @@ table.matrix select:focus{outline:none;border-color:var(--accent);}
 <main class="wrap">
 
   <section class="legal-hero">
-    <span class="sign-badge"><span class="dot"></span><span id="progressPill">0 / 0 completado</span></span>
+    <span class="sign-badge"><span class="dot"></span><span id="progressPill">Paso 1 de 5</span></span>
     <h1>Manual de onboarding</h1>
-    <p class="sub">Todo lo que necesitamos para poner en marcha tu proyecto. Responde en esta misma página: escribe en los campos y marca las casillas. Se guarda solo en tu navegador a medida que avanzas. <span class="save-pill" id="savePill">guardado ✓</span></p>
-    <div class="ob-rule"><b>//</b> Nunca escribas contraseñas ni claves acá. Para darnos acceso, invítanos como administrador desde tu propia cuenta o usa un gestor de contraseñas compartido — lo explicamos en la sección 01.</div>
+    <p class="sub">Esto es lo que necesitamos para poner en marcha tu proyecto. Vamos por partes: una sección a la vez, y se guarda solo en tu navegador. Puedes cerrar la página y volver cuando quieras. <span class="save-pill" id="savePill">guardado ✓</span></p>
+    <div class="ob-rule"><b>//</b> Nunca escribas contraseñas ni claves acá. Para darnos acceso, nos invitas desde tu propia cuenta o usamos un gestor de contraseñas compartido: te explicamos cómo en el paso 1.</div>
+    <p class="ob-help">¿Prefieres contárnoslo hablando? <a href="https://wa.me/56922053594?text=Hola%2C%20quiero%20llenar%20el%20manual%20de%20onboarding%20con%20ustedes" target="_blank" rel="noopener">Escríbenos por WhatsApp</a> y lo llenamos juntos.</p>
   </section>
 
-  <section class="ob-howto">
-    <span class="label"><b>./</b>cómo usar esta página</span>
-    <ol>
-      <li><span class="n">01</span><span><b>Recorre las 4 secciones</b> en orden: van de lo más simple a lo más estratégico.</span></li>
-      <li><span class="n">02</span><span><b>Escribe lo que sepas.</b> No hace falta terminarlo en un día: se guarda solo y puedes volver después.</span></li>
-      <li><span class="n">03</span><span><b>¿Algo no aplica o no lo sabes?</b> Déjalo en blanco y lo vemos juntos en una llamada.</span></li>
-      <li><span class="n">04</span><span><b>Al final</b>, presiona "Copiar todas las respuestas" y envíanoslas por correo o WhatsApp.</span></li>
-    </ol>
-  </section>
-
-  <nav class="ob-jump" aria-label="Secciones del manual">
-    <a href="#s1">01 Accesos</a>
-    <a href="#s2">02 Identidad visual</a>
-    <a href="#s3">03 Agente de IA</a>
-    <a href="#s4">04 Redes sociales</a>
-    <a href="#resumen">Resumen</a>
+  <nav class="ob-jump" id="stepNav" aria-label="Pasos del manual">
+    <button type="button" data-goto="0"><i></i>1. Accesos</button>
+    <button type="button" data-goto="1"><i></i>2. Tu marca</button>
+    <button type="button" data-goto="2"><i></i>3. Tu asistente</button>
+    <button type="button" data-goto="3"><i></i>4. Redes</button>
+    <button type="button" data-goto="4"><i></i>5. Enviar</button>
   </nav>
 
-  <section class="block" id="s1" data-section="Accesos y Credenciales">
-    <span class="num">01</span>
-    <h2>Accesos y credenciales</h2>
-    <p class="intro">Esto es para entrar a las herramientas donde vive tu negocio. Sin esto no podemos empezar a construir.</p>
+  <section class="block" id="s1" data-step data-section="Accesos y Credenciales">
+    <span class="num">Paso 1 de 5</span>
+    <h2>Accesos</h2>
+    <p class="intro">Para trabajar en tu sitio necesitamos poder entrar a donde vive hoy. Si no sabes alguna respuesta, déjala en blanco: la vemos juntos.</p>
 
-    <h3 class="sub"><b>//</b> dominio y hosting</h3>
+    <h3 class="sub"><b>//</b> tu dirección en internet</h3>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s1-dom"></span>Nombre de tu dominio</div>
-      <p class="hint">Ej: tuempresa.cl</p>
-      <input type="text" data-id="s1-dom" placeholder="tuempresa.cl" aria-label="Nombre de tu dominio">
+      <div class="q"><span class="filled-dot" data-dot="s1-dom"></span>¿Cuál es tu página web? <span class="tag-ess">esencial</span></div>
+      <p class="hint">Escríbela como la busca la gente. Si todavía no tienes, escribe "no tengo".</p>
+      <input type="text" data-id="s1-dom" data-essential placeholder="tuempresa.cl" aria-label="Tu página web">
     </div>
-    <div class="field-row">
-      <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s1-registrar"></span>¿Dónde está registrado?</div>
-        <input type="text" data-id="s1-registrar" placeholder="GoDaddy, NIC Chile, otro..." aria-label="Dónde está registrado el dominio">
-      </div>
-      <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s1-hosting"></span>Hosting actual (si ya tienes sitio)</div>
-        <input type="text" data-id="s1-hosting" placeholder="Proveedor, o partimos desde cero" aria-label="Hosting actual">
-      </div>
-    </div>
-    <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s1-dns"><span class="label-txt">Puedo darles acceso al panel de DNS<span class="sub-note">Es lo que apunta tu dominio a tu sitio. Si no sabes qué es, dinos quién te vendió el dominio</span></span></li>
-    </ul>
-
-    <h3 class="sub"><b>//</b> plataforma del sitio</h3>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s1-cms"></span>¿Ya tienes un sitio? ¿En qué plataforma?</div>
-      <p class="hint">WordPress, Shopify, Wix, otro — o "no tengo, partimos desde cero"</p>
-      <input type="text" data-id="s1-cms" placeholder="Ej: WordPress" aria-label="Plataforma del sitio actual">
+      <div class="q"><span class="filled-dot" data-dot="s1-registrar"></span>¿Quién te vendió esa dirección?</div>
+      <p class="hint">La empresa donde la compraste o pagas su renovación cada año.</p>
+      <input type="text" data-id="s1-registrar" placeholder="GoDaddy, NIC Chile, un conocido, no lo sé..." aria-label="Quién te vendió el dominio">
+      <details class="what"><summary>¿Por qué preguntamos esto?</summary><p>Ahí se configura a qué servidor apunta tu dirección. Sin ese acceso, tu sitio nuevo no puede quedar publicado en tu dominio. No necesitas entender cómo funciona: solo dinos el nombre de la empresa.</p></details>
+    </div>
+    <div class="field-group">
+      <div class="q"><span class="filled-dot" data-dot="s1-cms"></span>¿Con qué está hecho tu sitio actual?</div>
+      <p class="hint">Si no sabes, pon el nombre de quien te lo hizo. Si no tienes sitio, escribe "no tengo".</p>
+      <input type="text" data-id="s1-cms" placeholder="WordPress, Shopify, Wix, no lo sé..." aria-label="Con qué está hecho tu sitio actual">
     </div>
 
-    <h3 class="sub"><b>//</b> analítica y monitoreo</h3>
+    <h3 class="sub"><b>//</b> cómo nos darás acceso</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s1-ga"><span class="label-txt">Puedo darles acceso como administrador a Google Analytics</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s1-gsc"><span class="label-txt">Puedo darles acceso como administrador a Google Search Console</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s1-noanalytics"><span class="label-txt">No tengo ninguno todavía — los crean ustedes y quedo como dueño de la cuenta</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-invite"><span class="label-txt">Los invito desde mi cuenta, como se invita a alguien a un documento<span class="sub-note">Es la forma que preferimos: así nunca compartes tu contraseña</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-pwmanager"><span class="label-txt">Prefiero usar un gestor de contraseñas compartido<span class="sub-note">Tipo 1Password o Bitwarden. Si no usas ninguno, mejor la opción de arriba</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-helpaccess"><span class="label-txt">No sé cómo dar acceso — necesito que me guíen</span></li>
     </ul>
+    <div class="ob-rule"><b>//</b> No escribas contraseñas ni claves en esta página bajo ningún motivo.</div>
 
-    <h3 class="sub"><b>//</b> contraseñas y credenciales</h3>
+    <h3 class="sub"><b>//</b> estadísticas de visitas</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s1-invite"><span class="label-txt">Los voy a invitar como usuario o colaborador desde mi propio panel<span class="sub-note">La forma preferida: así nunca compartes tu contraseña principal</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s1-pwmanager"><span class="label-txt">Prefiero usar un gestor de contraseñas compartido (1Password, Bitwarden)</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-ga"><span class="label-txt">Ya mido las visitas de mi sitio y puedo darles acceso<span class="sub-note">Google Analytics o Search Console</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-noanalytics"><span class="label-txt">No mido nada todavía — háganlo ustedes y déjenme como dueño</span></li>
     </ul>
-    <div class="ob-rule"><b>//</b> No escribas contraseñas ni claves en esta página bajo ningún motivo: usa una de las dos opciones de arriba.</div>
-    <p class="note">¿Todavía no tienes algunos de estos accesos? No es problema: dínoslo y te guiamos para conseguirlos.</p>
   </section>
 
-  <section class="block" id="s2" data-section="Identidad Visual">
-    <span class="num">02</span>
-    <h2>Identidad visual y contenidos</h2>
-    <p class="intro">La cara de tu marca: lo que verán tus clientes al entrar a tu sitio.</p>
+  <section class="block" id="s2" data-step data-section="Identidad Visual" hidden>
+    <span class="num">Paso 2 de 5</span>
+    <h2>Tu marca</h2>
+    <p class="intro">Con esto armamos la cara de tu negocio: lo que ve un cliente cuando entra a tu sitio.</p>
 
-    <h3 class="sub"><b>//</b> marca</h3>
-    <div class="field-row">
-      <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s2-colors"></span>Colores de marca</div>
-        <p class="hint">Códigos HEX si los tienes, ej: #1A73E8</p>
-        <input type="text" data-id="s2-colors" placeholder="#1A73E8, #FFFFFF..." aria-label="Colores de marca">
-      </div>
-      <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s2-font"></span>Tipografía (si ya usas alguna)</div>
-        <input type="text" data-id="s2-font" placeholder="Ej: Montserrat" aria-label="Tipografía de marca">
-      </div>
-    </div>
-    <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s2-logo"><span class="label-txt">Voy a enviar mi logo en alta resolución<span class="sub-note">Idealmente editable (.ai, .eps, .svg) o al menos .png con fondo transparente</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s2-brandbook"><span class="label-txt">Tengo manual de marca y lo voy a enviar</span></li>
-    </ul>
-
-    <h3 class="sub"><b>//</b> contenido visual</h3>
-    <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s2-photos"><span class="label-txt">Voy a enviar fotos reales de mi negocio<span class="sub-note">Productos, local, equipo, procesos: mientras más auténticas, mejor</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s2-nophotos"><span class="label-txt">No tengo fotos profesionales — quiero ver alternativas</span></li>
-    </ul>
-
-    <h3 class="sub"><b>//</b> textos y contenidos</h3>
-    <div class="field-row">
-      <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s2-name"></span>Nombre comercial</div>
-        <input type="text" data-id="s2-name" placeholder="Nombre de tu marca" aria-label="Nombre comercial">
-      </div>
-      <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s2-slogan"></span>Eslogan (si tienes)</div>
-        <input type="text" data-id="s2-slogan" placeholder="Tu frase de marca" aria-label="Eslogan">
-      </div>
+    <h3 class="sub"><b>//</b> lo básico</h3>
+    <div class="field-group">
+      <div class="q"><span class="filled-dot" data-dot="s2-name"></span>¿Cómo se llama tu negocio? <span class="tag-ess">esencial</span></div>
+      <input type="text" data-id="s2-name" data-essential placeholder="Nombre con el que te conocen" aria-label="Nombre del negocio">
     </div>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s2-desc"></span>Descripción de tu negocio</div>
-      <p class="hint">Qué haces, a quién le vendes, qué te hace diferente</p>
-      <textarea data-id="s2-desc" placeholder="Escribe con tus propias palabras..." aria-label="Descripción de tu negocio"></textarea>
+      <div class="q"><span class="filled-dot" data-dot="s2-desc"></span>¿Qué haces y para quién? <span class="tag-ess">esencial</span></div>
+      <p class="hint">Como se lo explicarías a alguien en la fila del banco. Dos o tres líneas bastan.</p>
+      <textarea data-id="s2-desc" data-essential placeholder="Ej: Hacemos tortas por encargo para cumpleaños en Ñuñoa; entregamos a domicilio en 48 horas." aria-label="Qué haces y para quién"></textarea>
     </div>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s2-products"></span>Productos o servicios</div>
-      <p class="hint">Nombre, descripción breve y precio de cada uno (si se publica)</p>
-      <textarea data-id="s2-products" placeholder="Ej: Torta de chocolate — 8 personas — $25.000" aria-label="Productos o servicios"></textarea>
+      <div class="q"><span class="filled-dot" data-dot="s2-products"></span>¿Qué vendes? <span class="tag-ess">esencial</span></div>
+      <p class="hint">Tus productos o servicios principales, con precio si lo publicas. Con los 5 más pedidos basta para partir.</p>
+      <textarea data-id="s2-products" data-essential placeholder="Ej: Torta de chocolate, 8 personas, $25.000" aria-label="Qué vendes"></textarea>
     </div>
+
+    <h3 class="sub"><b>//</b> cómo te contactan</h3>
     <div class="field-row">
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s2-phone"></span>Teléfono de contacto</div>
-        <input type="text" data-id="s2-phone" placeholder="+56 9 ..." aria-label="Teléfono de contacto">
+        <div class="q"><span class="filled-dot" data-dot="s2-phone"></span>Teléfono <span class="tag-ess">esencial</span></div>
+        <input type="text" data-id="s2-phone" data-essential placeholder="+56 9 ..." aria-label="Teléfono de contacto">
       </div>
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s2-email"></span>Correo de contacto</div>
-        <input type="text" data-id="s2-email" placeholder="contacto@tuempresa.cl" aria-label="Correo de contacto">
+        <div class="q"><span class="filled-dot" data-dot="s2-email"></span>Correo <span class="tag-ess">esencial</span></div>
+        <input type="text" data-id="s2-email" data-essential placeholder="contacto@tuempresa.cl" aria-label="Correo de contacto">
       </div>
     </div>
     <div class="field-row">
       <div class="field-group">
         <div class="q"><span class="filled-dot" data-dot="s2-address"></span>Dirección</div>
-        <input type="text" data-id="s2-address" placeholder="Si aplica" aria-label="Dirección">
+        <input type="text" data-id="s2-address" placeholder="Si atiendes en un local" aria-label="Dirección">
       </div>
       <div class="field-group">
         <div class="q"><span class="filled-dot" data-dot="s2-hours"></span>Horarios de atención</div>
-        <input type="text" data-id="s2-hours" placeholder="Lun-Vie 9:00-18:00" aria-label="Horarios de atención">
+        <input type="text" data-id="s2-hours" placeholder="Lun a vie, 9:00 a 18:00" aria-label="Horarios de atención">
       </div>
     </div>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s2-social"></span>Redes sociales a enlazar</div>
-      <input type="text" data-id="s2-social" placeholder="Instagram, Facebook, TikTok..." aria-label="Redes sociales a enlazar">
-    </div>
-    <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s2-testimonials"></span>Testimonios o casos de clientes reales (si tienes)</div>
-      <textarea data-id="s2-testimonials" placeholder="Opcional" aria-label="Testimonios o casos de clientes"></textarea>
+      <div class="q"><span class="filled-dot" data-dot="s2-social"></span>Tus redes sociales</div>
+      <input type="text" data-id="s2-social" placeholder="@tucuenta en Instagram, Facebook, TikTok..." aria-label="Redes sociales">
     </div>
 
-    <h3 class="sub"><b>//</b> páginas que suele necesitar un sitio</h3>
+    <h3 class="sub"><b>//</b> imágenes y colores</h3>
+    <ul class="checklist">
+      <li class="check-item"><input type="checkbox" data-id="s2-logo"><span class="label-txt">Tengo mi logo y se los voy a enviar<span class="sub-note">El archivo de mejor calidad que tengas; si solo tienes el de Instagram, sirve igual para empezar</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s2-photos"><span class="label-txt">Tengo fotos de mi negocio y se las voy a enviar<span class="sub-note">Productos, local, equipo. Fotos reales de celular funcionan mejor que fotos de banco de imágenes</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s2-nophotos"><span class="label-txt">No tengo fotos ni logo — quiero ver qué alternativas hay</span></li>
+    </ul>
+    <div class="field-row">
+      <div class="field-group">
+        <div class="q"><span class="filled-dot" data-dot="s2-colors"></span>Colores de tu marca</div>
+        <p class="hint">Descríbelos no más: "azul como el de mi logo" sirve.</p>
+        <input type="text" data-id="s2-colors" placeholder="Azul y blanco, o el código #1A73E8" aria-label="Colores de marca">
+      </div>
+      <div class="field-group">
+        <div class="q"><span class="filled-dot" data-dot="s2-slogan"></span>Tu frase o eslogan</div>
+        <input type="text" data-id="s2-slogan" placeholder="Si tienes una" aria-label="Eslogan">
+      </div>
+    </div>
+
+    <h3 class="sub"><b>//</b> qué páginas quieres</h3>
+    <p class="hint" style="margin-bottom:10px;">Si no sabes, deja "por definir": lo proponemos nosotros.</p>
     <div class="table-scroll">
       <table class="matrix">
-        <thead><tr><th>Página</th><th>¿La necesitas?</th><th>Notas</th></tr></thead>
+        <thead><tr><th>Página</th><th>¿La quieres?</th><th>Notas</th></tr></thead>
         <tbody>
-          <tr><td>Inicio</td><td><select data-id="pg-inicio" aria-label="¿Necesitas página de Inicio?"><option>Sí</option></select></td><td><input type="text" data-id="pg-inicio-note" placeholder="—" aria-label="Notas sobre Inicio"></td></tr>
-          <tr><td>Nosotros / Quiénes somos</td><td><select data-id="pg-nosotros" aria-label="¿Necesitas página Nosotros?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-nosotros-note" placeholder="—" aria-label="Notas sobre Nosotros"></td></tr>
-          <tr><td>Productos / Servicios</td><td><select data-id="pg-productos" aria-label="¿Necesitas página de Productos?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-productos-note" placeholder="—" aria-label="Notas sobre Productos"></td></tr>
-          <tr><td>Precios</td><td><select data-id="pg-precios" aria-label="¿Necesitas página de Precios?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-precios-note" placeholder="—" aria-label="Notas sobre Precios"></td></tr>
-          <tr><td>Contacto</td><td><select data-id="pg-contacto" aria-label="¿Necesitas página de Contacto?"><option>Sí</option></select></td><td><input type="text" data-id="pg-contacto-note" placeholder="—" aria-label="Notas sobre Contacto"></td></tr>
-          <tr><td>Preguntas frecuentes</td><td><select data-id="pg-faq" aria-label="¿Necesitas página de Preguntas frecuentes?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-faq-note" placeholder="—" aria-label="Notas sobre Preguntas frecuentes"></td></tr>
-          <tr><td>Blog / Noticias</td><td><select data-id="pg-blog" aria-label="¿Necesitas Blog?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-blog-note" placeholder="—" aria-label="Notas sobre Blog"></td></tr>
+          <tr><td>Inicio</td><td><select data-id="pg-inicio" aria-label="¿Quieres página de Inicio?"><option>Sí</option></select></td><td><input type="text" data-id="pg-inicio-note" placeholder="—" aria-label="Notas sobre Inicio"></td></tr>
+          <tr><td>Quiénes somos</td><td><select data-id="pg-nosotros" aria-label="¿Quieres página Quiénes somos?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-nosotros-note" placeholder="—" aria-label="Notas sobre Quiénes somos"></td></tr>
+          <tr><td>Productos o servicios</td><td><select data-id="pg-productos" aria-label="¿Quieres página de Productos?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-productos-note" placeholder="—" aria-label="Notas sobre Productos"></td></tr>
+          <tr><td>Precios</td><td><select data-id="pg-precios" aria-label="¿Quieres página de Precios?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-precios-note" placeholder="—" aria-label="Notas sobre Precios"></td></tr>
+          <tr><td>Contacto</td><td><select data-id="pg-contacto" aria-label="¿Quieres página de Contacto?"><option>Sí</option></select></td><td><input type="text" data-id="pg-contacto-note" placeholder="—" aria-label="Notas sobre Contacto"></td></tr>
+          <tr><td>Preguntas frecuentes</td><td><select data-id="pg-faq" aria-label="¿Quieres página de Preguntas frecuentes?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-faq-note" placeholder="—" aria-label="Notas sobre Preguntas frecuentes"></td></tr>
+          <tr><td>Blog o noticias</td><td><select data-id="pg-blog" aria-label="¿Quieres Blog?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-blog-note" placeholder="—" aria-label="Notas sobre Blog"></td></tr>
         </tbody>
       </table>
     </div>
-    <p class="note">No necesitas textos perfectos ni redactados como profesional: con ideas en bruto nosotros los ordenamos y pulimos.</p>
+    <p class="note">No necesitas escribir textos "bonitos": con ideas en bruto nosotros los ordenamos y pulimos.</p>
   </section>
 
-  <section class="block" id="s3" data-section="Agente de IA">
-    <span class="num">03</span>
-    <h2>Entrenamiento de tu agente de IA</h2>
-    <p class="intro">La sección más importante: acá definimos cómo suena tu agente, qué sabe de tu negocio y qué resuelve solo.</p>
+  <section class="block" id="s3" data-step data-section="Agente de IA" hidden>
+    <span class="num">Paso 3 de 5</span>
+    <h2>Tu asistente</h2>
+    <p class="intro">Acá decides cómo responde tu asistente y qué sabe de tu negocio. Es lo que más diferencia un buen asistente de uno genérico.</p>
 
-    <h3 class="sub"><b>//</b> tono de voz y personalidad</h3>
+    <h3 class="sub"><b>//</b> cómo habla</h3>
+    <div class="field-group">
+      <div class="q">Marca todo lo que calce con tu negocio</div>
+      <ul class="chips">
+        <li><label class="chip"><input type="checkbox" data-id="s3-t-cercano"><span>Cercano y simpático</span></label></li>
+        <li><label class="chip"><input type="checkbox" data-id="s3-t-formal"><span>Formal y profesional</span></label></li>
+        <li><label class="chip"><input type="checkbox" data-id="s3-t-directo"><span>Directo, sin rodeos</span></label></li>
+        <li><label class="chip"><input type="checkbox" data-id="s3-t-emoji"><span>Puede usar emojis</span></label></li>
+        <li><label class="chip"><input type="checkbox" data-id="s3-t-noemoji"><span>Nada de emojis</span></label></li>
+        <li><label class="chip"><input type="checkbox" data-id="s3-t-tuteo"><span>De tú</span></label></li>
+        <li><label class="chip"><input type="checkbox" data-id="s3-t-usted"><span>De usted</span></label></li>
+      </ul>
+    </div>
     <div class="field-row">
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s3-botname"></span>¿Tiene nombre propio el asistente?</div>
+        <div class="q"><span class="filled-dot" data-dot="s3-botname"></span>¿Cómo quieres que se llame?</div>
+        <p class="hint">Si no se te ocurre, lo proponemos nosotros.</p>
         <input type="text" data-id="s3-botname" placeholder="Ej: Dominga" aria-label="Nombre del asistente">
       </div>
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s3-lang"></span>¿En qué idiomas debe responder?</div>
-        <input type="text" data-id="s3-lang" placeholder="Ej: Español" aria-label="Idiomas del asistente">
+        <div class="q"><span class="filled-dot" data-dot="s3-tone"></span>¿Algo más sobre cómo debe hablar?</div>
+        <input type="text" data-id="s3-tone" placeholder="Palabras que usas o que prefieres evitar" aria-label="Detalles del tono">
       </div>
     </div>
-    <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s3-tone"></span>¿Cómo quieres que hable?</div>
-      <p class="hint">Formal, cercano, entusiasta, directo, con o sin emojis, palabras de tu marca a usar o evitar</p>
-      <textarea data-id="s3-tone" placeholder="Describe la personalidad que quieres..." aria-label="Tono de voz del asistente"></textarea>
-    </div>
 
-    <h3 class="sub"><b>//</b> preguntas frecuentes de tus clientes</h3>
+    <h3 class="sub"><b>//</b> lo que más te preguntan</h3>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s3-faq"></span>Las 10 a 20 preguntas que más te hacen, con su respuesta</div>
-      <p class="hint">Por WhatsApp, redes, en el local o por teléfono: pregunta y respuesta juntas</p>
-      <textarea data-id="s3-faq" placeholder="Ej: ¿Hacen despacho? — Sí, a todo Santiago, $3.000..." style="min-height:130px;" aria-label="Preguntas frecuentes y sus respuestas"></textarea>
+      <div class="q"><span class="filled-dot" data-dot="s3-faq"></span>Escribe las 3 preguntas que más te hacen, con tu respuesta <span class="tag-ess">esencial</span></div>
+      <p class="hint">Tal como las responderías por WhatsApp. Si después quieres agregar más, mejor todavía.</p>
+      <textarea data-id="s3-faq" data-essential placeholder="¿Hacen despacho? — Sí, a todo Santiago, $3.000&#10;¿Cuánto se demoran? — 48 horas desde que confirmas" style="min-height:120px;" aria-label="Preguntas frecuentes y sus respuestas"></textarea>
     </div>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s3-notanswer"></span>Preguntas que el bot NO debe responder solo</div>
-      <p class="hint">Temas legales, reclamos graves, precios especiales</p>
-      <textarea data-id="s3-notanswer" placeholder="Opcional" aria-label="Preguntas que el bot no debe responder solo"></textarea>
-    </div>
-
-    <h3 class="sub"><b>//</b> catálogo y datos operativos</h3>
-    <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s3-policies"></span>Políticas de tu negocio</div>
-      <p class="hint">Devoluciones, garantías, formas de pago, tiempos de envío</p>
-      <textarea data-id="s3-policies" placeholder="Escribe aquí tus políticas..." aria-label="Políticas del negocio"></textarea>
+      <div class="q"><span class="filled-dot" data-dot="s3-policies"></span>Tus reglas del negocio</div>
+      <p class="hint">Formas de pago, despachos, devoluciones, garantías. Lo que el asistente necesita saber para no inventar.</p>
+      <textarea data-id="s3-policies" placeholder="Ej: Aceptamos transferencia y débito. No hacemos devoluciones de productos personalizados." aria-label="Reglas del negocio"></textarea>
     </div>
     <div class="field-row">
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s3-hours"></span>Horarios de atención</div>
-        <input type="text" data-id="s3-hours" placeholder="Incluye feriados si aplica" aria-label="Horarios de atención del negocio">
+        <div class="q"><span class="filled-dot" data-dot="s3-hours"></span>Horarios que debe informar</div>
+        <input type="text" data-id="s3-hours" placeholder="Incluye feriados si atiendes" aria-label="Horarios que debe informar el asistente">
       </div>
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s3-zones"></span>Zonas de despacho o cobertura</div>
-        <input type="text" data-id="s3-zones" placeholder="Si aplica" aria-label="Zonas de despacho o cobertura">
+        <div class="q"><span class="filled-dot" data-dot="s3-zones"></span>Dónde llegas con tu servicio</div>
+        <input type="text" data-id="s3-zones" placeholder="Comunas, regiones, o todo Chile" aria-label="Zonas de cobertura">
       </div>
     </div>
 
-    <h3 class="sub"><b>//</b> qué debe poder hacer el agente</h3>
+    <h3 class="sub"><b>//</b> qué quieres que haga</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s3-uc1"><span class="label-txt">Responder preguntas frecuentes</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc1"><span class="label-txt">Responder las preguntas de siempre</span></li>
       <li class="check-item"><input type="checkbox" data-id="s3-uc2"><span class="label-txt">Recomendar productos o servicios</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s3-uc3"><span class="label-txt">Agendar citas o reservas</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc3"><span class="label-txt">Agendar horas o reservas</span></li>
       <li class="check-item"><input type="checkbox" data-id="s3-uc4"><span class="label-txt">Tomar pedidos</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s3-uc5"><span class="label-txt">Cotizar o dar precios</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s3-uc6"><span class="label-txt">Recolectar datos de contacto (leads)</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc5"><span class="label-txt">Dar precios o cotizar</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc6"><span class="label-txt">Pedir el contacto de quien escribe, para que tú lo sigas después</span></li>
     </ul>
 
-    <h3 class="sub"><b>//</b> escalamiento a una persona</h3>
+    <h3 class="sub"><b>//</b> cuándo te pasa la conversación a ti</h3>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s3-escal"></span>¿En qué casos debe pasar la conversación a una persona real?</div>
-      <textarea data-id="s3-escal" placeholder="Ej: reclamo, negociación, pregunta muy específica" aria-label="Casos de escalamiento a una persona"></textarea>
+      <div class="q"><span class="filled-dot" data-dot="s3-escal"></span>¿En qué casos prefieres responder tú?</div>
+      <p class="hint">Ej: reclamos, descuentos, pedidos grandes, cualquier cosa que no esté clara.</p>
+      <textarea data-id="s3-escal" placeholder="Escribe aquí..." aria-label="Cuándo pasar la conversación a una persona"></textarea>
     </div>
     <div class="field-row">
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s3-escalchannel"></span>¿A quién avisar y por qué canal?</div>
-        <input type="text" data-id="s3-escalchannel" placeholder="WhatsApp, correo, panel interno" aria-label="A quién avisar y por qué canal">
+        <div class="q"><span class="filled-dot" data-dot="s3-escalchannel"></span>¿Cómo te avisamos?</div>
+        <input type="text" data-id="s3-escalchannel" placeholder="WhatsApp, correo..." aria-label="Cómo avisarte">
       </div>
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s3-escalhours"></span>Horarios en que hay alguien disponible</div>
-        <input type="text" data-id="s3-escalhours" placeholder="Ej: Lun-Vie 9:00-19:00" aria-label="Horarios con alguien disponible">
+        <div class="q"><span class="filled-dot" data-dot="s3-escalhours"></span>¿A qué horas hay alguien para responder?</div>
+        <input type="text" data-id="s3-escalhours" placeholder="Ej: lun a vie, 9:00 a 19:00" aria-label="Horarios con alguien disponible">
       </div>
     </div>
-
-    <h3 class="sub"><b>//</b> límites del agente</h3>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s3-limits"></span>Temas que el bot nunca debe tratar ni prometer</div>
-      <p class="hint">Ej: no inventar descuentos, no dar consejos médicos o legales, no confirmar stock incierto</p>
-      <textarea data-id="s3-limits" placeholder="Escribe aquí..." aria-label="Límites del agente"></textarea>
+      <div class="q"><span class="filled-dot" data-dot="s3-limits"></span>¿Qué NO debe decir nunca?</div>
+      <p class="hint">Ej: no inventar descuentos, no prometer stock, no dar consejos médicos o legales.</p>
+      <textarea data-id="s3-limits" placeholder="Escribe aquí..." aria-label="Qué no debe decir el asistente"></textarea>
     </div>
 
-    <p class="note">Si tienes conversaciones reales de WhatsApp o Instagram con clientes, compártelas sin datos sensibles: son oro para entrenar al agente con el lenguaje real de tus clientes.</p>
+    <p class="note">Si tienes conversaciones reales con clientes por WhatsApp o Instagram, mándanos algunas (sin datos sensibles): es la mejor materia prima para que el asistente hable como tú.</p>
   </section>
 
-  <section class="block" id="s4" data-section="Redes Sociales">
-    <span class="num">04</span>
-    <h2>Accesos a redes sociales</h2>
-    <p class="intro">Para que tu agente responda mensajes de Instagram, Facebook y WhatsApp, lo conectamos a tus cuentas de forma oficial, a través de Meta.</p>
+  <section class="block" id="s4" data-step data-section="Redes Sociales" hidden>
+    <span class="num">Paso 4 de 5</span>
+    <h2>Tus redes</h2>
+    <p class="intro">Para que el asistente conteste los mensajes que te llegan por Instagram, Facebook y WhatsApp, conectamos tus cuentas de forma oficial. Este paso lo hacemos juntos en una llamada; acá solo queremos saber cómo estás parado.</p>
 
-    <h3 class="sub"><b>//</b> facebook</h3>
+    <h3 class="sub"><b>//</b> instagram y facebook</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s4-fbadmin"><span class="label-txt">Soy administrador de mi Página de Facebook<span class="sub-note">No basta con ser editor</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s4-bp"><span class="label-txt">Tengo un Meta Business Portfolio vinculado a esa Página<span class="sub-note">Antes llamado Business Manager. Si no existe, lo creamos juntos</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-fbadmin"><span class="label-txt">Soy el dueño o administrador de mi página de Facebook</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-igpro"><span class="label-txt">Mi Instagram es cuenta de empresa o creador<span class="sub-note">No es la cuenta personal. Se cambia gratis desde la app, en Configuración</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-iglinked"><span class="label-txt">Mi Instagram está vinculado a mi página de Facebook</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-nosenada"><span class="label-txt">No sé en qué estado están mis cuentas — revísenlo conmigo</span></li>
     </ul>
+    <details class="what"><summary>¿Por qué me piden esto?</summary><p>Meta (la dueña de Instagram, Facebook y WhatsApp) solo deja que un asistente responda mensajes si la cuenta es de empresa y tú autorizas la conexión. Nosotros nunca te pedimos tu contraseña: tú aceptas desde tu propia cuenta y puedes desconectarnos cuando quieras.</p></details>
 
-    <h3 class="sub"><b>//</b> instagram</h3>
-    <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s4-igpro"><span class="label-txt">Mi cuenta es profesional (Empresa o Creador)<span class="sub-note">No una cuenta personal</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s4-iglinked"><span class="label-txt">Está vinculada a mi Página de Facebook</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s4-igadmin"><span class="label-txt">Soy administrador dentro de mi Business Portfolio</span></li>
-    </ul>
-
-    <h3 class="sub"><b>//</b> whatsapp business</h3>
+    <h3 class="sub"><b>//</b> whatsapp</h3>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s4-wanumber"></span>Número de teléfono dedicado para el agente</div>
-      <p class="hint">Recomendamos que no sea tu número personal, para evitar bloqueos</p>
-      <input type="text" data-id="s4-wanumber" placeholder="+56 9 ..." aria-label="Número de teléfono para el agente">
+      <div class="q"><span class="filled-dot" data-dot="s4-wanumber"></span>¿Qué número usarías para el asistente?</div>
+      <p class="hint">Mejor uno distinto al personal. Puede ser un número nuevo o el del negocio.</p>
+      <input type="text" data-id="s4-wanumber" placeholder="+56 9 ..." aria-label="Número para el asistente">
     </div>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s4-waregistered"><span class="label-txt">Ese número ya está registrado en otra cuenta de WhatsApp Business<span class="sub-note">Si es así, hay que liberarlo antes de conectarlo</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s4-waverify"><span class="label-txt">Puedo verificar el número cuando llegue el código por SMS o llamada</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-waregistered"><span class="label-txt">Ese número ya tiene WhatsApp instalado hoy<span class="sub-note">Se puede usar igual, pero hay que liberarlo antes: te avisamos cómo</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-waverify"><span class="label-txt">Puedo recibir el código de verificación en ese número</span></li>
     </ul>
 
-    <h3 class="sub"><b>//</b> cómo se conecta</h3>
-    <ol class="steps">
-      <li><span class="n">01</span><span>Te guiamos paso a paso mientras tú confirmas los accesos en pantalla: el control queda siempre de tu lado.</span></li>
-      <li><span class="n">02</span><span>Puede pedirse verificación en dos pasos. Es un requisito de seguridad de Meta, no algo que agreguemos nosotros.</span></li>
-      <li><span class="n">03</span><span>Una vez conectado, puedes revisar o revocar el acceso cuando quieras desde tu propio Meta Business Portfolio.</span></li>
-    </ol>
-
-    <div class="ob-rule"><b>//</b> Algunos permisos avanzados, como responder automáticamente por Instagram o Facebook, requieren que Meta apruebe la aplicación después de revisar cómo se usa. Puede tomar días o semanas: te avisamos del estado en cada etapa.</div>
+    <div class="ob-rule"><b>//</b> Algunos permisos de Instagram y Facebook los tiene que aprobar Meta, y puede tomar días o semanas. Te vamos contando en qué va.</div>
   </section>
 
-  <section class="block" id="resumen">
-    <span class="num">✓</span>
-    <h2>Resumen y próximos pasos</h2>
+  <section class="block" id="resumen" data-step hidden>
+    <span class="num">Paso 5 de 5</span>
+    <h2>Enviar</h2>
+    <p class="intro">Esto es lo que llevas. Con lo esencial listo ya podemos empezar: el resto lo completamos en el camino.</p>
     <div class="summary-grid" id="summaryGrid"></div>
 
-    <h3 class="sub"><b>//</b> qué pasa después de que envíes esto</h3>
+    <h3 class="sub"><b>//</b> cómo nos lo envías</h3>
+    <p class="note" style="margin-top:0;">Tus respuestas están guardadas solo en este navegador, así que hay que enviárnoslas: presiona copiar y pégalas en un correo o WhatsApp.</p>
+    <div class="ob-actions">
+      <button class="btn-primary" id="exportBtn">Copiar mis respuestas</button>
+      <a class="btn-ghost" href="https://wa.me/56922053594?text=Hola%2C%20te%20env%C3%ADo%20mis%20respuestas%20del%20manual%20de%20onboarding%3A" target="_blank" rel="noopener">Abrir WhatsApp</a>
+      <a class="btn-ghost" href="mailto:hola@atiendemelapyme.cl?subject=Manual%20de%20onboarding">Abrir correo</a>
+    </div>
+    <textarea class="export-out" id="exportOut" readonly aria-label="Respuestas para copiar"></textarea>
+
+    <h3 class="sub"><b>//</b> qué pasa después</h3>
     <ol class="steps">
-      <li><span class="n">01</span><span>Revisamos todo y te confirmamos si falta algo o si hay dudas.</span></li>
-      <li><span class="n">02</span><span>Empezamos a construir el sitio, entrenar al agente y conectar tus redes.</span></li>
+      <li><span class="n">01</span><span>Revisamos todo y te decimos si falta algo.</span></li>
+      <li><span class="n">02</span><span>Construimos el sitio, entrenamos a tu asistente y conectamos tus redes.</span></li>
       <li><span class="n">03</span><span>Te mostramos avances antes de publicar nada.</span></li>
       <li><span class="n">04</span><span>Coordinamos contigo la fecha de lanzamiento.</span></li>
     </ol>
 
-    <h3 class="sub"><b>//</b> enviar tus respuestas</h3>
-    <p class="note" style="margin-top:0;">Esta página guarda tus respuestas solo en este navegador: no nos llegan automáticamente. Cuando termines, cópialas y pégalas en un correo o WhatsApp. Si el computador es compartido, borra tus respuestas al final.</p>
-    <div class="ob-actions">
-      <button class="btn-primary" id="exportBtn">Copiar todas las respuestas</button>
-      <button class="btn-ghost" id="resetBtn">Borrar todas mis respuestas</button>
-    </div>
-    <textarea class="export-out" id="exportOut" readonly aria-label="Respuestas para copiar"></textarea>
+    <p class="note">Si el computador es compartido, borra tus respuestas cuando ya nos las hayas enviado.</p>
+    <div class="ob-actions"><button class="btn-ghost" id="resetBtn">Borrar mis respuestas</button></div>
   </section>
 
+  <nav class="ob-steps-foot" aria-label="Navegación entre pasos">
+    <button type="button" class="btn-ghost" id="prevStep">← Anterior</button>
+    <span class="step-progress"><span class="bar-track"><span class="bar-fill" id="stepBar"></span></span><span id="essentialHint"></span></span>
+    <button type="button" class="btn-primary" id="nextStep">Siguiente →</button>
+  </nav>
+
   <section class="legal-cta">
-    <p>¿Tienes dudas en el camino? No te frenes por no tener todo listo: escríbenos y avanzamos juntos, sección por sección.</p>
-    <a class="btn-primary" href="mailto:hola@atiendemelapyme.cl">Escríbenos</a>
+    <p>¿Te trabaste en alguna pregunta? No te frenes: escríbenos y la completamos juntos.</p>
+    <a class="btn-primary" href="https://wa.me/56922053594?text=Hola%2C%20tengo%20una%20duda%20con%20el%20manual%20de%20onboarding" target="_blank" rel="noopener">Preguntar por WhatsApp</a>
   </section>
 
   <footer>
@@ -1122,10 +1130,14 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body
 <script>
 (function(){
   var STORAGE_KEY = 'atp-onboarding-answers-v2';
+  var STEP_KEY = 'atp-onboarding-step';
 
-  var checkboxes = Array.prototype.slice.call(document.querySelectorAll('.check-item input[type=checkbox]'));
-  var textFields  = Array.prototype.slice.call(document.querySelectorAll('.field-group input[type=text], .field-group textarea'));
+  var checkboxes = Array.prototype.slice.call(document.querySelectorAll('input[type=checkbox][data-id]'));
+  var textFields = Array.prototype.slice.call(document.querySelectorAll('.field-group input[type=text], .field-group textarea'));
   var tableFields = Array.prototype.slice.call(document.querySelectorAll('table.matrix input[type=text], table.matrix select'));
+  var steps = Array.prototype.slice.call(document.querySelectorAll('[data-step]'));
+  var navButtons = Array.prototype.slice.call(document.querySelectorAll('#stepNav button'));
+  var essentials = Array.prototype.slice.call(document.querySelectorAll('[data-essential]'));
 
   function loadState(){
     try {
@@ -1142,16 +1154,14 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body
     var pill = document.getElementById('savePill');
     pill.classList.add('show');
     clearTimeout(savePillTimer);
-    savePillTimer = setTimeout(function(){ pill.classList.remove('show'); }, 1200);
+    savePillTimer = setTimeout(function(){ pill.classList.remove('show'); }, 1400);
   }
 
-  // restore
-  checkboxes.forEach(function(cb){
-    var id = cb.getAttribute('data-id');
-    if (state[id]) cb.checked = true;
-  });
+  // restaurar
+  checkboxes.forEach(function(cb){ if (state[cb.getAttribute('data-id')]) cb.checked = true; });
   textFields.concat(tableFields).forEach(function(f){
-    if (typeof state[f.getAttribute('data-id')] === 'string') f.value = state[f.getAttribute('data-id')];
+    var v = state[f.getAttribute('data-id')];
+    if (typeof v === 'string') f.value = v;
   });
 
   function updateDot(id){
@@ -1176,102 +1186,145 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body
     });
   });
   tableFields.forEach(function(f){
-    var evt = f.tagName === 'SELECT' ? 'change' : 'input';
-    f.addEventListener(evt, function(){
+    f.addEventListener(f.tagName === 'SELECT' ? 'change' : 'input', function(){
       state[f.getAttribute('data-id')] = f.value;
       saveState();
     });
   });
 
+  // ---- pasos ----
+  var current = 0;
+  try {
+    var savedStep = parseInt(localStorage.getItem(STEP_KEY), 10);
+    if (savedStep >= 0 && savedStep < steps.length) current = savedStep;
+  } catch(e) {}
+
+  function sectionDone(sec){
+    var boxes = Array.prototype.slice.call(sec.querySelectorAll('input[type=checkbox][data-id]'));
+    var fields = Array.prototype.slice.call(sec.querySelectorAll('.field-group input[type=text], .field-group textarea'));
+    var done = boxes.filter(function(b){ return b.checked; }).length +
+               fields.filter(function(f){ return f.value.trim().length > 0; }).length;
+    return { done: done, total: boxes.length + fields.length };
+  }
+
+  function goStep(i, scroll){
+    current = Math.max(0, Math.min(i, steps.length - 1));
+    steps.forEach(function(s, k){ s.hidden = k !== current; });
+    navButtons.forEach(function(b, k){
+      if (k === current) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    });
+    document.getElementById('prevStep').disabled = current === 0;
+    var next = document.getElementById('nextStep');
+    next.disabled = current === steps.length - 1;
+    next.textContent = current === steps.length - 2 ? 'Ir a enviar →' : 'Siguiente →';
+    try { localStorage.setItem(STEP_KEY, String(current)); } catch(e) {}
+    if (scroll) {
+      var top = document.querySelector('#stepNav').getBoundingClientRect().top + window.scrollY - 70;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+    }
+    updateAll();
+  }
+
+  navButtons.forEach(function(b){ b.addEventListener('click', function(){ goStep(Number(b.dataset.goto), true); }); });
+  document.getElementById('prevStep').addEventListener('click', function(){ goStep(current - 1, true); });
+  document.getElementById('nextStep').addEventListener('click', function(){ goStep(current + 1, true); });
+
   function updateAll(){
-    var sections = Array.prototype.slice.call(document.querySelectorAll('section.block[data-section]'));
-    var summaryGrid = document.getElementById('summaryGrid');
-    summaryGrid.textContent = '';
-    var totalAll = 0, doneAll = 0;
+    // marcas de avance en la navegación de pasos
+    steps.forEach(function(sec, k){
+      var btn = navButtons[k];
+      if (!btn) return;
+      if (sec.id === 'resumen') return;
+      var s = sectionDone(sec);
+      btn.classList.toggle('has-progress', s.done > 0);
+      btn.classList.toggle('is-done', s.total > 0 && s.done === s.total);
+    });
 
-    sections.forEach(function(sec){
-      var boxes = Array.prototype.slice.call(sec.querySelectorAll('.check-item input[type=checkbox]'));
-      var fields = Array.prototype.slice.call(sec.querySelectorAll('.field-group input[type=text], .field-group textarea'));
-      var doneBoxes = boxes.filter(function(b){ return b.checked; }).length;
-      var doneFields = fields.filter(function(f){ return f.value.trim().length > 0; }).length;
-      var total = boxes.length + fields.length;
-      var done = doneBoxes + doneFields;
-      totalAll += total; doneAll += done;
-      var pct = total ? Math.round((done/total)*100) : 0;
+    // esenciales
+    var filled = essentials.filter(function(f){ return f.value.trim().length > 0; }).length;
+    document.getElementById('progressPill').textContent = 'Paso ' + (current + 1) + ' de ' + steps.length;
+    var hint = document.getElementById('essentialHint');
+    hint.textContent = filled === essentials.length
+      ? 'Lo esencial está listo ✓'
+      : filled + ' de ' + essentials.length + ' datos esenciales';
+    hint.classList.toggle('done', filled === essentials.length);
+    document.getElementById('stepBar').style.width = Math.round(filled / essentials.length * 100) + '%';
 
-      // Se construye con el DOM (sin innerHTML) para que ningún texto se
-      // interprete como HTML.
+    // resumen por sección
+    var grid = document.getElementById('summaryGrid');
+    grid.textContent = '';
+    steps.forEach(function(sec){
+      if (!sec.hasAttribute('data-section')) return;
+      var s = sectionDone(sec);
+      var pct = s.total ? Math.round(s.done / s.total * 100) : 0;
       var row = document.createElement('div');
       row.className = 'summary-row';
-      var col = document.createElement('div');
-      col.style.flex = '1';
       var head = document.createElement('div');
-      head.style.display = 'flex';
-      head.style.justifyContent = 'space-between';
-      head.style.alignItems = 'center';
+      head.className = 'summary-head';
       var name = document.createElement('span');
       name.className = 'name';
-      name.textContent = sec.getAttribute('data-section');
+      name.textContent = sec.querySelector('h2').textContent;
       var stat = document.createElement('span');
-      stat.className = 'stat' + (done === total && total > 0 ? ' done' : '');
-      stat.textContent = done + ' / ' + total;
+      stat.className = 'stat' + (s.done === s.total && s.total > 0 ? ' done' : '');
+      stat.textContent = s.done + ' de ' + s.total;
       head.appendChild(name); head.appendChild(stat);
-      var track = document.createElement('div');
+      var track = document.createElement('span');
       track.className = 'bar-track';
-      var fill = document.createElement('div');
+      var fill = document.createElement('span');
       fill.className = 'bar-fill';
       fill.style.width = pct + '%';
       track.appendChild(fill);
-      col.appendChild(head); col.appendChild(track);
-      row.appendChild(col);
-      summaryGrid.appendChild(row);
+      row.appendChild(head); row.appendChild(track);
+      grid.appendChild(row);
     });
-
-    document.getElementById('progressPill').textContent = doneAll + ' / ' + totalAll + ' completado';
   }
 
-  // init dots
   textFields.forEach(function(f){ updateDot(f.getAttribute('data-id')); });
+  goStep(current, false);
 
   document.getElementById('resetBtn').addEventListener('click', function(){
     if (!confirm('¿Borrar todas tus respuestas? Esto no se puede deshacer.')) return;
     checkboxes.forEach(function(cb){ cb.checked = false; });
     textFields.concat(tableFields).forEach(function(f){ f.value = ''; });
     state = {};
-    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+    try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(STEP_KEY); } catch(e) {}
     var out = document.getElementById('exportOut');
     out.value = ''; out.style.display = 'none';
     textFields.forEach(function(f){ updateDot(f.getAttribute('data-id')); });
-    updateAll();
+    goStep(0, true);
   });
 
-  // ---- export ----
+  // ---- copiar respuestas ----
   function buildExportText(){
-    var lines = [];
-    lines.push('MANUAL DE ONBOARDING — RESPUESTAS');
-    lines.push('Atiéndeme la Pyme');
-    lines.push('');
-
-    var sections = Array.prototype.slice.call(document.querySelectorAll('section.block[data-section]'));
-    sections.forEach(function(sec){
-      lines.push('== ' + sec.getAttribute('data-section').toUpperCase() + ' ==');
-      var groups = Array.prototype.slice.call(sec.querySelectorAll('.field-group'));
-      groups.forEach(function(g){
+    var lines = ['MANUAL DE ONBOARDING — RESPUESTAS', 'Atiéndeme la Pyme', ''];
+    steps.forEach(function(sec){
+      if (!sec.hasAttribute('data-section')) return;
+      lines.push('== ' + sec.querySelector('h2').textContent.toUpperCase() + ' ==');
+      Array.prototype.slice.call(sec.querySelectorAll('.field-group')).forEach(function(g){
         var qEl = g.querySelector('.q');
         var input = g.querySelector('input[type=text], textarea');
         if (!qEl || !input) return;
-        lines.push('- ' + qEl.textContent.trim() + ': ' + (input.value.trim() || '(sin responder)'));
+        lines.push('- ' + qEl.textContent.replace('esencial', '').trim() + ': ' + (input.value.trim() || '(sin responder)'));
       });
-      var boxes = Array.prototype.slice.call(sec.querySelectorAll('.check-item'));
-      boxes.forEach(function(item){
+      Array.prototype.slice.call(sec.querySelectorAll('.chip')).forEach(function(chip){
+        var cb = chip.querySelector('input[type=checkbox]');
+        if (cb && cb.checked) lines.push('- [x] ' + chip.textContent.trim());
+      });
+      Array.prototype.slice.call(sec.querySelectorAll('.check-item')).forEach(function(item){
         var cb = item.querySelector('input[type=checkbox]');
         var label = item.querySelector('.label-txt');
         var text = label ? (label.childNodes[0] ? label.childNodes[0].textContent.trim() : label.textContent.trim()) : '';
         lines.push('- [' + (cb.checked ? 'x' : ' ') + '] ' + text);
       });
+      var rows = Array.prototype.slice.call(sec.querySelectorAll('table.matrix tbody tr'));
+      rows.forEach(function(tr){
+        var sel = tr.querySelector('select');
+        var note = tr.querySelector('input[type=text]');
+        if (!sel) return;
+        lines.push('- Página ' + tr.cells[0].textContent.trim() + ': ' + sel.value + (note && note.value.trim() ? ' (' + note.value.trim() + ')' : ''));
+      });
       lines.push('');
     });
-
     return lines.join('\\n');
   }
 
@@ -1280,11 +1333,10 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body
     var out = document.getElementById('exportOut');
     out.value = text;
     out.style.display = 'block';
-
     var btn = document.getElementById('exportBtn');
     function done(ok){
       btn.textContent = ok ? '✓ Copiado — pégalo en tu correo o WhatsApp' : 'Selecciona el texto de abajo y cópialo';
-      setTimeout(function(){ btn.textContent = 'Copiar todas las respuestas'; }, 2600);
+      setTimeout(function(){ btn.textContent = 'Copiar mis respuestas'; }, 2800);
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function(){ done(true); }, function(){
@@ -1295,10 +1347,9 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body
       try { done(document.execCommand('copy')); } catch(e){ done(false); }
     }
   });
-
-  updateAll();
 })();
 </script>
+
 </body></html>`;
 
 const ROBOTS_TXT = `User-agent: *

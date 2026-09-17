@@ -575,303 +575,240 @@ const OG_IMAGE_PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAABLAAAAJ2CAIAAADAIuwLAACRmEl
 // Manual de onboarding para clientes nuevos (/onboarding). Página estática
 // autocontenida: las respuestas viven solo en el navegador del cliente
 // (localStorage), no se envían a ningún servidor. noindex.
-const ONBOARDING_HTML = `<!DOCTYPE html>
-<html lang="es-CL">
-<head>
+const ONBOARDING_HTML = `<!DOCTYPE html><html lang="es"><head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Manual de Onboarding — Atiéndeme la Pyme</title>
+<meta name="description" content="Manual de onboarding para clientes nuevos de Atiéndeme la Pyme.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0A0A0A">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230A0A0A%22%2F%3E%3Ctext%20x%3D%2210%22%20y%3D%2248%22%20font-family%3D%22'Space%20Grotesk'%2C'Arial%20Black'%2Csans-serif%22%20font-weight%3D%22700%22%20font-size%3D%2242%22%20fill%3D%22%23EDEDE8%22%3Ea%3C%2Ftext%3E%3Crect%20x%3D%2240%22%20y%3D%2216%22%20width%3D%2213%22%20height%3D%2234%22%20fill%3D%22%23E8A33D%22%2F%3E%3C%2Fsvg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
 <style>
-  :root, :root:not([data-theme="light"]) {
-    --bg: #0A0A0A;
-    --bg-raised: #121212;
-    --bg-card: #141414;
-    --bg-field: #101010;
-    --border: #262626;
-    --border-soft: #1E1E1E;
-    --text: #F2F0EA;
-    --text-dim: #9C9992;
-    --text-faint: #6B6862;
-    --accent: #E8A33D;
-    --accent-dim: #8A6427;
-    --ok: #6FCF97;
-    --font-display: 'Space Grotesk', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0A0A0A; --bg-raised: #121212; --bg-card: #141414; --bg-field: #101010;
-      --border: #262626; --border-soft: #1E1E1E;
-      --text: #F2F0EA; --text-dim: #9C9992; --text-faint: #6B6862;
-      --accent: #E8A33D; --accent-dim: #8A6427; --ok: #6FCF97;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0A0A0A; --bg-raised: #121212; --bg-card: #141414; --bg-field: #101010;
-    --border: #262626; --border-soft: #1E1E1E;
-    --text: #F2F0EA; --text-dim: #9C9992; --text-faint: #6B6862;
-    --accent: #E8A33D; --accent-dim: #8A6427; --ok: #6FCF97;
-  }
+:root{--bg:#0A0A0A;--panel:#0F0F0F;--line:#242424;--line-hard:#EDEDE8;--text:#EDEDE8;--muted:#8A8A82;--muted2:#7D7D74;--accent:#E8A33D;--ok:#43D17C;--ink:#0A0A0A;--ease:cubic-bezier(0.23,1,0.32,1);}
+*{box-sizing:border-box;border-radius:0 !important;}
+html{scroll-behavior:smooth;scrollbar-color:var(--accent) var(--bg);}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+::selection{background:var(--accent);color:var(--ink);}
+a{color:var(--text);text-decoration:none;transition:color 150ms var(--ease);}
+a:hover{color:var(--accent);}
+button{font-family:inherit;cursor:pointer;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;scroll-behavior:auto !important;}
+}
+@keyframes blink{0%,49%{opacity:1;}50%,100%{opacity:0;}}
+.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:64px 64px;opacity:.35;}
+.wrap{max-width:1180px;margin:0 auto;position:relative;z-index:1;border-left:1px solid var(--line);border-right:1px solid var(--line);background:var(--bg);}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+.label b{color:var(--accent);font-weight:400;}
 
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-display);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-  }
-  a { color: var(--accent); }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* nav */
+.nav-header{position:fixed;top:0;left:0;width:100%;z-index:50;display:flex;align-items:stretch;justify-content:space-between;background:var(--bg);border-bottom:2px solid var(--line-hard);}
+.nav-logo{font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;padding:18px 20px;display:flex;align-items:center;gap:10px;}
+.nav-logo .cursor{display:inline-block;width:9px;height:16px;background:var(--accent);animation:blink 1.1s steps(1) infinite;}
+.nav-toggle{display:inline-flex;align-items:center;gap:10px;background:var(--bg);border:none;border-left:2px solid var(--line-hard);padding:0 26px;color:var(--text);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;transition:background 150ms var(--ease),color 150ms var(--ease);}
+.nav-toggle:hover{background:var(--accent);color:var(--ink);}
+body.menu-open .nav-toggle{background:var(--text);color:var(--ink);}
+.nav-toggle .bars{position:relative;width:14px;height:10px;flex:0 0 14px;}
+.nav-toggle .bars span{position:absolute;left:0;width:100%;height:2px;background:currentColor;transition:transform 200ms var(--ease);}
+.nav-toggle .bars span:nth-child(1){top:0;}
+.nav-toggle .bars span:nth-child(2){bottom:0;}
+body.menu-open .nav-toggle .bars span:nth-child(1){transform:translateY(4px) rotate(45deg);}
+body.menu-open .nav-toggle .bars span:nth-child(2){transform:translateY(-4px) rotate(-45deg);}
+.menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);opacity:0;pointer-events:none;transition:opacity 200ms var(--ease);z-index:39;}
+body.menu-open .menu-overlay{opacity:1;pointer-events:auto;}
+.menu-panel{position:fixed;top:0;right:0;height:100%;width:clamp(300px,36vw,420px);background:var(--bg);border-left:2px solid var(--line-hard);display:flex;flex-direction:column;padding:96px 32px 32px;overflow-y:auto;z-index:40;transform:translateX(105%);transition:transform 300ms var(--ease);}
+body.menu-open .menu-panel{transform:translateX(0);}
+.menu-list{list-style:none;margin:0 0 auto;padding:0;display:flex;flex-direction:column;counter-reset:mi;}
+.menu-list li{counter-increment:mi;border-bottom:1px solid var(--line);}
+.menu-list a{display:flex;align-items:baseline;gap:14px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.9rem;line-height:1.1;letter-spacing:-0.01em;text-transform:uppercase;padding:18px 2px;transition:color 150ms var(--ease),transform 150ms var(--ease);}
+.menu-list a::before{content:'0' counter(mi);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:400;color:var(--accent);}
+.menu-list a:hover{color:var(--accent);transform:translateX(10px);}
+.menu-socials{margin-top:2.5rem;padding-top:1.5rem;border-top:2px solid var(--line-hard);display:flex;flex-direction:column;gap:.75rem;}
+.menu-socials-title{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);}
+.menu-socials-list{list-style:none;margin:0;padding:0;display:flex;gap:1.4rem;flex-wrap:wrap;}
+.menu-socials-list a{font-size:13px;color:var(--muted);display:inline-block;padding:10px 4px;}
+.menu-socials-list a:hover{color:var(--accent);}
 
-  .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+/* hero */
+.legal-hero{padding:150px 40px 60px;border-bottom:2px solid var(--line-hard);}
+.sign-badge{display:inline-flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text);border:1px solid var(--accent);padding:8px 14px;background:var(--bg);box-shadow:4px 4px 0 var(--accent);}
+.sign-badge .dot{width:8px;height:8px;background:var(--ok);animation:blink 1.4s steps(1) infinite;}
+.legal-hero h1{margin:28px 0 0;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(32px,6vw,58px);line-height:1;letter-spacing:-0.02em;text-transform:uppercase;}
+.legal-hero .sub{margin:20px 0 0;max-width:640px;font-size:14px;line-height:1.75;color:var(--muted);}
 
-  /* ---- top bar ---- */
-  .topbar {
-    border-bottom: 1px solid var(--border-soft);
-    padding: 18px 0;
-    position: sticky; top: 0;
-    background: rgba(10,10,10,0.9);
-    backdrop-filter: blur(6px);
-    z-index: 10;
-  }
-  .topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .brand { font-family: var(--font-mono); font-size: 13px; color: var(--text-dim); letter-spacing: 0.02em; }
-  .brand strong { color: var(--text); }
-  .topbar-right { display: flex; align-items: center; gap: 10px; }
-  .progress-pill {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text-dim);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 5px 12px;
-    white-space: nowrap;
-  }
-  .progress-pill strong { color: var(--accent); }
-  .save-pill {
-    font-family: var(--font-mono);
-    font-size: 11.5px;
-    color: var(--text-faint);
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity .3s;
-  }
-  .save-pill.show { opacity: 1; }
+/* clauses */
+.clause{padding:36px 40px;border-bottom:1px solid var(--line);position:relative;}
+.clause .num{display:inline-block;font-size:11px;letter-spacing:.1em;color:var(--muted);border:1px solid var(--line-hard);padding:4px 10px;margin-bottom:14px;}
+.clause h2{margin:0 0 14px;font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:var(--accent);}
+.clause p{margin:0 0 12px;font-size:13.5px;line-height:1.8;color:var(--muted);}
+.clause p:last-child{margin-bottom:0;}
+.clause p strong{color:var(--text);font-weight:700;}
+.clause a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;}
+.clause ul{margin:0 0 12px 20px;padding:0;color:var(--muted);font-size:13.5px;line-height:1.8;}
+.clause ul:last-child{margin-bottom:0;}
+.clause ul li{margin-bottom:4px;}
+.clause ul strong{color:var(--text);}
 
-  /* ---- hero ---- */
-  .hero { padding: 64px 0 40px; border-bottom: 1px solid var(--border-soft); }
-  .hero .kicker { font-family: var(--font-mono); font-size: 13px; color: var(--accent); margin: 0 0 14px; }
-  .hero .kicker::before { content: "$ "; color: var(--text-faint); }
-  .hero h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.15; margin: 0 0 18px; font-weight: 600; letter-spacing: -0.01em; }
-  .hero p.lead { color: var(--text-dim); font-size: 17px; max-width: 58ch; margin: 0 0 28px; }
-  .hero .rule {
-    display: flex; align-items: flex-start; gap: 10px;
-    background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    padding: 14px 16px; border-radius: 4px; font-size: 14px; color: var(--text-dim); max-width: 58ch;
-  }
-  .hero .rule strong { color: var(--text); }
+/* cta */
+.legal-cta{padding:56px 40px;text-align:center;border-bottom:2px solid var(--line-hard);}
+.legal-cta p{margin:0 0 24px;color:var(--muted);font-size:13.5px;}
+.btn-primary{display:inline-block;background:var(--accent);color:var(--ink);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:16px 30px;border:2px solid var(--accent);box-shadow:5px 5px 0 var(--line-hard);transition:transform 150ms var(--ease),box-shadow 150ms var(--ease);}
+.btn-primary:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--line-hard);color:var(--ink);}
 
-  /* ---- how to use ---- */
-  .howto { padding: 34px 0; border-bottom: 1px solid var(--border-soft); }
-  .howto ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
-  .howto li { display: flex; gap: 14px; align-items: baseline; font-size: 15px; color: var(--text-dim); }
-  .howto li .n { font-family: var(--font-mono); color: var(--accent); font-size: 13px; flex-shrink: 0; width: 20px; }
-  .howto li strong { color: var(--text); font-weight: 500; }
+footer{padding:0;display:flex;flex-wrap:wrap;align-items:stretch;justify-content:space-between;font-size:11px;letter-spacing:.06em;color:var(--muted2);}
+footer .cell{padding:20px 24px;display:flex;align-items:center;gap:8px;}
+footer .cell .ok-dot{width:7px;height:7px;background:var(--ok);display:inline-block;animation:blink 1.4s steps(1) infinite;}
+footer .links{display:flex;align-items:stretch;}
+footer .links a{color:var(--muted2);padding:20px 20px;display:flex;align-items:center;border-left:1px solid var(--line);text-transform:uppercase;}
+footer .links a:hover{color:var(--accent);background:var(--panel);}
 
-  /* ---- section nav ---- */
-  .nav { padding: 22px 0; border-bottom: 1px solid var(--border-soft); display: flex; flex-wrap: wrap; gap: 8px; overflow-x: auto; }
-  .nav a {
-    font-family: var(--font-mono); font-size: 12.5px; text-decoration: none; color: var(--text-dim);
-    border: 1px solid var(--border); border-radius: 999px; padding: 6px 13px;
-    transition: border-color .15s, color .15s; white-space: nowrap;
-  }
-  .nav a:hover { color: var(--accent); border-color: var(--accent-dim); }
+@media (max-width:640px){
+  .legal-hero{padding:120px 20px 40px;}
+  .clause{padding:28px 20px;}
+  .legal-cta{padding:40px 20px;}
+  .menu-panel{width:min(calc(100vw - 16px),320px);padding:88px 20px 20px;}
+  .menu-list a{font-size:1.4rem;}
+}
 
-  /* ---- sections ---- */
-  section.block { padding: 56px 0; border-bottom: 1px solid var(--border-soft); scroll-margin-top: 70px; }
-  section.block:last-of-type { border-bottom: none; }
-  .block-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
-  .block-num { font-family: var(--font-mono); color: var(--accent); font-size: 15px; }
-  .block h2 { font-size: 26px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
-  .block > .intro { color: var(--text-dim); margin: 10px 0 32px; max-width: 60ch; font-size: 15.5px; }
+/* onboarding */
+.save-pill{color:var(--ok);font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:0;transition:opacity 200ms var(--ease);}
+.save-pill.show{opacity:1;}
+.ob-rule{margin:24px 0 0;max-width:640px;border:1px solid var(--line-hard);border-left:2px solid var(--accent);background:var(--panel);padding:14px 16px;font-size:13px;line-height:1.7;color:var(--muted);}
+.ob-rule b{color:var(--accent);font-weight:400;margin-right:6px;}
+.ob-howto{padding:36px 40px;border-bottom:1px solid var(--line);}
+.ob-howto ol{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:12px;max-width:760px;}
+.ob-howto li,.steps li{display:flex;gap:14px;font-size:13.5px;line-height:1.7;color:var(--muted);}
+.ob-howto .n,.steps .n{color:var(--accent);font-size:11px;letter-spacing:.1em;flex-shrink:0;padding-top:3px;}
+.ob-howto b,.steps b{color:var(--text);font-weight:700;}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-width:760px;}
+.ob-jump{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line);}
+.ob-jump a{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:14px 18px;border-right:1px solid var(--line);}
+.ob-jump a:hover{color:var(--accent);background:var(--panel);}
 
-  h3.sub {
-    font-family: var(--font-mono); font-size: 14px; font-weight: 500; color: var(--text);
-    margin: 34px 0 14px; display: flex; align-items: center; gap: 8px;
-  }
-  h3.sub:first-of-type { margin-top: 0; }
+.block{padding:40px;border-bottom:1px solid var(--line);scroll-margin-top:70px;}
+.block .num{display:inline-block;font-size:11px;letter-spacing:.1em;color:var(--muted);border:1px solid var(--line-hard);padding:4px 10px;}
+.block h2{margin:14px 0 0;font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;letter-spacing:-0.01em;text-transform:uppercase;color:var(--accent);}
+.block .intro{margin:12px 0 0;max-width:640px;font-size:13.5px;line-height:1.8;color:var(--muted);}
+h3.sub{margin:34px 0 14px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:400;}
+h3.sub b{color:var(--accent);font-weight:400;}
 
-  /* ---- checkbox items (confirm-only questions) ---- */
-  .checklist { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; }
-  .check-item { display: flex; align-items: flex-start; gap: 12px; padding: 11px 12px; border-radius: 6px; cursor: pointer; transition: background .12s; }
-  .check-item:hover { background: var(--bg-raised); }
-  .check-item input {
-    appearance: none; -webkit-appearance: none; width: 17px; height: 17px; margin-top: 2px;
-    border: 1.5px solid var(--border); border-radius: 4px; background: var(--bg-card); flex-shrink: 0; cursor: pointer;
-    position: relative; transition: border-color .12s, background .12s;
-  }
-  .check-item input:checked { background: var(--accent); border-color: var(--accent); }
-  .check-item input:checked::after {
-    content: ""; position: absolute; left: 5px; top: 1px; width: 4px; height: 8px;
-    border: solid #0A0A0A; border-width: 0 2px 2px 0; transform: rotate(45deg);
-  }
-  .check-item .label { font-size: 15px; color: var(--text); }
-  .check-item input:checked ~ .label { color: var(--text-faint); text-decoration: line-through; text-decoration-color: var(--border); }
-  .check-item .label .sub-note { display: block; color: var(--text-dim); font-size: 13.5px; margin-top: 3px; text-decoration: none; }
+.checklist{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);}
+.check-item{display:flex;gap:14px;align-items:flex-start;padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer;transition:background 150ms var(--ease);}
+.check-item:hover{background:var(--panel);}
+.check-item input{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:2px 0 0;flex-shrink:0;border:2px solid var(--line-hard);background:var(--bg);cursor:pointer;position:relative;}
+.check-item input:checked{background:var(--accent);border-color:var(--accent);}
+.check-item input:checked::after{content:'';position:absolute;left:4px;top:0;width:4px;height:9px;border:solid var(--ink);border-width:0 2px 2px 0;transform:rotate(45deg);}
+.check-item .label-txt{font-size:13.5px;line-height:1.6;color:var(--text);}
+.check-item input:checked ~ .label-txt{color:var(--muted2);}
+.check-item .sub-note{display:block;color:var(--muted);font-size:12px;margin-top:4px;}
 
-  /* ---- answer fields (typed answers) ---- */
-  .field-group { margin: 0 0 22px; }
-  .field-group:last-child { margin-bottom: 0; }
-  .field-group .q {
-    font-size: 15px; color: var(--text); display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;
-  }
-  .field-group .q .filled-dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0;
-    transition: background .15s;
-  }
-  .field-group .q .filled-dot.on { background: var(--ok); }
-  .field-group .hint { font-size: 13px; color: var(--text-dim); margin: 0 0 8px; }
-  .field-group input[type=text], .field-group textarea {
-    width: 100%; background: var(--bg-field); border: 1px solid var(--border); border-radius: 6px;
-    padding: 10px 12px; color: var(--text); font-family: var(--font-display); font-size: 14.5px;
-    transition: border-color .12s;
-  }
-  .field-group textarea { min-height: 74px; resize: vertical; line-height: 1.5; }
-  .field-group input[type=text]:focus, .field-group textarea:focus { outline: none; border-color: var(--accent-dim); }
-  .field-group input[type=text]::placeholder, .field-group textarea::placeholder { color: var(--text-faint); }
-  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+.field-group{margin:0 0 20px;max-width:760px;}
+.field-group .q{display:flex;align-items:baseline;gap:9px;font-size:13.5px;color:var(--text);}
+.field-group .q .filled-dot{width:7px;height:7px;background:var(--line-hard);flex-shrink:0;opacity:.35;transition:background 150ms var(--ease),opacity 150ms var(--ease);}
+.field-group .q .filled-dot.on{background:var(--ok);opacity:1;}
+.field-group .hint{margin:4px 0 8px;font-size:12px;color:var(--muted);}
+.field-group input[type=text],.field-group textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;padding:11px 12px;transition:border-color 150ms var(--ease);}
+.field-group textarea{min-height:84px;resize:vertical;line-height:1.7;}
+.field-group input[type=text]:focus,.field-group textarea:focus{outline:none;border-color:var(--accent);}
+.field-group ::placeholder{color:var(--muted2);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px;}
 
-  .no-pw {
-    display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--text-faint);
-    margin-top: 6px;
-  }
+.note{margin:22px 0 0;max-width:640px;font-size:12.5px;line-height:1.8;color:var(--muted);border-left:1px solid var(--line-hard);padding-left:14px;}
 
-  .note { font-size: 14px; color: var(--text-dim); border-left: 2px solid var(--border); padding-left: 14px; margin: 22px 0 0; }
-  .note strong { color: var(--text); }
+.table-scroll{overflow-x:auto;margin-top:6px;}
+table.matrix{width:100%;border-collapse:collapse;font-size:13px;min-width:520px;}
+table.matrix th,table.matrix td{border-bottom:1px solid var(--line);text-align:left;padding:11px 10px;}
+table.matrix th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:400;}
+table.matrix td:first-child{color:var(--text);}
+table.matrix input[type=text]{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--muted);font-family:inherit;font-size:12.5px;padding:4px 0;}
+table.matrix input[type=text]:focus{outline:none;border-bottom-color:var(--accent);}
+table.matrix select{background:var(--panel);color:var(--text);border:1px solid var(--line);font-family:inherit;font-size:12px;padding:5px 8px;}
+table.matrix select:focus{outline:none;border-color:var(--accent);}
 
-  table.matrix { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 6px 0 0; }
-  table.matrix th, table.matrix td { border-bottom: 1px solid var(--border-soft); text-align: left; padding: 10px 8px; }
-  table.matrix th { font-family: var(--font-mono); font-weight: 500; color: var(--text-dim); font-size: 12.5px; }
-  table.matrix td:first-child { color: var(--text); }
-  table.matrix input[type=text] {
-    width: 100%; background: transparent; border: none; border-bottom: 1px dashed var(--border);
-    color: var(--text-dim); font-family: var(--font-display); font-size: 14px; padding: 3px 0; border-radius: 0;
-  }
-  table.matrix input[type=text]:focus { outline: none; border-bottom-color: var(--accent); }
-  table.matrix select {
-    background: var(--bg-card); color: var(--text); border: 1px solid var(--border); border-radius: 4px;
-    font-family: var(--font-display); font-size: 13px; padding: 4px 6px;
-  }
+.summary-grid{display:grid;gap:0;margin:18px 0 0;border-top:1px solid var(--line);}
+.summary-row{border-bottom:1px solid var(--line);padding:14px 4px;}
+.summary-row .name{font-size:13.5px;color:var(--text);}
+.summary-row .stat{font-size:12px;color:var(--muted);}
+.summary-row .stat.done{color:var(--ok);}
+.bar-track{height:3px;background:var(--line);margin-top:9px;}
+.bar-fill{height:100%;background:var(--accent);width:0;transition:width 200ms var(--ease);}
 
-  .warn {
-    display: flex; gap: 10px; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    padding: 14px 16px; border-radius: 4px; font-size: 14px; color: var(--text-dim); margin-top: 28px;
-  }
-  .warn strong { color: var(--text); }
+.ob-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:20px;}
+.btn-ghost{background:var(--bg);color:var(--text);border:2px solid var(--line-hard);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:16px 30px;transition:background 150ms var(--ease),color 150ms var(--ease);}
+.btn-ghost:hover{background:var(--text);color:var(--ink);}
+.export-out{display:none;width:100%;max-width:860px;min-height:220px;margin-top:18px;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:1.7;padding:14px;white-space:pre-wrap;}
 
-  /* ---- summary ---- */
-  .summary-grid { display: grid; gap: 10px; margin: 18px 0 30px; }
-  .summary-row { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; background: var(--bg-card); }
-  .summary-row .name { font-size: 15px; color: var(--text); }
-  .summary-row .stat { font-family: var(--font-mono); font-size: 13px; color: var(--text-dim); }
-  .summary-row .stat.done { color: var(--ok); }
-  .bar-track { height: 4px; border-radius: 2px; background: var(--border-soft); margin-top: 8px; overflow: hidden; }
-  .bar-fill { height: 100%; background: var(--accent); width: 0%; transition: width .2s; }
-
-  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-  .steps li { display: flex; gap: 12px; font-size: 15px; color: var(--text-dim); }
-  .steps li .n { font-family: var(--font-mono); color: var(--accent); flex-shrink: 0; width: 18px; }
-
-  .export-box { margin-top: 34px; }
-  .export-btn {
-    font-family: var(--font-mono); font-size: 13px; color: var(--bg); background: var(--accent);
-    border: none; border-radius: 999px; padding: 11px 22px; cursor: pointer; font-weight: 500;
-    transition: opacity .12s;
-  }
-  .export-btn:hover { opacity: .88; }
-  .export-hint { font-size: 13px; color: var(--text-dim); margin: 10px 0 0; max-width: 55ch; }
-  .export-out {
-    display: none; margin-top: 16px; width: 100%; min-height: 220px;
-    background: var(--bg-field); border: 1px solid var(--border); border-radius: 6px;
-    padding: 14px; color: var(--text-dim); font-family: var(--font-mono); font-size: 12.5px; white-space: pre-wrap;
-  }
-
-  footer { padding: 40px 0 70px; text-align: center; }
-  footer .msg { font-size: 15px; color: var(--text-dim); max-width: 50ch; margin: 0 auto 8px; }
-  footer .reset {
-    margin-top: 22px; font-family: var(--font-mono); font-size: 12px; color: var(--text-faint);
-    background: none; border: 1px solid var(--border-soft); border-radius: 999px; padding: 6px 14px; cursor: pointer;
-  }
-  footer .reset:hover { color: var(--text-dim); border-color: var(--border); }
-
-  @media (max-width: 600px) {
-    .hero { padding: 48px 0 32px; }
-    section.block { padding: 40px 0; }
-    table.matrix { display: block; overflow-x: auto; }
-  }
+@media (max-width:640px){
+  .ob-howto,.block{padding:28px 20px;}
+  .field-row{grid-template-columns:1fr;}
+  .ob-actions .btn-primary,.ob-actions .btn-ghost{width:100%;text-align:center;}
+}
 </style>
 </head>
 <body>
-
-<div class="topbar">
-  <div class="wrap">
-    <div class="brand"><strong>Atiéndeme la Pyme</strong> · Manual de Onboarding</div>
-    <div class="topbar-right">
-      <span class="save-pill" id="savePill">guardado ✓</span>
-      <div class="progress-pill" id="progressPill">0 / 0 completado</div>
+<div class="grid-bg"></div>
+<header class="nav-header">
+  <div class="nav-logo"><svg class="brand-mark" width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" focusable="false" style="flex-shrink:0"><rect width="64" height="64" fill="var(--bg)"/><text x="10" y="48" font-family="'Space Grotesk','Arial Black',sans-serif" font-weight="700" font-size="42" fill="var(--text)">a</text><rect x="40" y="16" width="13" height="34" fill="var(--accent)"/></svg>ATIÉNDEME_LA_PYME<span class="cursor"></span></div>
+  <button class="nav-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="menuPanel">
+    <span class="bars"><span></span><span></span></span>
+    Menú
+  </button>
+</header>
+<div class="menu-overlay" id="menuOverlay"></div>
+<nav class="menu-panel" id="menuPanel" aria-label="Navegación principal">
+  <ul class="menu-list">
+    <li><a href="/#solucion" class="menu-link">Solución</a></li>
+    <li><a href="/#canales" class="menu-link">Canales</a></li>
+    <li><a href="/#precios" class="menu-link">Precios</a></li>
+    <li><a href="/#faq" class="menu-link">FAQ</a></li>
+    <li><a href="/#contacto" class="menu-link">Agendar demo</a></li>
+  </ul>
+  <div class="menu-socials">
+    <p class="menu-socials-title">Síguenos</p>
+    <div class="menu-socials-list">
+      <a href="https://instagram.com/atiendemelapyme" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://wa.me/56922053594" target="_blank" rel="noopener">WhatsApp</a>
+      <a href="mailto:hola@atiendemelapyme.cl">Correo</a>
     </div>
   </div>
-</div>
+</nav>
+<main class="wrap">
 
-<div class="hero">
-  <div class="wrap">
-    <p class="kicker">manual-onboarding.sh --cliente</p>
-    <h1>Todo lo que necesitamos para poner en marcha tu proyecto</h1>
-    <p class="lead">Responde directamente en esta página: escribe en los campos de texto y marca las casillas de confirmación. Todo se guarda automáticamente en este navegador a medida que avanzas.</p>
-    <div class="rule">
-      <span>🔒</span>
-      <span><strong>Importante:</strong> nunca escribas contraseñas ni claves en esta página. Para credenciales, invítanos como administrador/colaborador desde tu propia cuenta, o usa un gestor de contraseñas compartido — te lo explicamos en la Sección 1.</span>
-    </div>
-  </div>
-</div>
+  <section class="legal-hero">
+    <span class="sign-badge"><span class="dot"></span><span id="progressPill">0 / 0 completado</span></span>
+    <h1>Manual de onboarding</h1>
+    <p class="sub">Todo lo que necesitamos para poner en marcha tu proyecto. Responde en esta misma página: escribe en los campos y marca las casillas. Se guarda solo en tu navegador a medida que avanzas. <span class="save-pill" id="savePill">guardado ✓</span></p>
+    <div class="ob-rule"><b>//</b> Nunca escribas contraseñas ni claves acá. Para darnos acceso, invítanos como administrador desde tu propia cuenta o usa un gestor de contraseñas compartido — lo explicamos en la sección 01.</div>
+  </section>
 
-<div class="howto">
-  <div class="wrap">
+  <section class="ob-howto">
+    <span class="label"><b>./</b>cómo usar esta página</span>
     <ol>
-      <li><span class="n">01</span><span><strong>Recorre las 4 secciones</strong> en el orden en que aparecen — van de lo más simple a lo más estratégico.</span></li>
-      <li><span class="n">02</span><span><strong>Escribe lo que sepas.</strong> No es necesario completarlo todo en un día — se guarda solo y puedes volver después.</span></li>
-      <li><span class="n">03</span><span><strong>¿Algo no aplica o no lo sabes?</strong> Déjalo en blanco, lo resolvemos juntos en una llamada.</span></li>
-      <li><span class="n">04</span><span><strong>Al final</strong>, usa el botón "Copiar todas las respuestas" y envíanoslas por correo o WhatsApp.</span></li>
+      <li><span class="n">01</span><span><b>Recorre las 4 secciones</b> en orden: van de lo más simple a lo más estratégico.</span></li>
+      <li><span class="n">02</span><span><b>Escribe lo que sepas.</b> No hace falta terminarlo en un día: se guarda solo y puedes volver después.</span></li>
+      <li><span class="n">03</span><span><b>¿Algo no aplica o no lo sabes?</b> Déjalo en blanco y lo vemos juntos en una llamada.</span></li>
+      <li><span class="n">04</span><span><b>Al final</b>, presiona "Copiar todas las respuestas" y envíanoslas por correo o WhatsApp.</span></li>
     </ol>
-  </div>
-</div>
+  </section>
 
-<div class="nav">
-  <div class="wrap" style="display:flex; flex-wrap:wrap; gap:8px;">
-    <a href="#s1">1. Accesos y Credenciales</a>
-    <a href="#s2">2. Identidad Visual</a>
-    <a href="#s3">3. Agente de IA</a>
-    <a href="#s4">4. Redes Sociales</a>
+  <nav class="ob-jump" aria-label="Secciones del manual">
+    <a href="#s1">01 Accesos</a>
+    <a href="#s2">02 Identidad visual</a>
+    <a href="#s3">03 Agente de IA</a>
+    <a href="#s4">04 Redes sociales</a>
     <a href="#resumen">Resumen</a>
-  </div>
-</div>
+  </nav>
 
-<!-- ===================== SECCIÓN 1 ===================== -->
-<section class="block" id="s1" data-section="Accesos y Credenciales">
-  <div class="wrap">
-    <div class="block-head"><span class="block-num">01</span><h2>Accesos y Credenciales</h2></div>
-    <p class="intro">Esto es para "entrar" a las herramientas donde vive tu negocio. Sin esto, no podemos empezar a construir nada.</p>
+  <section class="block" id="s1" data-section="Accesos y Credenciales">
+    <span class="num">01</span>
+    <h2>Accesos y credenciales</h2>
+    <p class="intro">Esto es para entrar a las herramientas donde vive tu negocio. Sin esto no podemos empezar a construir.</p>
 
-    <h3 class="sub">🌐 Dominio y hosting</h3>
+    <h3 class="sub"><b>//</b> dominio y hosting</h3>
     <div class="field-group">
       <div class="q"><span class="filled-dot" data-dot="s1-dom"></span>Nombre de tu dominio</div>
       <p class="hint">Ej: tuempresa.cl</p>
@@ -880,48 +817,46 @@ const ONBOARDING_HTML = `<!DOCTYPE html>
     <div class="field-row">
       <div class="field-group">
         <div class="q"><span class="filled-dot" data-dot="s1-registrar"></span>¿Dónde está registrado?</div>
-        <input type="text" data-id="s1-registrar" placeholder="GoDaddy, NIC Chile, otro..." aria-label="¿Dónde está registrado el dominio?">
+        <input type="text" data-id="s1-registrar" placeholder="GoDaddy, NIC Chile, otro..." aria-label="Dónde está registrado el dominio">
       </div>
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s1-hosting"></span>Hosting actual (si tienes sitio hoy)</div>
-        <input type="text" data-id="s1-hosting" placeholder="Nombre del proveedor, o 'partimos desde cero'" aria-label="Hosting actual">
+        <div class="q"><span class="filled-dot" data-dot="s1-hosting"></span>Hosting actual (si ya tienes sitio)</div>
+        <input type="text" data-id="s1-hosting" placeholder="Proveedor, o partimos desde cero" aria-label="Hosting actual">
       </div>
     </div>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s1-dns"><span class="label">Puedo darles acceso al panel de DNS<span class="sub-note">Es lo que apunta tu dominio a tu sitio web. Si no sabes qué es, solo dinos quién te vendió el dominio</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-dns"><span class="label-txt">Puedo darles acceso al panel de DNS<span class="sub-note">Es lo que apunta tu dominio a tu sitio. Si no sabes qué es, dinos quién te vendió el dominio</span></span></li>
     </ul>
 
-    <h3 class="sub">🖥️ CMS / plataforma del sitio</h3>
+    <h3 class="sub"><b>//</b> plataforma del sitio</h3>
     <div class="field-group">
       <div class="q"><span class="filled-dot" data-dot="s1-cms"></span>¿Ya tienes un sitio? ¿En qué plataforma?</div>
       <p class="hint">WordPress, Shopify, Wix, otro — o "no tengo, partimos desde cero"</p>
       <input type="text" data-id="s1-cms" placeholder="Ej: WordPress" aria-label="Plataforma del sitio actual">
     </div>
 
-    <h3 class="sub">📊 Analítica y monitoreo</h3>
+    <h3 class="sub"><b>//</b> analítica y monitoreo</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s1-ga"><span class="label">Puedo darles acceso como administrador a Google Analytics</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s1-gsc"><span class="label">Puedo darles acceso como administrador a Google Search Console</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s1-noanalytics"><span class="label">No tengo ninguno todavía — lo crean ustedes y quedo como dueño de la cuenta</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-ga"><span class="label-txt">Puedo darles acceso como administrador a Google Analytics</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-gsc"><span class="label-txt">Puedo darles acceso como administrador a Google Search Console</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-noanalytics"><span class="label-txt">No tengo ninguno todavía — los crean ustedes y quedo como dueño de la cuenta</span></li>
     </ul>
 
-    <h3 class="sub">🔑 Contraseñas y credenciales</h3>
+    <h3 class="sub"><b>//</b> contraseñas y credenciales</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s1-invite"><span class="label">Los voy a invitar como usuario/colaborador desde mi propio panel<span class="sub-note">La forma preferida — así nunca compartes tu contraseña principal</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s1-pwmanager"><span class="label">Prefiero usar un gestor de contraseñas compartido (1Password, Bitwarden)</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-invite"><span class="label-txt">Los voy a invitar como usuario o colaborador desde mi propio panel<span class="sub-note">La forma preferida: así nunca compartes tu contraseña principal</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s1-pwmanager"><span class="label-txt">Prefiero usar un gestor de contraseñas compartido (1Password, Bitwarden)</span></li>
     </ul>
-    <p class="no-pw">⚠️ No escribas contraseñas ni claves en esta página bajo ningún motivo — usa una de las dos opciones de arriba.</p>
-    <p class="note">¿No tienes algunos de estos accesos todavía? No es un problema — dínoslo y te guiamos para conseguirlos.</p>
-  </div>
-</section>
+    <div class="ob-rule"><b>//</b> No escribas contraseñas ni claves en esta página bajo ningún motivo: usa una de las dos opciones de arriba.</div>
+    <p class="note">¿Todavía no tienes algunos de estos accesos? No es problema: dínoslo y te guiamos para conseguirlos.</p>
+  </section>
 
-<!-- ===================== SECCIÓN 2 ===================== -->
-<section class="block" id="s2" data-section="Identidad Visual">
-  <div class="wrap">
-    <div class="block-head"><span class="block-num">02</span><h2>Identidad Visual y Contenidos Web</h2></div>
-    <p class="intro">Esto es la cara de tu marca: lo que verán tus clientes al entrar a tu sitio.</p>
+  <section class="block" id="s2" data-section="Identidad Visual">
+    <span class="num">02</span>
+    <h2>Identidad visual y contenidos</h2>
+    <p class="intro">La cara de tu marca: lo que verán tus clientes al entrar a tu sitio.</p>
 
-    <h3 class="sub">🎨 Marca</h3>
+    <h3 class="sub"><b>//</b> marca</h3>
     <div class="field-row">
       <div class="field-group">
         <div class="q"><span class="filled-dot" data-dot="s2-colors"></span>Colores de marca</div>
@@ -934,17 +869,17 @@ const ONBOARDING_HTML = `<!DOCTYPE html>
       </div>
     </div>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s2-logo"><span class="label">Voy a enviar mi logo en alta resolución<span class="sub-note">Idealmente editable (.ai, .eps, .svg) o al menos .png con fondo transparente</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s2-brandbook"><span class="label">Tengo manual de marca y lo voy a enviar</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s2-logo"><span class="label-txt">Voy a enviar mi logo en alta resolución<span class="sub-note">Idealmente editable (.ai, .eps, .svg) o al menos .png con fondo transparente</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s2-brandbook"><span class="label-txt">Tengo manual de marca y lo voy a enviar</span></li>
     </ul>
 
-    <h3 class="sub">🖼️ Contenido visual</h3>
+    <h3 class="sub"><b>//</b> contenido visual</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s2-photos"><span class="label">Voy a enviar fotos reales de mi negocio<span class="sub-note">Productos, local, equipo, procesos — mientras más auténticas, mejor</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s2-nophotos"><span class="label">No tengo fotos profesionales — quiero ver alternativas</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s2-photos"><span class="label-txt">Voy a enviar fotos reales de mi negocio<span class="sub-note">Productos, local, equipo, procesos: mientras más auténticas, mejor</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s2-nophotos"><span class="label-txt">No tengo fotos profesionales — quiero ver alternativas</span></li>
     </ul>
 
-    <h3 class="sub">✍️ Textos y contenidos</h3>
+    <h3 class="sub"><b>//</b> textos y contenidos</h3>
     <div class="field-row">
       <div class="field-group">
         <div class="q"><span class="filled-dot" data-dot="s2-name"></span>Nombre comercial</div>
@@ -958,7 +893,7 @@ const ONBOARDING_HTML = `<!DOCTYPE html>
     <div class="field-group">
       <div class="q"><span class="filled-dot" data-dot="s2-desc"></span>Descripción de tu negocio</div>
       <p class="hint">Qué haces, a quién le vendes, qué te hace diferente</p>
-      <textarea data-id="s2-desc" placeholder="Escribe aquí, con tus propias palabras..." aria-label="Descripción de tu negocio"></textarea>
+      <textarea data-id="s2-desc" placeholder="Escribe con tus propias palabras..." aria-label="Descripción de tu negocio"></textarea>
     </div>
     <div class="field-group">
       <div class="q"><span class="filled-dot" data-dot="s2-products"></span>Productos o servicios</div>
@@ -994,50 +929,50 @@ const ONBOARDING_HTML = `<!DOCTYPE html>
       <textarea data-id="s2-testimonials" placeholder="Opcional" aria-label="Testimonios o casos de clientes"></textarea>
     </div>
 
-    <h3 class="sub">📄 Páginas que normalmente necesita un sitio</h3>
-    <table class="matrix">
-      <thead><tr><th>Página</th><th>¿La necesitas?</th><th>Notas</th></tr></thead>
-      <tbody>
-        <tr><td>Inicio</td><td><select data-id="pg-inicio" aria-label="¿Necesitas página de Inicio?"><option>Sí</option></select></td><td><input type="text" data-id="pg-inicio-note" placeholder="—" aria-label="Notas sobre Inicio"></td></tr>
-        <tr><td>Nosotros / Quiénes somos</td><td><select data-id="pg-nosotros" aria-label="¿Necesitas página Nosotros?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-nosotros-note" placeholder="—" aria-label="Notas sobre Nosotros"></td></tr>
-        <tr><td>Productos / Servicios</td><td><select data-id="pg-productos" aria-label="¿Necesitas página de Productos?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-productos-note" placeholder="—" aria-label="Notas sobre Productos"></td></tr>
-        <tr><td>Precios</td><td><select data-id="pg-precios" aria-label="¿Necesitas página de Precios?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-precios-note" placeholder="—" aria-label="Notas sobre Precios"></td></tr>
-        <tr><td>Contacto</td><td><select data-id="pg-contacto" aria-label="¿Necesitas página de Contacto?"><option>Sí</option></select></td><td><input type="text" data-id="pg-contacto-note" placeholder="—" aria-label="Notas sobre Contacto"></td></tr>
-        <tr><td>Preguntas frecuentes</td><td><select data-id="pg-faq" aria-label="¿Necesitas página de Preguntas frecuentes?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-faq-note" placeholder="—" aria-label="Notas sobre Preguntas frecuentes"></td></tr>
-        <tr><td>Blog / Noticias</td><td><select data-id="pg-blog" aria-label="¿Necesitas Blog?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-blog-note" placeholder="—" aria-label="Notas sobre Blog"></td></tr>
-      </tbody>
-    </table>
-    <p class="note">No necesitas textos "perfectos" ni redactados como profesional — con ideas en bruto nosotros los ordenamos y pulimos.</p>
-  </div>
-</section>
+    <h3 class="sub"><b>//</b> páginas que suele necesitar un sitio</h3>
+    <div class="table-scroll">
+      <table class="matrix">
+        <thead><tr><th>Página</th><th>¿La necesitas?</th><th>Notas</th></tr></thead>
+        <tbody>
+          <tr><td>Inicio</td><td><select data-id="pg-inicio" aria-label="¿Necesitas página de Inicio?"><option>Sí</option></select></td><td><input type="text" data-id="pg-inicio-note" placeholder="—" aria-label="Notas sobre Inicio"></td></tr>
+          <tr><td>Nosotros / Quiénes somos</td><td><select data-id="pg-nosotros" aria-label="¿Necesitas página Nosotros?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-nosotros-note" placeholder="—" aria-label="Notas sobre Nosotros"></td></tr>
+          <tr><td>Productos / Servicios</td><td><select data-id="pg-productos" aria-label="¿Necesitas página de Productos?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-productos-note" placeholder="—" aria-label="Notas sobre Productos"></td></tr>
+          <tr><td>Precios</td><td><select data-id="pg-precios" aria-label="¿Necesitas página de Precios?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-precios-note" placeholder="—" aria-label="Notas sobre Precios"></td></tr>
+          <tr><td>Contacto</td><td><select data-id="pg-contacto" aria-label="¿Necesitas página de Contacto?"><option>Sí</option></select></td><td><input type="text" data-id="pg-contacto-note" placeholder="—" aria-label="Notas sobre Contacto"></td></tr>
+          <tr><td>Preguntas frecuentes</td><td><select data-id="pg-faq" aria-label="¿Necesitas página de Preguntas frecuentes?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-faq-note" placeholder="—" aria-label="Notas sobre Preguntas frecuentes"></td></tr>
+          <tr><td>Blog / Noticias</td><td><select data-id="pg-blog" aria-label="¿Necesitas Blog?"><option>Sí</option><option selected>Por definir</option><option>No</option></select></td><td><input type="text" data-id="pg-blog-note" placeholder="—" aria-label="Notas sobre Blog"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">No necesitas textos perfectos ni redactados como profesional: con ideas en bruto nosotros los ordenamos y pulimos.</p>
+  </section>
 
-<!-- ===================== SECCIÓN 3 ===================== -->
-<section class="block" id="s3" data-section="Agente de IA">
-  <div class="wrap">
-    <div class="block-head"><span class="block-num">03</span><h2>Entrenamiento y Casos de Uso para tu Agente de IA</h2></div>
-    <p class="intro">La sección más importante para que tu agente suene como tú, conozca tu negocio y resuelva lo que tus clientes realmente preguntan.</p>
+  <section class="block" id="s3" data-section="Agente de IA">
+    <span class="num">03</span>
+    <h2>Entrenamiento de tu agente de IA</h2>
+    <p class="intro">La sección más importante: acá definimos cómo suena tu agente, qué sabe de tu negocio y qué resuelve solo.</p>
 
-    <h3 class="sub">🗣️ Tono de voz y personalidad</h3>
+    <h3 class="sub"><b>//</b> tono de voz y personalidad</h3>
     <div class="field-row">
       <div class="field-group">
         <div class="q"><span class="filled-dot" data-dot="s3-botname"></span>¿Tiene nombre propio el asistente?</div>
         <input type="text" data-id="s3-botname" placeholder="Ej: Dominga" aria-label="Nombre del asistente">
       </div>
       <div class="field-group">
-        <div class="q"><span class="filled-dot" data-dot="s3-lang"></span>¿En qué idioma(s) debe responder?</div>
+        <div class="q"><span class="filled-dot" data-dot="s3-lang"></span>¿En qué idiomas debe responder?</div>
         <input type="text" data-id="s3-lang" placeholder="Ej: Español" aria-label="Idiomas del asistente">
       </div>
     </div>
     <div class="field-group">
       <div class="q"><span class="filled-dot" data-dot="s3-tone"></span>¿Cómo quieres que hable?</div>
-      <p class="hint">Formal, cercano, entusiasta, directo, con o sin emojis, palabras típicas de tu marca a usar o evitar</p>
+      <p class="hint">Formal, cercano, entusiasta, directo, con o sin emojis, palabras de tu marca a usar o evitar</p>
       <textarea data-id="s3-tone" placeholder="Describe la personalidad que quieres..." aria-label="Tono de voz del asistente"></textarea>
     </div>
 
-    <h3 class="sub">❓ Preguntas frecuentes de tus clientes</h3>
+    <h3 class="sub"><b>//</b> preguntas frecuentes de tus clientes</h3>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s3-faq"></span>Las 10-20 preguntas que más te hacen hoy, con su respuesta</div>
-      <p class="hint">Por WhatsApp, redes, en el local, por teléfono — pregunta y respuesta juntas</p>
+      <div class="q"><span class="filled-dot" data-dot="s3-faq"></span>Las 10 a 20 preguntas que más te hacen, con su respuesta</div>
+      <p class="hint">Por WhatsApp, redes, en el local o por teléfono: pregunta y respuesta juntas</p>
       <textarea data-id="s3-faq" placeholder="Ej: ¿Hacen despacho? — Sí, a todo Santiago, $3.000..." style="min-height:130px;" aria-label="Preguntas frecuentes y sus respuestas"></textarea>
     </div>
     <div class="field-group">
@@ -1046,7 +981,7 @@ const ONBOARDING_HTML = `<!DOCTYPE html>
       <textarea data-id="s3-notanswer" placeholder="Opcional" aria-label="Preguntas que el bot no debe responder solo"></textarea>
     </div>
 
-    <h3 class="sub">📦 Catálogo y datos operativos</h3>
+    <h3 class="sub"><b>//</b> catálogo y datos operativos</h3>
     <div class="field-group">
       <div class="q"><span class="filled-dot" data-dot="s3-policies"></span>Políticas de tu negocio</div>
       <p class="hint">Devoluciones, garantías, formas de pago, tiempos de envío</p>
@@ -1063,19 +998,19 @@ const ONBOARDING_HTML = `<!DOCTYPE html>
       </div>
     </div>
 
-    <h3 class="sub">🎯 Qué debe poder hacer el agente</h3>
+    <h3 class="sub"><b>//</b> qué debe poder hacer el agente</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s3-uc1"><span class="label">Responder preguntas frecuentes</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s3-uc2"><span class="label">Recomendar productos/servicios</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s3-uc3"><span class="label">Agendar citas o reservas</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s3-uc4"><span class="label">Tomar pedidos</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s3-uc5"><span class="label">Cotizar / dar precios</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s3-uc6"><span class="label">Recolectar datos de contacto (leads)</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc1"><span class="label-txt">Responder preguntas frecuentes</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc2"><span class="label-txt">Recomendar productos o servicios</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc3"><span class="label-txt">Agendar citas o reservas</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc4"><span class="label-txt">Tomar pedidos</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc5"><span class="label-txt">Cotizar o dar precios</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s3-uc6"><span class="label-txt">Recolectar datos de contacto (leads)</span></li>
     </ul>
 
-    <h3 class="sub">🙋 Escalamiento a un humano</h3>
+    <h3 class="sub"><b>//</b> escalamiento a una persona</h3>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s3-escal"></span>¿En qué casos debe derivar la conversación a una persona real?</div>
+      <div class="q"><span class="filled-dot" data-dot="s3-escal"></span>¿En qué casos debe pasar la conversación a una persona real?</div>
       <textarea data-id="s3-escal" placeholder="Ej: reclamo, negociación, pregunta muy específica" aria-label="Casos de escalamiento a una persona"></textarea>
     </div>
     <div class="field-row">
@@ -1089,92 +1024,101 @@ const ONBOARDING_HTML = `<!DOCTYPE html>
       </div>
     </div>
 
-    <h3 class="sub">🚫 Límites del agente</h3>
+    <h3 class="sub"><b>//</b> límites del agente</h3>
     <div class="field-group">
-      <div class="q"><span class="filled-dot" data-dot="s3-limits"></span>Temas que el bot nunca debe tratar o prometer</div>
-      <p class="hint">Ej: no inventar descuentos, no dar consejos médicos/legales, no confirmar stock incierto</p>
+      <div class="q"><span class="filled-dot" data-dot="s3-limits"></span>Temas que el bot nunca debe tratar ni prometer</div>
+      <p class="hint">Ej: no inventar descuentos, no dar consejos médicos o legales, no confirmar stock incierto</p>
       <textarea data-id="s3-limits" placeholder="Escribe aquí..." aria-label="Límites del agente"></textarea>
     </div>
 
-    <p class="note">Consejo: si tienes conversaciones reales de WhatsApp o Instagram con clientes, compártelas (sin datos sensibles) — son oro puro para entrenar al agente con el lenguaje real de tus clientes.</p>
-  </div>
-</section>
+    <p class="note">Si tienes conversaciones reales de WhatsApp o Instagram con clientes, compártelas sin datos sensibles: son oro para entrenar al agente con el lenguaje real de tus clientes.</p>
+  </section>
 
-<!-- ===================== SECCIÓN 4 ===================== -->
-<section class="block" id="s4" data-section="Redes Sociales">
-  <div class="wrap">
-    <div class="block-head"><span class="block-num">04</span><h2>Accesos a Redes Sociales</h2></div>
-    <p class="intro">Para que tu agente pueda responder mensajes de Instagram, Facebook y WhatsApp, lo conectamos directamente a tus cuentas de forma oficial, a través de Meta.</p>
+  <section class="block" id="s4" data-section="Redes Sociales">
+    <span class="num">04</span>
+    <h2>Accesos a redes sociales</h2>
+    <p class="intro">Para que tu agente responda mensajes de Instagram, Facebook y WhatsApp, lo conectamos a tus cuentas de forma oficial, a través de Meta.</p>
 
-    <h3 class="sub">📘 Facebook</h3>
+    <h3 class="sub"><b>//</b> facebook</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s4-fbadmin"><span class="label">Soy administrador de mi Página de Facebook<span class="sub-note">No basta con "editor"</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s4-bp"><span class="label">Tengo un Meta Business Portfolio vinculado a esa Página<span class="sub-note">Antes llamado "Business Manager". Si no existe, lo creamos juntos</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-fbadmin"><span class="label-txt">Soy administrador de mi Página de Facebook<span class="sub-note">No basta con ser editor</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-bp"><span class="label-txt">Tengo un Meta Business Portfolio vinculado a esa Página<span class="sub-note">Antes llamado Business Manager. Si no existe, lo creamos juntos</span></span></li>
     </ul>
 
-    <h3 class="sub">📸 Instagram</h3>
+    <h3 class="sub"><b>//</b> instagram</h3>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s4-igpro"><span class="label">Mi cuenta es de tipo profesional (Empresa o Creador)<span class="sub-note">No una cuenta personal</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s4-iglinked"><span class="label">Está vinculada a mi Página de Facebook</span></li>
-      <li class="check-item"><input type="checkbox" data-id="s4-igadmin"><span class="label">Soy administrador dentro de mi Business Portfolio</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-igpro"><span class="label-txt">Mi cuenta es profesional (Empresa o Creador)<span class="sub-note">No una cuenta personal</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-iglinked"><span class="label-txt">Está vinculada a mi Página de Facebook</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-igadmin"><span class="label-txt">Soy administrador dentro de mi Business Portfolio</span></li>
     </ul>
 
-    <h3 class="sub">💬 WhatsApp Business</h3>
+    <h3 class="sub"><b>//</b> whatsapp business</h3>
     <div class="field-group">
       <div class="q"><span class="filled-dot" data-dot="s4-wanumber"></span>Número de teléfono dedicado para el agente</div>
       <p class="hint">Recomendamos que no sea tu número personal, para evitar bloqueos</p>
       <input type="text" data-id="s4-wanumber" placeholder="+56 9 ..." aria-label="Número de teléfono para el agente">
     </div>
     <ul class="checklist">
-      <li class="check-item"><input type="checkbox" data-id="s4-waregistered"><span class="label">Confirmo que ese número ya está registrado en otra cuenta de WhatsApp Business<span class="sub-note">Si es así, hay que liberarlo antes de conectarlo</span></span></li>
-      <li class="check-item"><input type="checkbox" data-id="s4-waverify"><span class="label">Puedo verificar el número cuando llegue el código por SMS o llamada</span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-waregistered"><span class="label-txt">Ese número ya está registrado en otra cuenta de WhatsApp Business<span class="sub-note">Si es así, hay que liberarlo antes de conectarlo</span></span></li>
+      <li class="check-item"><input type="checkbox" data-id="s4-waverify"><span class="label-txt">Puedo verificar el número cuando llegue el código por SMS o llamada</span></li>
     </ul>
 
-    <h3 class="sub">🔗 Cómo se conecta</h3>
+    <h3 class="sub"><b>//</b> cómo se conecta</h3>
     <ol class="steps">
-      <li><span class="n">1</span><span>Te guiamos paso a paso mientras tú confirmas los accesos en pantalla — así conservas tú el control desde el primer momento.</span></li>
-      <li><span class="n">2</span><span>Puede pedirse verificación en dos pasos (2FA) — es un requisito de seguridad de Meta, no algo que agreguemos nosotros.</span></li>
-      <li><span class="n">3</span><span>Una vez conectado, puedes revisar o revocar el acceso cuando quieras desde tu propio Meta Business Portfolio.</span></li>
+      <li><span class="n">01</span><span>Te guiamos paso a paso mientras tú confirmas los accesos en pantalla: el control queda siempre de tu lado.</span></li>
+      <li><span class="n">02</span><span>Puede pedirse verificación en dos pasos. Es un requisito de seguridad de Meta, no algo que agreguemos nosotros.</span></li>
+      <li><span class="n">03</span><span>Una vez conectado, puedes revisar o revocar el acceso cuando quieras desde tu propio Meta Business Portfolio.</span></li>
     </ol>
 
-    <div class="warn">
-      <span>⚠️</span>
-      <span><strong>Importante:</strong> algunos permisos avanzados (como responder automáticamente por Instagram o Facebook) requieren que Meta apruebe la aplicación después de revisar cómo se usan. Puede tomar días o semanas — te avisamos del estado en cada etapa.</span>
-    </div>
-  </div>
-</section>
+    <div class="ob-rule"><b>//</b> Algunos permisos avanzados, como responder automáticamente por Instagram o Facebook, requieren que Meta apruebe la aplicación después de revisar cómo se usa. Puede tomar días o semanas: te avisamos del estado en cada etapa.</div>
+  </section>
 
-<!-- ===================== RESUMEN ===================== -->
-<section class="block" id="resumen">
-  <div class="wrap">
-    <div class="block-head"><span class="block-num">✓</span><h2>Resumen y próximos pasos</h2></div>
+  <section class="block" id="resumen">
+    <span class="num">✓</span>
+    <h2>Resumen y próximos pasos</h2>
     <div class="summary-grid" id="summaryGrid"></div>
 
-    <h3 class="sub" style="margin-top:38px;">¿Qué pasa después de que envíes esta información?</h3>
+    <h3 class="sub"><b>//</b> qué pasa después de que envíes esto</h3>
     <ol class="steps">
-      <li><span class="n">1</span><span>Revisamos todo y te confirmamos si falta algo o si hay dudas.</span></li>
-      <li><span class="n">2</span><span>Empezamos a construir el sitio, entrenar al agente de IA y conectar tus redes.</span></li>
-      <li><span class="n">3</span><span>Te mostramos avances antes de publicar nada en producción.</span></li>
-      <li><span class="n">4</span><span>Coordinamos una fecha de lanzamiento contigo.</span></li>
+      <li><span class="n">01</span><span>Revisamos todo y te confirmamos si falta algo o si hay dudas.</span></li>
+      <li><span class="n">02</span><span>Empezamos a construir el sitio, entrenar al agente y conectar tus redes.</span></li>
+      <li><span class="n">03</span><span>Te mostramos avances antes de publicar nada.</span></li>
+      <li><span class="n">04</span><span>Coordinamos contigo la fecha de lanzamiento.</span></li>
     </ol>
 
-    <div class="export-box">
-      <h3 class="sub" style="margin-top:0;">📋 Enviar tus respuestas</h3>
-      <p class="export-hint">Esta página guarda tus respuestas solo en este navegador — no nos llegan automáticamente. Cuando termines, copia todo y pégalo en un correo o WhatsApp para enviárnoslo.</p>
-      <p class="export-hint">Si el computador es compartido, usa "Borrar todas mis respuestas" al final cuando ya nos hayas enviado la información.</p>
-      <button class="export-btn" id="exportBtn">Copiar todas las respuestas</button>
-      <textarea class="export-out" id="exportOut" readonly aria-label="Respuestas para copiar"></textarea>
+    <h3 class="sub"><b>//</b> enviar tus respuestas</h3>
+    <p class="note" style="margin-top:0;">Esta página guarda tus respuestas solo en este navegador: no nos llegan automáticamente. Cuando termines, cópialas y pégalas en un correo o WhatsApp. Si el computador es compartido, borra tus respuestas al final.</p>
+    <div class="ob-actions">
+      <button class="btn-primary" id="exportBtn">Copiar todas las respuestas</button>
+      <button class="btn-ghost" id="resetBtn">Borrar todas mis respuestas</button>
     </div>
-  </div>
-</section>
+    <textarea class="export-out" id="exportOut" readonly aria-label="Respuestas para copiar"></textarea>
+  </section>
 
-<footer>
-  <div class="wrap">
-    <p class="msg">¿Tienes dudas en el camino? No te frenes por no tener todo listo — escríbenos y avanzamos juntos, sección por sección.</p>
-    <button class="reset" id="resetBtn">Borrar todas mis respuestas</button>
-  </div>
-</footer>
+  <section class="legal-cta">
+    <p>¿Tienes dudas en el camino? No te frenes por no tener todo listo: escríbenos y avanzamos juntos, sección por sección.</p>
+    <a class="btn-primary" href="mailto:hola@atiendemelapyme.cl">Escríbenos</a>
+  </section>
 
+  <footer>
+    <span class="cell"><span class="ok-dot"></span>SYS.OK — © 2026 ATIÉNDEME LA PYME</span>
+    <div class="links">
+      <a href="/terminos">Términos</a>
+      <a href="/privacidad">Privacidad</a>
+      <a href="mailto:hola@atiendemelapyme.cl">Contacto</a>
+    </div>
+  </footer>
+
+</main>
+<script>
+const menuOverlay = document.getElementById('menuOverlay');
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#menuToggle')) { document.body.classList.toggle('menu-open'); syncMenu(); return; }
+  if (e.target === menuOverlay || e.target.closest('.menu-link')) { document.body.classList.remove('menu-open'); syncMenu(); }
+});
+function syncMenu(){ document.getElementById('menuToggle').setAttribute('aria-expanded', document.body.classList.contains('menu-open')); }
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body.classList.contains('menu-open')){ document.body.classList.remove('menu-open'); syncMenu(); } });
+</script>
 <script>
 (function(){
   var STORAGE_KEY = 'atp-onboarding-answers-v2';
@@ -1321,7 +1265,7 @@ const ONBOARDING_HTML = `<!DOCTYPE html>
       var boxes = Array.prototype.slice.call(sec.querySelectorAll('.check-item'));
       boxes.forEach(function(item){
         var cb = item.querySelector('input[type=checkbox]');
-        var label = item.querySelector('.label');
+        var label = item.querySelector('.label-txt');
         var text = label ? (label.childNodes[0] ? label.childNodes[0].textContent.trim() : label.textContent.trim()) : '';
         lines.push('- [' + (cb.checked ? 'x' : ' ') + '] ' + text);
       });
@@ -1355,10 +1299,7 @@ const ONBOARDING_HTML = `<!DOCTYPE html>
   updateAll();
 })();
 </script>
-
-</body>
-</html>
-`;
+</body></html>`;
 
 const ROBOTS_TXT = `User-agent: *
 Allow: /

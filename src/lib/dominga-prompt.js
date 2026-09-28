@@ -6,31 +6,31 @@
 
 const INITIAL_GREETINGS = [
   {
-    globo1: '¡Hola! 👋 Por acá Dominga, de Atiéndeme la Pyme. ¿Cómo va todo?',
+    globo1: '¡Hola! 👋 Soy Dominga, la asistente de IA de Atiéndeme la Pyme. ¿Cómo va todo?',
     globo2: 'Dime no más de qué es tu negocio 💡 y te muestro al toque cómo automatizar tus respuestas o cotizaciones 📲 para no dejar ir ni un solo cliente. ⚡'
   },
   {
-    globo1: '¡Hola! 😊 Qué gusto saludarte. Soy Dominga de Atiéndeme la Pyme.',
+    globo1: '¡Hola! 😊 Qué gusto saludarte. Soy Dominga, asistente de IA de Atiéndeme la Pyme.',
     globo2: 'Cuéntame brevemente ✍️ a qué te dedicas y te envío directo un par de ideas concretas 🚀 para que la IA atienda tus chats 24/7. 📲'
   },
   {
-    globo1: 'Estimado/a, un gusto saludarte. 💼 Te habla Dominga de Atiéndeme la Pyme.',
+    globo1: 'Estimado/a, un gusto saludarte. 💼 Soy Dominga, asistente de IA de Atiéndeme la Pyme.',
     globo2: 'Si me indicas el rubro 📊 de tu empresa, te preparo al instante ejemplos prácticos ⚡ para reducir tareas manuales y optimizar tus ventas por WhatsApp. 📈'
   },
   {
-    globo1: '¡Hola! 🌟 Espero que estés teniendo un gran día. Por aquí Dominga de Atiéndeme la Pyme.',
+    globo1: '¡Hola! 🌟 Espero que estés teniendo un gran día. Soy Dominga, la asistente de IA de Atiéndeme la Pyme.',
     globo2: '¿De qué es tu negocio? 🏪 Cuéntame un poco y te muestro cómo dejar un asistente respondiendo por ti 💬 a cualquier hora, ¡incluso los fines de semana! ⏱️'
   },
   {
-    globo1: '¡Hola! 🙌 Te doy la bienvenida a Atiéndeme la Pyme. Soy Dominga.',
+    globo1: '¡Hola! 🙌 Bienvenido/a a Atiéndeme la Pyme. Soy Dominga, tu asistente de IA.',
     globo2: '¡Dime qué vendes u ofreces! 🏷️ Te armo altiro una propuesta 🤖 para responder consultas y agendar citas 🗓️ en automático para tu caso. 🤝'
   },
   {
-    globo1: '¡Hola! 📲 Qué tal. Soy Dominga de Atiéndeme la Pyme.',
+    globo1: '¡Hola! 📲 Qué tal. Soy Dominga, asistente de IA de Atiéndeme la Pyme.',
     globo2: 'Coméntame de qué se trata tu pyme 💡 y te muestro cómo resolver las dudas de tus clientes en segundos ⚡ sin que tengas que estar pegado al celular. 😊'
   },
   {
-    globo1: '¡Hola! 👋 Soy Dominga de Atiéndeme la Pyme. ¡Bienvenido/a!',
+    globo1: '¡Hola! 👋 Soy Dominga, asistente de IA de Atiéndeme la Pyme. ¡Bienvenido/a!',
     globo2: '¿De qué es tu negocio? 🏢 Cuéntame y te muestro de inmediato 💡 cómo la IA puede atender 📲 y agendar por ti 🗓️ desde hoy.'
   }
 ];

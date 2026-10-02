@@ -10,6 +10,15 @@ describe('static/public routes', () => {
     expect(html).toContain('Atiéndeme la Pyme');
   });
 
+  it('todos los saludos del chat web se identifican como asistente de IA', async () => {
+    const html = await (await SELF.fetch('https://example.com/')).text();
+    const greetings = [...html.matchAll(/first: '([^']+)'/g)].map((m) => m[1]);
+    expect(greetings.length).toBeGreaterThan(0);
+    for (const greeting of greetings) {
+      expect(greeting).toMatch(/asistente de IA/);
+    }
+  });
+
   it('serves /terminos with the design-system nav and footer', async () => {
     const res = await SELF.fetch('https://example.com/terminos');
     expect(res.status).toBe(200);

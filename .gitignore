@@ -8,3 +8,10 @@ node_modules/
 .agents/
 skills-lock.json
 .impeccable/
+
+# Local / temporales
+.gstack/
+.dev.vars
+coverage/
+*.mov
+*.mp4

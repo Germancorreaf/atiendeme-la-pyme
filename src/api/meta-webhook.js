@@ -11,7 +11,7 @@
 //   X-Hub-Signature-256 de cada request entrante.
 
 import { callClaude } from '../lib/anthropic.js';
-import { getRandomGreeting, buildSystemPrompt } from '../lib/dominga-prompt.js';
+import { getRandomGreeting, buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { timingSafeEqual } from '../lib/timingSafe.js';
 import { getConnectionByPageId, getConnectionByIgId } from '../lib/metaConnections.js';
@@ -148,10 +148,13 @@ async function handleEvent(event, entryId, isInstagram, context) {
   if (!rlCheck.allowed) return;
 
   const userMessage = event.message.text;
-  const history = await getConversationHistory(sessionId, env);
+  // Historial completo (para decidir la divulgación de IA) y los últimos 10
+  // mensajes (lo único que se le pasa al modelo).
+  const fullHistory = await getConversationHistory(sessionId, env, null);
+  const history = fullHistory.slice(-10);
   const reply = history.length === 0
     ? getRandomGreeting()
-    : await getClaudeReply(userMessage, history, context);
+    : withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
 
   // Solo se pide el perfil (nombre/username + foto) en el primer mensaje de
   // cada conversación -- evita una llamada extra a la Graph API por cada
@@ -188,7 +191,7 @@ async function fetchProfile(isInstagram, senderId, accessToken) {
   }
 }
 
-async function getConversationHistory(sessionId, env) {
+async function getConversationHistory(sessionId, env, limit = 10) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return [];
   try {
     const response = await fetch(
@@ -196,7 +199,8 @@ async function getConversationHistory(sessionId, env) {
       { headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` } }
     );
     const data = await response.json();
-    return data.length > 0 ? (data[0].messages || []).slice(-10) : [];
+    const all = data.length > 0 ? (data[0].messages || []) : [];
+    return limit == null ? all : all.slice(-limit);
   } catch (err) {
     console.error('Error fetching Meta history:', err.message);
     return [];

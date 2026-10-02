@@ -12,7 +12,7 @@
  */
 
 import { callClaude } from '../lib/anthropic.js';
-import { getRandomGreeting, buildSystemPrompt } from '../lib/dominga-prompt.js';
+import { getRandomGreeting, buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 
@@ -92,10 +92,13 @@ export async function onRequestPost(context) {
           const sessionId = `whatsapp_${phoneNumberId}_${from}`;
           const userMessage = message.text.body;
 
-          const history = await getConversationHistory(sessionId, env);
+          // Historial completo (decide la divulgación de IA) y últimos 10
+          // mensajes (lo único que se le pasa al modelo).
+          const fullHistory = await getConversationHistory(sessionId, env, null);
+          const history = fullHistory.slice(-10);
           const reply = history.length === 0
             ? getRandomGreeting()
-            : await getClaudeReply(userMessage, history, context);
+            : withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
 
           await saveMessage(sessionId, from, userMessage, reply, env, contactName);
           await sendMessage(from, reply, phoneNumberId, accessToken);
@@ -112,7 +115,7 @@ export async function onRequestPost(context) {
   }
 }
 
-async function getConversationHistory(sessionId, env) {
+async function getConversationHistory(sessionId, env, limit = 10) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return [];
 
   try {
@@ -126,7 +129,8 @@ async function getConversationHistory(sessionId, env) {
       }
     );
     const data = await response.json();
-    return data.length > 0 ? (data[0].messages || []).slice(-10) : [];
+    const all = data.length > 0 ? (data[0].messages || []) : [];
+    return limit == null ? all : all.slice(-limit);
   } catch (err) {
     console.error('Error fetching WhatsApp history:', err.message);
     return [];

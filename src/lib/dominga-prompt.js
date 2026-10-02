@@ -43,6 +43,51 @@ const PRICING_SUMMARY = `- Plan Básico: $149.990 implementación + $49.990/mes 
 - Add-on opcional: Landing Page Profesional $199.990 (pago único, aplica a cualquier plan).
 - Sin contratos. Cancela cuando quieras.`;
 
+// ---------------------------------------------------------------------------
+// Divulgación de IA garantizada por código (Meta / Messenger Platform policy).
+//
+// Los saludos de INITIAL_GREETINGS ya se identifican como IA, pero solo se usan
+// en la PRIMERA interacción de cada conversación. El resto de las respuestas las
+// genera el modelo y la instrucción del prompt no es una garantía: se comprobó en
+// producción que respuestas de Dominga en conversaciones existentes no se
+// identificaban. Estas funciones lo fuerzan por código, sin depender del modelo.
+// ---------------------------------------------------------------------------
+export const AI_DISCLOSURE_LINE = 'Soy Dominga, asistente de IA de Atiéndeme la Pyme.';
+
+// Pausa a partir de la cual se vuelve a avisar que es una experiencia
+// automatizada (Meta lo pide "tras una pausa larga").
+export const AI_DISCLOSURE_REPEAT_AFTER_MS = 6 * 60 * 60 * 1000;
+
+// Solo frases que son una auto-identificación inequívoca. "chatbot IA" o
+// "asistentes de IA" (hablando del producto) NO cuentan.
+const AI_SELF_ID_RE = /\basistente (virtual )?(de|con) (IA|inteligencia artificial)\b|\bsoy una? (IA|inteligencia artificial)\b/i;
+
+export function hasAiDisclosure(text) {
+  return typeof text === 'string' && AI_SELF_ID_RE.test(text);
+}
+
+/**
+ * ¿Hay que anteponer la línea de divulgación a la próxima respuesta?
+ * Sí si: (a) ninguna respuesta previa del asistente se identificó como IA, o
+ * (b) pasó más de AI_DISCLOSURE_REPEAT_AFTER_MS desde el último mensaje.
+ * `history` debe ser el historial COMPLETO de la conversación (no solo los
+ * últimos mensajes que se le pasan al modelo).
+ */
+export function needsAiDisclosure(history, now = Date.now()) {
+  const list = Array.isArray(history) ? history : [];
+  const disclosed = list.some((m) => m && m.role === 'assistant' && hasAiDisclosure(m.content));
+  if (!disclosed) return true;
+  const lastTs = Date.parse(list[list.length - 1]?.timestamp || '');
+  return Number.isFinite(lastTs) && now - lastTs > AI_DISCLOSURE_REPEAT_AFTER_MS;
+}
+
+/** Devuelve `reply` con la línea de divulgación antepuesta cuando corresponde. */
+export function withAiDisclosure(reply, history, now = Date.now()) {
+  if (hasAiDisclosure(reply)) return reply;
+  if (!needsAiDisclosure(history, now)) return reply;
+  return `${AI_DISCLOSURE_LINE}\n\n${reply}`;
+}
+
 export function getRandomGreeting() {
   const pick = INITIAL_GREETINGS[Math.floor(Math.random() * INITIAL_GREETINGS.length)];
   return `${pick.globo1}\n\n${pick.globo2}`;
@@ -118,6 +163,19 @@ Si quieren agendar: pide nombre, email y el horario que prefieren, y avísales q
 
   return `Eres Dominga. Asistente de IA para Atiéndeme la Pyme.
 
+🤖 IDENTIDAD — CRÍTICO PARA CUMPLIMIENTO DE POLÍTICAS META:
+**EN TODOS TUS MENSAJES, identifícate explícitamente como asistente de IA.**
+No es opcional. No depende del usuario. Es OBLIGATORIO en cada mensaje.
+
+Ejemplos de cómo identificarte:
+- "Soy Dominga, asistente de IA de Atiéndeme la Pyme..."
+- "Como asistente de IA, te digo que..."
+- "Soy una IA llamada Dominga..."
+- "Yo soy Dominga, una asistente de IA..."
+
+Esto aplica en TODOS los contextos: primer mensaje, respuestas posteriores, mensajes breves, mensajes largos.
+Si NO te identificas como IA en un mensaje, es una violación de las políticas de Meta/Instagram/Messenger.
+
 FECHA: Hoy es ${weekday}, ${todayISO}. Mañana ${tomorrowISO}. USA estas fechas reales.
 
 ---TONO---
@@ -153,13 +211,18 @@ ${lengthRule}
 ✓ Chileno pero entendible
 ✓ Directo. Sin rodeos. Sin "por supuesto que sí, déjeme informarle"
 ✓ Usa fechas reales (${todayISO}, ${tomorrowISO})
-✓ Si el usuario dice algo que te emociona (desplegó su negocio, quiere agendar), muestra emoción genuina con un emoji.`;
+✓ Si el usuario dice algo que te emociona (desplegó su negocio, quiere agendar), muestra emoción genuina con un emoji.
+✓ **SIEMPRE identifícate como asistente de IA en cada respuesta.**`;
 }
 
 
 export function buildEmailSystemPrompt() {
   const { todayISO, weekday } = getTodayInfo();
-  return `Eres Dominga, asistente de Atiéndeme la Pyme. Estás redactando un BORRADOR de respuesta a un correo entrante para que un humano lo revise antes de enviarlo.
+  return `Eres Dominga, asistente de IA de Atiéndeme la Pyme. Estás redactando un BORRADOR de respuesta a un correo entrante para que un humano lo revise antes de enviarlo.
+
+🤖 IDENTIDAD:
+En correos formales, identifícate como asistente de IA de forma natural pero clara.
+Puedes decir: "Soy Dominga, asistente de IA de Atiéndeme la Pyme..."
 
 FECHA: Hoy es ${weekday}, ${todayISO}.
 

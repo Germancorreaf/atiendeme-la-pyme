@@ -14,7 +14,7 @@ import { callClaude } from '../lib/anthropic.js';
 import { getRandomGreeting, buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { timingSafeEqual } from '../lib/timingSafe.js';
-import { getConnectionByPageId, getConnectionByIgId } from '../lib/metaConnections.js';
+import { getConnectionByPageId, getConnectionByIgId, usesInstagramToken } from '../lib/metaConnections.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -137,6 +137,10 @@ async function handleEvent(event, entryId, isInstagram, context) {
   }
 
   const channel = isInstagram ? 'instagram' : 'messenger';
+  // El host de la Graph API depende del TIPO DE TOKEN guardado, no solo del canal:
+  // una conexión hecha vía Página de Facebook usa token de Facebook aunque el
+  // mensaje venga de Instagram.
+  const instagramHost = isInstagram && usesInstagramToken(connection);
   const sessionId = `${channel}_${senderId}`;
 
   const rlCheck = await checkAllLimits(sessionId, env.RATE_LIMIT_KV, {
@@ -161,11 +165,11 @@ async function handleEvent(event, entryId, isInstagram, context) {
   // mensaje, y saveMessage no pisa un perfil ya guardado si esta llamada
   // se omite o falla.
   const profile = history.length === 0
-    ? await fetchProfile(isInstagram, senderId, connection.page_access_token)
+    ? await fetchProfile(isInstagram, senderId, connection.page_access_token, instagramHost)
     : null;
 
   await saveMessage(sessionId, senderId, userMessage, reply, env, profile);
-  await sendMessage(isInstagram, connection.page_id, connection.page_access_token, senderId, reply);
+  await sendMessage(instagramHost, connection.page_id, connection.page_access_token, senderId, reply);
 }
 
 // Perfil público del remitente (nombre/username + foto), vía la misma Graph
@@ -173,8 +177,8 @@ async function handleEvent(event, entryId, isInstagram, context) {
 // (lo que se muestra como @usuario en el resto de la app); Messenger solo
 // tiene "name". Si falla (token vencido, ID de prueba, etc.) no debe romper
 // el envío del mensaje -- por eso siempre se atrapa el error acá.
-async function fetchProfile(isInstagram, senderId, accessToken) {
-  const host = isInstagram ? 'graph.instagram.com' : 'graph.facebook.com';
+async function fetchProfile(isInstagram, senderId, accessToken, useInstagramHost = isInstagram) {
+  const host = useInstagramHost ? 'graph.instagram.com' : 'graph.facebook.com';
   const fields = isInstagram ? 'name,username,profile_pic' : 'name,profile_pic';
   try {
     const res = await fetch(

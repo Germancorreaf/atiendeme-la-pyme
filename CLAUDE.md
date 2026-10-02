@@ -8,8 +8,9 @@ Datos en Supabase; modelo: API de Anthropic. Idioma del proyecto: español de Ch
 1. `git status` y `git log --oneline -3`. **Si hay archivos modificados que no son tuyos, otra sesión está
    trabajando: no los edites, no los incluyas en tu commit, no los reviertas.** Commitea solo tus archivos
    (`git add <archivo>`, nunca `git add -A`).
-2. Trabaja siempre en `~/atiendeme-la-pyme`. **La carpeta `~/Desktop/atiendeme-la-pyme` es una copia vieja
-   (100+ commits atrás): no se usa ni se despliega desde ahí.**
+2. Trabaja siempre en `~/atiendeme-la-pyme`, la única copia del repo. Si aparece otra copia (Escritorio,
+   Descargas…) es vieja: no se usa ni se despliega desde ahí (la del Escritorio estaba 100+ commits atrás y se
+   retiró el 2026-10-02).
 
 ## Comandos
 - `npm test` — vitest con el pool de Cloudflare Workers (hay que dejarlo en verde antes de commitear).
@@ -53,3 +54,5 @@ revisión siga abierta **no renombres esos textos ni cambies los scopes de OAuth
 - Cambios de comportamiento ⇒ test que falle sin el cambio. Corre `npm test` completo antes de subir.
 - Ramas de trabajo se borran al integrarlas; las `respaldo-*` son copias antiguas a propósito.
 - Respaldo antes de limpiezas grandes: `git bundle create ~/atiende-backups/<fecha>.bundle --all`.
+- Material no-código (marca, diseño histórico, evidencia y videos del App Review): `~/Documents/Atiéndeme la Pyme/`.
+  No va al repo (`*.mov`/`*.mp4` están en `.gitignore`).

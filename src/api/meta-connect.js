@@ -34,7 +34,7 @@
 // Protegido detras de la sesion de /admin (checkSessionAuth): solo alguien
 // ya logueado en el dashboard puede iniciar o completar esta conexion.
 
-import { checkSessionAuth } from '../lib/adminSession.js';
+import { checkSessionAuth, isCrossSiteRequest } from '../lib/adminSession.js';
 import { timingSafeEqual } from '../lib/timingSafe.js';
 import { upsertConnection, deleteConnectionByPageId, getConnectionByPageId } from '../lib/metaConnections.js';
 
@@ -243,6 +243,9 @@ export async function onRequestGetDeleteConnection(context) {
   const { request, env } = context;
   if (!(await checkSessionAuth(request, env))) {
     return new Response('Unauthorized', { status: 401 });
+  }
+  if (isCrossSiteRequest(request)) {
+    return new Response('Forbidden', { status: 403 });
   }
   const url = new URL(request.url);
   const pageId = url.searchParams.get('page_id');

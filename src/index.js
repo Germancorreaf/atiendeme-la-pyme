@@ -1558,8 +1558,10 @@ export default {
             }
             if (pathname.startsWith('/ws/chat/')) {
                 const sessionId = pathname.slice('/ws/chat/'.length);
-                if (!sessionId) {
-                    return new Response('sessionId requerido', { status: 400 });
+                // Mismo formato que valida /api/chat (hex/guiones, 32-64): evita
+                // crear salas arbitrarias del Durable Object con cualquier texto.
+                if (!/^[a-f0-9-]{32,64}$/.test(sessionId)) {
+                    return new Response('sessionId inválido', { status: 400 });
                 }
                 return await routeToChatRoom(env, sessionId, 'visitor', request);
             }

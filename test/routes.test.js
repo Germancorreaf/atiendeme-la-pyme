@@ -66,8 +66,15 @@ describe('static/public routes', () => {
 
 describe('/ws/chat and /ws/admin-chat routing', () => {
   it('requires a websocket upgrade for /ws/chat/:sessionId', async () => {
-    const res = await SELF.fetch('https://example.com/ws/chat/some-session');
+    const res = await SELF.fetch('https://example.com/ws/chat/' + 'a'.repeat(32));
     expect(res.status).toBe(426);
+  });
+
+  it('rejects /ws/chat/ with a sessionId that is not hex/dashes 32-64', async () => {
+    const res = await SELF.fetch('https://example.com/ws/chat/some-session', {
+      headers: { Upgrade: 'websocket' },
+    });
+    expect(res.status).toBe(400);
   });
 
   it('rejects /ws/chat/ with no sessionId', async () => {

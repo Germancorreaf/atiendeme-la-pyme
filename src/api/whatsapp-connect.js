@@ -23,7 +23,7 @@
 // Protegido detrás de la sesión de /admin: solo alguien ya logueado en el
 // dashboard puede iniciar o completar esta conexión.
 
-import { checkSessionAuth } from '../lib/adminSession.js';
+import { checkSessionAuth, isCrossSiteRequest } from '../lib/adminSession.js';
 import {
   upsertWhatsappConnection,
   deleteWhatsappConnection,
@@ -199,7 +199,7 @@ export async function onRequestPostExchange(context) {
     // mensajes). El PIN es de verificación en dos pasos de WhatsApp, no una
     // credencial que Germán deba recordar -- se genera al azar acá porque
     // solo se usa internamente, vía API, nunca se ingresa a mano.
-    const pin = String(Math.floor(100000 + Math.random() * 900000));
+    const pin = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
     const registerRes = await fetch(
       `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/register?access_token=${encodeURIComponent(longLivedToken)}`,
       {
@@ -244,6 +244,9 @@ export async function onRequestGetDeleteConnection(context) {
   const { request, env } = context;
   if (!(await checkSessionAuth(request, env))) {
     return new Response('Unauthorized', { status: 401 });
+  }
+  if (isCrossSiteRequest(request)) {
+    return new Response('Forbidden', { status: 403 });
   }
   const url = new URL(request.url);
   const phoneNumberId = url.searchParams.get('phone_number_id');

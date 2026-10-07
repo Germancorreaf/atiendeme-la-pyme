@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { env as workerEnv } from 'cloudflare:test';
 import { onRequestPost } from '../../src/api/whatsapp.js';
 import { AI_DISCLOSURE_LINE } from '../../src/lib/dominga-prompt.js';
+import { computeHmacSha256Hex } from '../../src/lib/metaSignature.js';
 
 const NOW = Date.now();
 const ts = (minAgo) => new Date(NOW - minAgo * 60000).toISOString();
@@ -32,8 +33,9 @@ async function deliver(from) {
       messages: [{ type: 'text', from, text: { body: 'Hola, ¿cómo funciona el servicio?' } }],
     } }] }],
   });
-  const req = new Request('https://example.com/webhook/whatsapp', { method: 'POST', body, headers: { 'Content-Type': 'application/json' } });
-  const env = { SUPABASE_URL: 'https://supabase.test', SUPABASE_SERVICE_KEY: 'k', ANTHROPIC_API_KEY: 'a', RATE_LIMIT_KV: workerEnv.RATE_LIMIT_KV };
+  const sig = 'sha256=' + await computeHmacSha256Hex('test-app-secret', body);
+  const req = new Request('https://example.com/webhook/whatsapp', { method: 'POST', body, headers: { 'Content-Type': 'application/json', 'X-Hub-Signature-256': sig } });
+  const env = { META_APP_SECRET: 'test-app-secret', SUPABASE_URL: 'https://supabase.test', SUPABASE_SERVICE_KEY: 'k', ANTHROPIC_API_KEY: 'a', RATE_LIMIT_KV: workerEnv.RATE_LIMIT_KV };
   const res = await onRequestPost({ request: req, env, ctx: { waitUntil: () => {} } });
   expect(res.status).toBe(200);
 }

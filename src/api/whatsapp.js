@@ -15,6 +15,7 @@ import { callClaude } from '../lib/anthropic.js';
 import { getRandomGreeting, buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
+import { verifyMetaSignature } from '../lib/metaSignature.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -42,7 +43,15 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   try {
-    const body = await request.json();
+    // Sin firma válida de Meta (X-Hub-Signature-256) se descarta el POST:
+    // si no, cualquiera que conozca la URL podría hacer gastar Claude y
+    // mandar WhatsApps desde el número del negocio.
+    const rawBody = await request.text();
+    if (!(await verifyMetaSignature(request, rawBody, [env.META_APP_SECRET, env.INSTAGRAM_APP_SECRET]))) {
+      console.warn('WhatsApp webhook: firma X-Hub-Signature-256 inválida o ausente, se rechaza');
+      return new Response('Forbidden', { status: 403 });
+    }
+    const body = JSON.parse(rawBody);
     const entries = body.entry || [];
 
     for (const entry of entries) {

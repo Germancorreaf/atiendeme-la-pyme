@@ -86,3 +86,13 @@ export async function checkSessionAuth(request, env) {
     return false;
   }
 }
+
+// Las rutas "Desconectar" borran con un GET y la cookie de sesión es
+// SameSite=Lax (se envía en navegaciones de primer nivel desde otros sitios).
+// Sin esta guardia, un link ajeno abierto con la sesión de admin activa
+// podría desconectar una cuenta. Los navegadores modernos informan el origen
+// en Sec-Fetch-Site; un clic desde /admin llega como "same-origin".
+export function isCrossSiteRequest(request) {
+  const site = request.headers.get('Sec-Fetch-Site');
+  return site === 'cross-site' || site === 'same-site';
+}

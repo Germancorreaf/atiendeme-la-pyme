@@ -13,7 +13,7 @@
 import { callClaude } from '../lib/anthropic.js';
 import { getRandomGreeting, buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
-import { timingSafeEqual } from '../lib/timingSafe.js';
+import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { getConnectionByPageId, getConnectionByIgId, usesInstagramToken } from '../lib/metaConnections.js';
 
 const GRAPH_API_VERSION = 'v21.0';
@@ -44,29 +44,8 @@ export async function onRequestGet(context) {
 // -- son dos apps/secrets distintos dentro del mismo panel de Meta. Probamos
 // ambos para no romper si en el futuro llegan también webhooks de
 // Página/Messenger firmados con META_APP_SECRET.
-async function computeHmacSha256Hex(secret, rawBody) {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signatureBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
-  return [...new Uint8Array(signatureBuffer)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 async function verifySignature(request, rawBody, env) {
-  const signatureHeader = request.headers.get('X-Hub-Signature-256') || '';
-  if (!signatureHeader.startsWith('sha256=')) return false;
-  const receivedHex = signatureHeader.slice('sha256='.length);
-
-  const secrets = [env.INSTAGRAM_APP_SECRET, env.META_APP_SECRET].filter(Boolean);
-  for (const secret of secrets) {
-    const expectedHex = await computeHmacSha256Hex(secret, rawBody);
-    if (timingSafeEqual(receivedHex, expectedHex)) return true;
-  }
-  return false;
+  return verifyMetaSignature(request, rawBody, [env.INSTAGRAM_APP_SECRET, env.META_APP_SECRET]);
 }
 
 async function alreadyProcessed(messageId, env) {

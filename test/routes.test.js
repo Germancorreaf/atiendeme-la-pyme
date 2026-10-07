@@ -19,6 +19,20 @@ describe('static/public routes', () => {
     }
   });
 
+  it('carga Microsoft Clarity, la CSP lo permite y el chat queda enmascarado en las grabaciones', async () => {
+    for (const path of ['/', '/chatbot-ia-para-veterinarias']) {
+      const res = await SELF.fetch('https://example.com' + path);
+      const csp = res.headers.get('Content-Security-Policy');
+      expect(csp).toMatch(/script-src [^;]*https:\/\/\*\.clarity\.ms/);
+      expect(csp).toMatch(/connect-src [^;]*https:\/\/\*\.clarity\.ms/);
+      expect(await res.text()).toContain('https://www.clarity.ms/tag/yu5gw10tb4');
+    }
+    const html = await (await SELF.fetch('https://example.com/')).text();
+    expect(html).toContain('id="atp-chat-panel" data-clarity-mask="true"');
+    const privacy = await (await SELF.fetch('https://example.com/privacidad')).text();
+    expect(privacy).toContain('Microsoft Clarity');
+  });
+
   it('serves /terminos with the design-system nav and footer', async () => {
     const res = await SELF.fetch('https://example.com/terminos');
     expect(res.status).toBe(200);

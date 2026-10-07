@@ -149,6 +149,12 @@ gtag('config', 'G-V709QK49JE');
     s.async = true;
     s.src = 'https://www.googletagmanager.com/gtag/js?id=G-V709QK49JE';
     document.head.appendChild(s);
+    // Microsoft Clarity (mapas de calor y grabaciones), con la misma carga diferida.
+    window.clarity = window.clarity || function(){ (window.clarity.q = window.clarity.q || []).push(arguments); };
+    var c = document.createElement('script');
+    c.async = true;
+    c.src = 'https://www.clarity.ms/tag/yu5gw10tb4';
+    document.head.appendChild(c);
   }
   triggers.forEach(function(t){ window.addEventListener(t, loadGA, { passive: true }); });
   window.addEventListener('load', function(){ setTimeout(loadGA, 6000); });

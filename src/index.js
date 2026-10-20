@@ -1376,13 +1376,13 @@ ${VERTICAL_SLUGS.map((slug) => `  <url>
   </url>
 `).join('')}  <url>
     <loc>https://atiendemelapyme.cl/privacidad</loc>
-    <lastmod>2026-07-22</lastmod>
+    <lastmod>2026-10-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://atiendemelapyme.cl/terminos</loc>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-10-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

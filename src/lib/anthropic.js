@@ -4,13 +4,19 @@
 import { ApiError, fetchWithTimeout } from './errors.js';
 
 const ANTHROPIC_API_BASE = 'https://api.anthropic.com/v1';
-const DEFAULT_MODEL = 'claude-sonnet-4-5-20250929';
+// Claude Haiku 5.5: el modelo más económico ($0,10 / $0,50 por millón de
+// tokens de entrada / salida). Alcanza para conversar, responder y agendar.
+// Piensa antes de responder (adaptive thinking por defecto): el esfuerzo
+// `low` lo mantiene corto, y ese pensamiento cuenta dentro de max_tokens.
+const DEFAULT_MODEL = 'claude-haiku-5-5';
+const DEFAULT_EFFORT = 'low';
 const DEFAULT_TIMEOUT = 30000;
 
 export async function callClaude(messages, systemPrompt, context, options = {}) {
   const {
     model = DEFAULT_MODEL,
-    maxTokens = 1024,
+    effort = DEFAULT_EFFORT,
+    maxTokens = 2048,
     timeout = DEFAULT_TIMEOUT,
     apiKeyVar = 'ANTHROPIC_API_KEY'
   } = options;
@@ -25,7 +31,8 @@ export async function callClaude(messages, systemPrompt, context, options = {}) 
     model,
     max_tokens: maxTokens,
     system: systemPrompt,
-    messages
+    messages,
+    output_config: { effort }
   };
 
   try {
@@ -57,8 +64,11 @@ export async function callClaude(messages, systemPrompt, context, options = {}) 
     const textBlock = data.content?.find((block) => block.type === 'text');
     
     if (!textBlock || !textBlock.text) {
-      throw new ApiError('No text content in Anthropic response', 500, {
-        responseContent: data.content
+      // stop_reason "refusal" (filtros de seguridad del modelo, con
+      // stop_details.category) o "max_tokens" (el pensamiento usó el tope).
+      throw new ApiError(`No text content in Anthropic response (stop_reason: ${data.stop_reason})`, 500, {
+        stopReason: data.stop_reason,
+        stopDetails: data.stop_details
       });
     }
 

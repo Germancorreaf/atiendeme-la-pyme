@@ -42,10 +42,7 @@ async function getClaudeReply(userMessage, history, context, systemPrompt, chann
     { role: 'user', content: userMessage }
   ];
   try {
-    return await callClaude(messages, systemPrompt, context, {
-      model: 'claude-haiku-4-5-20251001',
-      maxTokens: 512
-    });
+    return await callClaude(messages, systemPrompt, context);
   } catch (err) {
     console.error(`Claude call failed for ${channel}:`, err.message);
     return 'Lo siento, tuve un problema técnico. Intenta de nuevo.';

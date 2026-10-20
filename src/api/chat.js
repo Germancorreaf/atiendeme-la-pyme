@@ -183,10 +183,7 @@ export async function onRequestPost(context) {
     // mensaje real del usuario, y siempre debe ir a Claude — nunca a un
     // saludo enlatado, o se ignoraría lo que la persona realmente escribió.
     const systemPrompt = buildSystemPrompt({ canScheduleViaJSON: true });
-    const reply = await callClaude(limitedMessages, systemPrompt, context, {
-      model: 'claude-haiku-4-5-20251001',
-      maxTokens: 1024
-    });
+    const reply = await callClaude(limitedMessages, systemPrompt, context);
 
     const lastUserMessage = [...limitedMessages].reverse().find((m) => m.role === 'user');
     const escalation = detectEscalation(lastUserMessage?.content || '', reply);

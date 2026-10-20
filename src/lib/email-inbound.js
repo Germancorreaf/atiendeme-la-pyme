@@ -108,7 +108,8 @@ export async function handleInboundEmail(message, env, ctx) {
       [{ role: 'user', content: bodyText }],
       buildEmailSystemPrompt(),
       { env },
-      { maxTokens: 600 }
+      // Borrador formal de correo: un poco más de cuidado que un chat.
+      { effort: 'medium' }
     );
 
     const result = await notifyGerman({ fromEmail, fromName, subject, originalText: bodyText, draftText, env });

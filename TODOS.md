@@ -125,7 +125,7 @@ create unique index if not exists scheduled_appointments_unique_slot
 ### Otros menores
 
 - **Modelo de borradores de correo:** `src/lib/email-inbound.js` usa el modelo por defecto de `src/lib/anthropic.js` (`claude-sonnet-4-5-20250929`). Cambiarlo es decisión de costo/calidad.
-- **Webhook legado `/webhook/instagram`:** solo responde la verificación GET y usa `FACEBOOK_VERIFY_TOKEN`. Si la suscripción antigua ya no está en el panel de Meta, borrar `src/api/instagram.js`, su ruta y ese secret.
+- **Herramientas de test con vulnerabilidades (solo desarrollo):** `@cloudflare/vitest-pool-workers` (0.22 y 0.23) trae su propio wrangler/miniflare con `sharp` y `undici` vulnerables. No llega a producción (`npm audit --omit=dev` = 0). Actualizar cuando salga una versión que use wrangler ≥ 4.131.
 - **robots.txt administrado por Cloudflare:** bloquea bots de entrenamiento de IA (no los de búsqueda). Decidir si mantenerlo (se cambia en Cloudflare, no en el código).
 
 ## Completed

@@ -78,6 +78,22 @@ describe('static/public routes', () => {
   });
 });
 
+describe('limpieza', () => {
+  it('el webhook legado /webhook/instagram ya no existe (los mensajes llegan por /webhook/meta)', async () => {
+    expect((await SELF.fetch('https://example.com/webhook/instagram')).status).toBe(404);
+    expect((await SELF.fetch('https://example.com/webhook/instagram', { method: 'POST', body: '{}' })).status).toBe(404);
+  });
+
+  it('/og-image.png se sirve igual en requests repetidas (decodificada una vez)', async () => {
+    for (let i = 0; i < 2; i++) {
+      const res = await SELF.fetch('https://example.com/og-image.png');
+      expect(res.status).toBe(200);
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      expect([...bytes.slice(1, 4)].map((c) => String.fromCharCode(c)).join('')).toBe('PNG');
+    }
+  });
+});
+
 describe('/ws/chat and /ws/admin-chat routing', () => {
   it('requires a websocket upgrade for /ws/chat/:sessionId', async () => {
     const res = await SELF.fetch('https://example.com/ws/chat/' + 'a'.repeat(32));

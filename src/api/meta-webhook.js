@@ -11,7 +11,7 @@
 //   X-Hub-Signature-256 de cada request entrante.
 
 import { callClaude } from '../lib/anthropic.js';
-import { buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
+import { botFor, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { limitRequest } from '../lib/rateLimit.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { getConnectionByPageId, getConnectionByIgId, usesInstagramToken } from '../lib/metaConnections.js';
@@ -132,7 +132,12 @@ async function handleEvent(event, entryId, isInstagram, context) {
   // ("¿tienen hora mañana?"), un saludo genérico dejaría su pregunta sin
   // respuesta. La divulgación de IA la fuerza withAiDisclosure (historial vacío
   // => siempre se antepone la línea).
-  const reply = withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
+  // Bot del cliente (bot_prompt de su conexión) o Dominga si no tiene.
+  const bot = botFor(connection);
+  const reply = withAiDisclosure(
+    await getClaudeReply(userMessage, history, context, bot.systemPrompt),
+    fullHistory, Date.now(), bot.disclosureLine
+  );
 
   // Solo se pide el perfil (nombre/username + foto) en el primer mensaje de
   // cada conversación -- evita una llamada extra a la Graph API por cada
@@ -148,7 +153,8 @@ async function handleEvent(event, entryId, isInstagram, context) {
   if (escalation.escalate) {
     await sendEscalationNotification({
       sessionId, reason: escalation.reason, userMessage, botReply: reply,
-      leadContact: profile?.name || null, channel: isInstagram ? 'Instagram' : 'Messenger'
+      leadContact: profile?.name || null,
+      channel: `${isInstagram ? 'Instagram' : 'Messenger'}${bot.businessName ? ` · ${bot.businessName}` : ''}`
     }, env);
   }
 }
@@ -192,17 +198,13 @@ async function getConversationHistory(sessionId, env, limit = 10) {
   }
 }
 
-async function getClaudeReply(userMessage, history, context) {
+async function getClaudeReply(userMessage, history, context, systemPrompt) {
   const messages = [
     ...history.map((msg) => ({ role: msg.role, content: msg.content })),
     { role: 'user', content: userMessage }
   ];
 
   try {
-    // canScheduleViaJSON: false porque este canal reenvía la respuesta de
-    // Claude directo como texto vía Send API. brief: true porque
-    // Instagram/Messenger piden mensajes cortos, igual que WhatsApp.
-    const systemPrompt = buildSystemPrompt({ canScheduleViaJSON: false, brief: true });
     return await callClaude(messages, systemPrompt, context, {
       model: 'claude-haiku-4-5-20251001',
       maxTokens: 512

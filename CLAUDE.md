@@ -43,6 +43,14 @@ Datos en Supabase; modelo: API de Anthropic. Idioma del proyecto: español de Ch
   (`graph.instagram.com` vs `graph.facebook.com`) depende del **tipo de token**, no del canal
   (`usesInstagramToken`, `pickInstagramConnection`). Mezclarlos da "Cannot parse access token".
 
+## Bot de cada cliente
+- Columna `bot_prompt` (texto) en `meta_connections` y `whatsapp_connections`: información del negocio que Germán
+  escribe en la implementación. Con texto, Claude responde como "la asistente de IA de {negocio}" con esos datos
+  (`botFor` / `buildClientPrompt` en `dominga-prompt.js`); vacía = Dominga de Atiéndeme la Pyme (cuentas propias).
+- El nombre del negocio sale de `business_name` (WhatsApp) o `page_name` / `ig_username` (Meta).
+- Un mismo Instagram puede tener dos filas en `meta_connections` (ver arriba): el `bot_prompt` va en ambas.
+- Los avisos de escalamiento llegan a Germán con el nombre del cliente en el asunto.
+
 ## App Review de Meta
 Instagram/Messenger: aprobado (2026-10-20). WhatsApp (Tech Provider): pendiente. Mientras la revisión de
 WhatsApp siga abierta, **no renombres los textos y botones del panel que salen en los videos** (`Conectar WhatsApp`,

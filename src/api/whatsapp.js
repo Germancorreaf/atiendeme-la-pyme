@@ -12,7 +12,7 @@
  */
 
 import { callClaude } from '../lib/anthropic.js';
-import { buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
+import { botFor, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { limitRequest } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
@@ -129,9 +129,14 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
   // mensajes (lo único que se le pasa al modelo).
   const fullHistory = await getConversationHistory(sessionId, env, null);
   const history = fullHistory.slice(-10);
+  // Bot del cliente (bot_prompt de su conexión) o Dominga si no tiene.
+  const bot = botFor(connection);
   // El primer mensaje también va a Claude (ver meta-webhook.js): la
   // divulgación de IA la fuerza withAiDisclosure con historial vacío.
-  const reply = withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
+  const reply = withAiDisclosure(
+    await getClaudeReply(userMessage, history, context, bot.systemPrompt),
+    fullHistory, Date.now(), bot.disclosureLine
+  );
 
   const escalation = detectEscalation(userMessage, reply, { messaging: true });
   await saveMessage(sessionId, from, userMessage, reply, env, contactName, escalation);
@@ -139,7 +144,7 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
   if (escalation.escalate) {
     await sendEscalationNotification({
       sessionId, reason: escalation.reason, userMessage, botReply: reply,
-      leadContact: `+${from}`, channel: 'WhatsApp'
+      leadContact: `+${from}`, channel: bot.businessName ? `WhatsApp · ${bot.businessName}` : 'WhatsApp'
     }, env);
   }
 }
@@ -166,17 +171,13 @@ async function getConversationHistory(sessionId, env, limit = 10) {
   }
 }
 
-async function getClaudeReply(userMessage, history, context) {
+async function getClaudeReply(userMessage, history, context, systemPrompt) {
   const messages = [
     ...history.map((msg) => ({ role: msg.role, content: msg.content })),
     { role: 'user', content: userMessage }
   ];
 
   try {
-    // canScheduleViaJSON: false porque este canal reenvía la respuesta de
-    // Claude directo como texto a WhatsApp. brief: true porque WhatsApp
-    // pide mensajes cortos, igual que Instagram.
-    const systemPrompt = buildSystemPrompt({ canScheduleViaJSON: false, brief: true });
     return await callClaude(messages, systemPrompt, context, {
       model: 'claude-haiku-4-5-20251001',
       maxTokens: 512

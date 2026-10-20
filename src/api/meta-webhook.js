@@ -10,14 +10,11 @@
 // - META_APP_SECRET: App Secret de la app, para validar la firma
 //   X-Hub-Signature-256 de cada request entrante.
 
-import { callClaude } from '../lib/anthropic.js';
-import { botFor, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { limitRequest } from '../lib/rateLimit.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { getConnectionByPageId, getConnectionByIgId, usesInstagramToken } from '../lib/metaConnections.js';
-import { detectEscalation } from '../lib/escalation.js';
-import { sendEscalationNotification } from '../lib/email.js';
 import { alreadyProcessed } from '../lib/dedup.js';
+import { replyToMessage } from '../lib/chatSessions.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -123,40 +120,18 @@ async function handleEvent(event, entryId, isInstagram, context) {
   });
   if (!rlCheck.allowed) return;
 
-  const userMessage = event.message.text;
-  // Historial completo (para decidir la divulgación de IA) y los últimos 10
-  // mensajes (lo único que se le pasa al modelo).
-  const fullHistory = await getConversationHistory(sessionId, env, null);
-  const history = fullHistory.slice(-10);
-  // El primer mensaje también va a Claude: si el cliente ya pregunta algo
-  // ("¿tienen hora mañana?"), un saludo genérico dejaría su pregunta sin
-  // respuesta. La divulgación de IA la fuerza withAiDisclosure (historial vacío
-  // => siempre se antepone la línea).
-  // Bot del cliente (bot_prompt de su conexión) o Dominga si no tiene.
-  const bot = botFor(connection);
-  const reply = withAiDisclosure(
-    await getClaudeReply(userMessage, history, context, bot.systemPrompt),
-    fullHistory, Date.now(), bot.disclosureLine
-  );
-
-  // Solo se pide el perfil (nombre/username + foto) en el primer mensaje de
-  // cada conversación -- evita una llamada extra a la Graph API por cada
-  // mensaje, y saveMessage no pisa un perfil ya guardado si esta llamada
-  // se omite o falla.
-  const profile = history.length === 0
-    ? await fetchProfile(isInstagram, senderId, connection.page_access_token, instagramHost)
-    : null;
-
-  const escalation = detectEscalation(userMessage, reply, { messaging: true });
-  await saveMessage(sessionId, senderId, userMessage, reply, env, profile, escalation);
-  await sendMessage(instagramHost, connection.page_id, connection.page_access_token, senderId, reply);
-  if (escalation.escalate) {
-    await sendEscalationNotification({
-      sessionId, reason: escalation.reason, userMessage, botReply: reply,
-      leadContact: profile?.name || null,
-      channel: `${isInstagram ? 'Instagram' : 'Messenger'}${bot.businessName ? ` · ${bot.businessName}` : ''}`
-    }, env);
-  }
+  await replyToMessage({
+    sessionId,
+    userMessage: event.message.text,
+    connection,
+    channel: isInstagram ? 'Instagram' : 'Messenger',
+    leadContact: senderId,
+    // Perfil (nombre/username + foto): saveExchange no pisa uno ya guardado
+    // si esta llamada se omite o falla.
+    loadProfile: () => fetchProfile(isInstagram, senderId, connection.page_access_token, instagramHost),
+    send: (reply) => sendMessage(instagramHost, connection.page_id, connection.page_access_token, senderId, reply),
+    context
+  });
 }
 
 // Perfil público del remitente (nombre/username + foto), vía la misma Graph
@@ -182,94 +157,6 @@ async function fetchProfile(isInstagram, senderId, accessToken, useInstagramHost
   }
 }
 
-async function getConversationHistory(sessionId, env, limit = 10) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return [];
-  try {
-    const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodeURIComponent(sessionId)}`,
-      { headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` } }
-    );
-    const data = await response.json();
-    const all = data.length > 0 ? (data[0].messages || []) : [];
-    return limit == null ? all : all.slice(-limit);
-  } catch (err) {
-    console.error('Error fetching Meta history:', err.message);
-    return [];
-  }
-}
-
-async function getClaudeReply(userMessage, history, context, systemPrompt) {
-  const messages = [
-    ...history.map((msg) => ({ role: msg.role, content: msg.content })),
-    { role: 'user', content: userMessage }
-  ];
-
-  try {
-    return await callClaude(messages, systemPrompt, context, {
-      model: 'claude-haiku-4-5-20251001',
-      maxTokens: 512
-    });
-  } catch (err) {
-    console.error('Claude call failed for Meta channel:', err.message);
-    return 'Lo siento, tuve un problema técnico. Intenta de nuevo.';
-  }
-}
-
-async function saveMessage(sessionId, senderId, userMessage, botResponse, env, profile, escalation = {}) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return;
-
-  try {
-    const encodedId = encodeURIComponent(sessionId);
-    const getResponse = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodedId}`,
-      { headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` } }
-    );
-
-    const existing = await getResponse.json();
-    const messages = [
-      ...(existing.length > 0 ? existing[0].messages || [] : []),
-      { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
-      { role: 'assistant', content: botResponse, timestamp: new Date().toISOString() }
-    ];
-    // Una conversación escalada sigue escalada aunque el siguiente
-    // intercambio sea normal (igual que el chat web).
-    const prev = existing[0] || {};
-
-    const method = existing.length > 0 ? 'PATCH' : 'POST';
-    const url = existing.length > 0
-      ? `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodedId}`
-      : `${env.SUPABASE_URL}/rest/v1/chat_sessions`;
-
-    await fetch(url, {
-      method,
-      headers: {
-        apikey: env.SUPABASE_SERVICE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        session_id: sessionId,
-        messages,
-        lead_contact: senderId,
-        // profile solo viene poblado en el primer mensaje (ver handleEvent);
-        // si es null, se omiten estas claves y no se pisa lo ya guardado.
-        ...(profile ? { sender_name: profile.name, sender_avatar_url: profile.avatarUrl } : {}),
-        escalated: Boolean(prev.escalated) || Boolean(escalation.escalate),
-        escalation_reason: escalation.reason || prev.escalation_reason || null,
-        updated_at: new Date().toISOString()
-      })
-    });
-  } catch (error) {
-    console.error('Error saving Meta message to Supabase:', error.message);
-  }
-}
-
-// Hay dos flujos de conexion (meta-connect.js): Instagram via Instagram
-// Login (token graph.instagram.com) y Pagina de Facebook via Facebook Login
-// for Business (token graph.facebook.com). Cada uno emite un tipo de token
-// distinto y cada Graph API solo entiende el suyo -- mandar un token de
-// Facebook a graph.instagram.com (o viceversa) tira "Cannot parse access
-// token". Por eso hay que elegir el host segun el canal del mensaje entrante.
 async function sendMessage(isInstagram, recipientOrPageId, accessToken, recipientId, messageText) {
   const url = isInstagram
     ? `https://graph.instagram.com/${GRAPH_API_VERSION}/${recipientOrPageId}/messages?access_token=${encodeURIComponent(accessToken)}`

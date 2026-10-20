@@ -5,20 +5,19 @@
  * Requiere estos secrets en el Worker (wrangler secret put ...):
  * - WHATSAPP_VERIFY_TOKEN: string propio, se configura también en el
  *   panel de Meta (Webhooks > Verify Token) al conectar el endpoint.
- * - WHATSAPP_ACCESS_TOKEN: token del system user / access token permanente
- *   generado en Meta Business Suite para la app de WhatsApp.
- * - WHATSAPP_PHONE_NUMBER_ID: ID del número de teléfono en Meta (no es el
- *   número en sí), visible en WhatsApp > Configuración de la API.
+ * - WHATSAPP_ACCESS_TOKEN: token del usuario del sistema (sin caducidad)
+ *   para los números sin fila en whatsapp_connections (el número propio).
+ *   El phone_number_id llega en cada webhook.
+ *
+ * El flujo de respuesta (historial, bot, Claude, guardar, avisar) es común con
+ * Instagram/Messenger: ver lib/chatSessions.js.
  */
 
-import { callClaude } from '../lib/anthropic.js';
-import { botFor, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { limitRequest } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
-import { detectEscalation } from '../lib/escalation.js';
-import { sendEscalationNotification } from '../lib/email.js';
 import { alreadyProcessed } from '../lib/dedup.js';
+import { replyToMessage } from '../lib/chatSessions.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -119,128 +118,20 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
     return;
   }
 
-  // Namespace por número de negocio: un mismo cliente final puede
-  // escribirle a más de un negocio conectado, y no deben mezclarse
-  // el historial ni el contexto entre bots distintos.
-  const sessionId = `whatsapp_${phoneNumberId}_${from}`;
-  const userMessage = message.text.body;
-
-  // Historial completo (decide la divulgación de IA) y últimos 10
-  // mensajes (lo único que se le pasa al modelo).
-  const fullHistory = await getConversationHistory(sessionId, env, null);
-  const history = fullHistory.slice(-10);
-  // Bot del cliente (bot_prompt de su conexión) o Dominga si no tiene.
-  const bot = botFor(connection);
-  // El primer mensaje también va a Claude (ver meta-webhook.js): la
-  // divulgación de IA la fuerza withAiDisclosure con historial vacío.
-  const reply = withAiDisclosure(
-    await getClaudeReply(userMessage, history, context, bot.systemPrompt),
-    fullHistory, Date.now(), bot.disclosureLine
-  );
-
-  const escalation = detectEscalation(userMessage, reply, { messaging: true });
-  await saveMessage(sessionId, from, userMessage, reply, env, contactName, escalation);
-  await sendMessage(from, reply, phoneNumberId, accessToken);
-  if (escalation.escalate) {
-    await sendEscalationNotification({
-      sessionId, reason: escalation.reason, userMessage, botReply: reply,
-      leadContact: `+${from}`, channel: bot.businessName ? `WhatsApp · ${bot.businessName}` : 'WhatsApp'
-    }, env);
-  }
-}
-
-async function getConversationHistory(sessionId, env, limit = 10) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return [];
-
-  try {
-    const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodeURIComponent(sessionId)}`,
-      {
-        headers: {
-          apikey: env.SUPABASE_SERVICE_KEY,
-          Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`
-        }
-      }
-    );
-    const data = await response.json();
-    const all = data.length > 0 ? (data[0].messages || []) : [];
-    return limit == null ? all : all.slice(-limit);
-  } catch (err) {
-    console.error('Error fetching WhatsApp history:', err.message);
-    return [];
-  }
-}
-
-async function getClaudeReply(userMessage, history, context, systemPrompt) {
-  const messages = [
-    ...history.map((msg) => ({ role: msg.role, content: msg.content })),
-    { role: 'user', content: userMessage }
-  ];
-
-  try {
-    return await callClaude(messages, systemPrompt, context, {
-      model: 'claude-haiku-4-5-20251001',
-      maxTokens: 512
-    });
-  } catch (err) {
-    console.error('Claude call failed for WhatsApp:', err.message);
-    return 'Lo siento, tuve un problema técnico. Intenta de nuevo.';
-  }
-}
-
-async function saveMessage(sessionId, from, userMessage, botResponse, env, contactName, escalation = {}) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return;
-
-  try {
-    const encodedId = encodeURIComponent(sessionId);
-    const getResponse = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodedId}`,
-      {
-        headers: {
-          apikey: env.SUPABASE_SERVICE_KEY,
-          Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`
-        }
-      }
-    );
-
-    const existing = await getResponse.json();
-    const messages = [
-      ...(existing.length > 0 ? existing[0].messages || [] : []),
-      { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
-      { role: 'assistant', content: botResponse, timestamp: new Date().toISOString() }
-    ];
-    // WhatsApp manda el nombre de perfil en casi todos los mensajes; si por
-    // algún motivo no viene en este, no pisamos uno ya guardado.
-    const senderName = contactName || (existing.length > 0 ? existing[0].sender_name : null) || null;
-    // Una conversación escalada sigue escalada aunque el siguiente
-    // intercambio sea normal (igual que el chat web).
-    const prev = existing[0] || {};
-
-    const method = existing.length > 0 ? 'PATCH' : 'POST';
-    const url = existing.length > 0
-      ? `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodedId}`
-      : `${env.SUPABASE_URL}/rest/v1/chat_sessions`;
-
-    await fetch(url, {
-      method,
-      headers: {
-        apikey: env.SUPABASE_SERVICE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        session_id: sessionId,
-        messages,
-        lead_contact: from,
-        sender_name: senderName,
-        escalated: Boolean(prev.escalated) || Boolean(escalation.escalate),
-        escalation_reason: escalation.reason || prev.escalation_reason || null,
-        updated_at: new Date().toISOString()
-      })
-    });
-  } catch (error) {
-    console.error('Error saving WhatsApp message to Supabase:', error.message);
-  }
+  await replyToMessage({
+    // Namespace por número de negocio: un mismo cliente final puede
+    // escribirle a más de un negocio conectado, y no deben mezclarse
+    // el historial ni el contexto entre bots distintos.
+    sessionId: `whatsapp_${phoneNumberId}_${from}`,
+    userMessage: message.text.body,
+    connection,
+    channel: 'WhatsApp',
+    leadContact: from,
+    notifyContact: `+${from}`,
+    senderName: contactName,
+    send: (reply) => sendMessage(from, reply, phoneNumberId, accessToken),
+    context
+  });
 }
 
 async function sendMessage(to, messageText, phoneNumberId, accessToken) {

@@ -25,7 +25,8 @@ Datos en Supabase; modelo: API de Anthropic. Idioma del proyecto: español de Ch
   reformatees ni lo muevas de sitio sin un motivo concreto.
 - `src/api/` — `chat.js` (web), `meta-webhook.js` (Messenger + Instagram), `whatsapp.js`, `meta-connect.js` y
   `whatsapp-connect.js` (conexión de cuentas), `admin.js` (panel), `schedule.js` (agenda).
-- `src/lib/` — `dominga-prompt.js` (prompt, saludos y divulgación de IA), `metaConnections.js`, `anthropic.js`, etc.
+- `src/lib/` — `dominga-prompt.js` (prompt, saludos y divulgación de IA), `chatSessions.js` (flujo común de respuesta
+  de WhatsApp/Instagram/Messenger), `metaConnections.js`, `anthropic.js`, etc.
 - `src/durable-objects/ChatRoom.js` — chat en vivo/escalamiento a humano.
 - `test/` — espejo de `src/`. Sin tests aún: `email-inbound`, `email-template`,
   `google-calendar`, `reminder-cron`, `vertical-pages`, `whatsappConnections`, `timingSafe`.

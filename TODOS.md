@@ -115,13 +115,12 @@ create unique index if not exists scheduled_appointments_unique_slot
 **Effort:** S
 **Priority:** P3
 
-### Código duplicado en los webhooks de mensajería
+### Guardado de mensajes sin transacción
 
-**What:** `getConversationHistory`, `getClaudeReply` y `saveMessage` están casi idénticos en `src/api/whatsapp.js` y `src/api/meta-webhook.js`. `saveMessage` hace leer-y-escribir sin transacción (dos mensajes seguidos pueden pisarse). Extraer a un módulo compartido, con tests del camino completo antes de refactorizar.
+**What:** `saveExchange` (`src/lib/chatSessions.js`), `saveChatSession` (`src/api/chat.js`) y `ChatRoom.persistMessage` leen la conversación y la reescriben completa. Si llegan dos mensajes de la misma persona casi al mismo tiempo, uno puede pisar al otro en el historial guardado (la respuesta sí se envía). Arreglo de raíz: una función de Postgres que agregue mensajes a `messages` en una sola operación (`rpc`).
 
-**Effort:** M
+**Effort:** S
 **Priority:** P3
-**Depends on:** Que el App Review de WhatsApp termine (toca `whatsapp.js`).
 
 ### Otros menores
 

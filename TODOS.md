@@ -68,6 +68,19 @@
 
 ## Marketing
 
+### Perfil de Google Business: falta verificar (creado 2026-10-20)
+
+**Estado:** perfil "Atiéndeme la Pyme" creado en la cuenta gcorref@gmail.com como negocio de área de servicio (Región Metropolitana, dirección oculta). Categoría: Empresa de software. Teléfono y WhatsApp: +56 9 2205 3594 (chat → https://wa.me/56922053594, responde Dominga). Sitio: https://atiendemelapyme.cl. **Pendiente la verificación por video** (no aparece en Google hasta verificar): business.google.com → el perfil → Verificar.
+
+**Guion del video (una toma, 30-60 s, sin cortes):** 1) afuera, calle o número de la dirección ingresada; 2) adentro, computador con atiendemelapyme.cl y el panel /admin con sesión ya iniciada (sin mostrar contraseñas ni secretos; pasar rápido por las conversaciones); 3) factura, boleta o e-RUT de HIGH LIFE SpA.
+
+**Después de verificar, completar:** categoría adicional "Diseñador de sitios web", horario, servicios, logo y esta descripción (Google no permite enlaces en ella):
+
+> Atiéndeme la Pyme instala asistentes de inteligencia artificial para pymes chilenas. El asistente responde las consultas de tus clientes por WhatsApp, Instagram, Facebook y tu sitio web, y agenda horas en tu Google Calendar, también de noche y los fines de semana, cuando tu equipo no alcanza a contestar. Lo entrenamos con la información real de tu negocio (servicios, precios y horarios) y tú supervisas cada conversación desde un panel. Trabajamos con clínicas, centros médicos, veterinarias, centros estéticos, peluquerías, kinesiólogos, psicólogos y spas. Implementación en 1 a 3 semanas, sin conocimientos técnicos y sin contratos largos. Agenda una demo gratuita de 20 minutos.
+
+**Priority:** P2
+
+
 ### Sección de testimonios/casos de éxito en la landing
 
 **What:** Agregar una sección en la landing pública para mostrar resultados reales (ej. "recuperamos X ventas nocturnas para [cliente]") una vez que exista un caso validado.

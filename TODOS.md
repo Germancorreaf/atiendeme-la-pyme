@@ -4,14 +4,12 @@
 
 ### Meta: pasar a producción (Instagram + Messenger aprobados) y WhatsApp como Tech Provider
 
-**Estado (2026-10-20):** Meta aprobó casi todo el App Review de Instagram/Messenger; falta WhatsApp. ManyChat ya no existe en el código ni en los secrets del Worker.
+**Estado (2026-10-20, verificado en el panel):** app Publicada. Aprobados todos los permisos de Instagram/Messenger (`instagram_business_manage_messages`, `pages_messaging`, `pages_manage_metadata`, `pages_show_list`, `instagram_business_basic`, `instagram_basic`, `business_management`, `public_profile`). Negocio verificado (portfolio 104592773922483). ManyChat ya no existe en el código ni en los secrets del Worker.
 
 **Pendiente (lo hace Germán en el panel de Meta):**
-1. Revisar qué permisos quedaron sin aprobar. Ojo con `instagram_business_manage_messages`: no figuraba en la solicitud enviada y lo usa "Conectar Instagram" para responder DMs.
-2. Poner la app en modo Live.
-3. Probar con una cuenta que NO tenga rol en la app (cliente piloto): conectar y recibir un mensaje real.
-4. WhatsApp / Tech Provider: verificación del negocio (si falta) → Advanced Access para `whatsapp_business_messaging` y `whatsapp_business_management` con video real de "Conectar WhatsApp" + un mensaje real → idealmente una configuración de Facebook Login for Business propia para WhatsApp (su ID va en `WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID` en `wrangler.toml`; hoy reusa `META_LOGIN_CONFIG_ID`) → webhook en `https://atiendemelapyme.cl/webhook/whatsapp` suscrito a `messages`.
-5. Revocar en Meta el token viejo de Página (`FACEBOOK_PAGE_TOKEN`, que ningún código usa) y borrarlo: `npx wrangler secret delete FACEBOOK_PAGE_TOKEN`.
+1. Probar con una cuenta que NO tenga rol en la app (cliente piloto): conectar y recibir un mensaje real.
+2. WhatsApp / Tech Provider: "Verificación de acceso" (Configuración de la app → Verificación → Ver detalles; Meta responde en ~5 días) → probar "Conectar WhatsApp" con un número real → App Review de `whatsapp_business_messaging` y `whatsapp_business_management` con video real → idealmente una configuración de Facebook Login for Business propia para WhatsApp (su ID va en `WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID` en `wrangler.toml`; hoy reusa `META_LOGIN_CONFIG_ID`) → webhook en `https://atiendemelapyme.cl/webhook/whatsapp` suscrito a `messages`.
+3. Revocar en Meta el token viejo de Página (`FACEBOOK_PAGE_TOKEN`, que ningún código usa) y borrarlo: `npx wrangler secret delete FACEBOOK_PAGE_TOKEN`.
 
 **Landing:** decir "Tech Provider de Meta para WhatsApp Business" solo cuando Meta lo apruebe; nunca "oficial", "partner" ni el logo de Meta.
 

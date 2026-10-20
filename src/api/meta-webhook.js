@@ -11,7 +11,7 @@
 //   X-Hub-Signature-256 de cada request entrante.
 
 import { callClaude } from '../lib/anthropic.js';
-import { getRandomGreeting, buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
+import { buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { getConnectionByPageId, getConnectionByIgId, usesInstagramToken } from '../lib/metaConnections.js';
@@ -135,9 +135,11 @@ async function handleEvent(event, entryId, isInstagram, context) {
   // mensajes (lo único que se le pasa al modelo).
   const fullHistory = await getConversationHistory(sessionId, env, null);
   const history = fullHistory.slice(-10);
-  const reply = history.length === 0
-    ? getRandomGreeting()
-    : withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
+  // El primer mensaje también va a Claude: si el cliente ya pregunta algo
+  // ("¿tienen hora mañana?"), un saludo genérico dejaría su pregunta sin
+  // respuesta. La divulgación de IA la fuerza withAiDisclosure (historial vacío
+  // => siempre se antepone la línea).
+  const reply = withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
 
   // Solo se pide el perfil (nombre/username + foto) en el primer mensaje de
   // cada conversación -- evita una llamada extra a la Graph API por cada

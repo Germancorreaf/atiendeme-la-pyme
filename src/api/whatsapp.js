@@ -12,7 +12,7 @@
  */
 
 import { callClaude } from '../lib/anthropic.js';
-import { getRandomGreeting, buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
+import { buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
@@ -105,9 +105,9 @@ export async function onRequestPost(context) {
           // mensajes (lo único que se le pasa al modelo).
           const fullHistory = await getConversationHistory(sessionId, env, null);
           const history = fullHistory.slice(-10);
-          const reply = history.length === 0
-            ? getRandomGreeting()
-            : withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
+          // El primer mensaje también va a Claude (ver meta-webhook.js): la
+          // divulgación de IA la fuerza withAiDisclosure con historial vacío.
+          const reply = withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
 
           await saveMessage(sessionId, from, userMessage, reply, env, contactName);
           await sendMessage(from, reply, phoneNumberId, accessToken);

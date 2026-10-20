@@ -198,7 +198,7 @@ footer .links a:hover{color:var(--accent);background:var(--panel);}
     <div class="clause">
       <span class="num">01</span>
       <h2>Quiénes somos y aceptación</h2>
-      <p>Atiéndeme la Pyme ("nosotros", "el proveedor") ofrece agentes de inteligencia artificial (chat y voz) para automatizar la atención al cliente, ventas y agendamiento de citas de pequeñas y medianas empresas en Chile, a través de canales como sitio web, WhatsApp, Instagram, Facebook Messenger y correo electrónico. Al contratar nuestros servicios o usar este sitio, usted acepta estos Términos y Condiciones. Si no está de acuerdo, no debe usar el servicio.</p>
+      <p>Atiéndeme la Pyme ("nosotros", "el proveedor") ofrece agentes de inteligencia artificial (chat y voz) para automatizar la atención al cliente, ventas y agendamiento de citas de pequeñas y medianas empresas en Chile, a través de canales como sitio web, WhatsApp, Instagram, Facebook Messenger y correo electrónico. Al contratar nuestros servicios o usar este sitio, aceptas estos Términos y Condiciones. Si no estás de acuerdo, no uses el servicio.</p>
     </div>
 
     <div class="clause">
@@ -1486,7 +1486,7 @@ export default {
             if (pathname === '/admin/meta/connect-facebook/confirm' && request.method === 'POST') {
                 return await metaConnectFacebookConfirmPost({ request, env });
             }
-            if (pathname === '/admin/meta/connections/delete' && request.method === 'GET') {
+            if (pathname === '/admin/meta/connections/delete' && request.method === 'POST') {
                 return await metaDeleteConnectionGet({ request, env });
             }
             if (pathname === '/admin/whatsapp/connect' && request.method === 'GET') {
@@ -1495,7 +1495,7 @@ export default {
             if (pathname === '/admin/whatsapp/connect/exchange' && request.method === 'POST') {
                 return await whatsappConnectExchangePost({ request, env });
             }
-            if (pathname === '/admin/whatsapp/connections/delete' && request.method === 'GET') {
+            if (pathname === '/admin/whatsapp/connections/delete' && request.method === 'POST') {
                 return await whatsappDeleteConnectionGet({ request, env });
             }
             if (pathname === '/privacidad' || pathname === '/privacidad/') {

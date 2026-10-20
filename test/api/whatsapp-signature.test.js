@@ -61,3 +61,19 @@ describe('guardia contra borrado por link ajeno', () => {
     expect(isCrossSiteRequest(mk(null))).toBe(false);
   });
 });
+
+import { SELF } from 'cloudflare:test';
+describe('Desconectar ahora es POST', () => {
+  it('GET a /admin/meta/connections/delete ya no es una ruta de borrado', async () => {
+    const res = await SELF.fetch('https://example.com/admin/meta/connections/delete?page_id=1');
+    expect(res.status).toBe(404);
+  });
+  it('POST sin sesión de admin -> 401', async () => {
+    const res = await SELF.fetch('https://example.com/admin/meta/connections/delete?page_id=1', { method: 'POST' });
+    expect(res.status).toBe(401);
+  });
+  it('POST de WhatsApp sin sesión de admin -> 401', async () => {
+    const res = await SELF.fetch('https://example.com/admin/whatsapp/connections/delete?phone_number_id=1', { method: 'POST' });
+    expect(res.status).toBe(401);
+  });
+});

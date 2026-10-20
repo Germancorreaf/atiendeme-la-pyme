@@ -22,7 +22,7 @@ function connectionsCardHtml(connections) {
         const sub = c.page_name && c.ig_username ? escHtml(c.page_name) : '';
         return `<div class="conn-row">
           <div><span class="conn-dot"></span>${label}${sub ? ' <span class="conn-sub">(' + sub + ')</span>' : ''}</div>
-          <a href="/admin/meta/connections/delete?page_id=${encodeURIComponent(c.page_id)}" onclick="return confirm('¿Desconectar esta cuenta?');">Desconectar</a>
+          <form method="post" action="/admin/meta/connections/delete?page_id=${encodeURIComponent(c.page_id)}" onsubmit="return confirm('¿Desconectar esta cuenta?');"><button type="submit" class="link-btn">Desconectar</button></form>
         </div>`;
     }).join('');
     return `<div class="card">
@@ -41,7 +41,7 @@ function whatsappConnectionsCardHtml(connections) {
         const sub = c.display_phone_number ? escHtml(c.display_phone_number) : '';
         return `<div class="conn-row">
           <div><span class="conn-dot"></span>${label}${sub ? ' <span class="conn-sub">(' + sub + ')</span>' : ''}</div>
-          <a href="/admin/whatsapp/connections/delete?phone_number_id=${encodeURIComponent(c.phone_number_id)}" onclick="return confirm('¿Desconectar este número?');">Desconectar</a>
+          <form method="post" action="/admin/whatsapp/connections/delete?phone_number_id=${encodeURIComponent(c.phone_number_id)}" onsubmit="return confirm('¿Desconectar este número?');"><button type="submit" class="link-btn">Desconectar</button></form>
         </div>`;
     }).join('');
     return `<div class="card">
@@ -404,6 +404,9 @@ h2{font-family:var(--display);font-size:19px;letter-spacing:-.01em;font-weight:7
 .conn-row:last-of-type{border-bottom:none;}
 .conn-row a{font-size:12px;color:var(--muted);white-space:nowrap;flex-shrink:0;}
 .conn-row a:hover{color:var(--alert);}
+.conn-row form{margin:0;flex-shrink:0;}
+.link-btn{background:none;border:none;padding:0;font:inherit;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;}
+.link-btn:hover{color:var(--alert);text-decoration:underline;}
 .conn-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:8px;}
 .conn-sub{color:var(--muted);font-size:11.5px;}
 

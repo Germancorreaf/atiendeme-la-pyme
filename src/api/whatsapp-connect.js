@@ -78,7 +78,7 @@ let waSessionData = null;
 window.addEventListener('message', (event) => {
   if (!event.origin.endsWith('facebook.com')) return;
   try {
-    const data = JSON.parse(event.data);
+    const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
     if (data.type === 'WA_EMBEDDED_SIGNUP') {
       // Embedded Signup v4: FINISH, FINISH_ONLY_WABA,
       // FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING (coexistencia), etc.
@@ -164,9 +164,10 @@ export async function onRequestPostExchange(context) {
     return new Response(JSON.stringify({ success: false, error: 'Body inválido' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const { code, waba_id: wabaId, phone_number_id: phoneNumberId } = body;
-  if (!code || !wabaId || !phoneNumberId) {
-    return new Response(JSON.stringify({ success: false, error: 'Faltan code, waba_id o phone_number_id (¿se cerró la ventana antes de terminar?)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  const { code } = body;
+  let { waba_id: wabaId, phone_number_id: phoneNumberId } = body;
+  if (!code) {
+    return new Response(JSON.stringify({ success: false, error: 'Falta code (¿se cerró la ventana antes de terminar?)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   try {
@@ -192,6 +193,23 @@ export async function onRequestPostExchange(context) {
     const exchangeRes = await fetch(exchangeUrl.toString());
     const exchangeData = await exchangeRes.json();
     const longLivedToken = exchangeRes.ok && exchangeData.access_token ? exchangeData.access_token : shortLivedData.access_token;
+
+    // 2b. Si el navegador no recibió el evento de Meta con los IDs (pasa con
+    // Embedded Signup v4), se sacan del token: la WABA autorizada viene en
+    // debug_token y el número, de la WABA.
+    if (!wabaId) {
+      const dbgRes = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/debug_token?input_token=${encodeURIComponent(longLivedToken)}&access_token=${encodeURIComponent(`${env.META_APP_ID}|${env.META_APP_SECRET}`)}`);
+      const dbg = await dbgRes.json();
+      const scope = (dbg.data?.granular_scopes || []).find((g) => g.scope === 'whatsapp_business_management');
+      wabaId = scope?.target_ids?.[0];
+      if (!wabaId) throw new Error('Meta no indicó qué cuenta de WhatsApp Business se autorizó.');
+    }
+    if (!phoneNumberId) {
+      const pnRes = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${wabaId}/phone_numbers?fields=id&access_token=${encodeURIComponent(longLivedToken)}`);
+      const pn = await pnRes.json();
+      phoneNumberId = pn.data?.[0]?.id;
+      if (!phoneNumberId) throw new Error('La cuenta de WhatsApp Business no tiene un número.');
+    }
 
     // 3. Suscribir la app a esta WABA (para recibir mensajes por webhook).
     const subRes = await fetch(

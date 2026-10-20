@@ -64,7 +64,9 @@ export async function onRequestGetConnect(context) {
   return htmlResponse(`
 <h1>Conectar WhatsApp</h1>
 <p>Se abrirá una ventana de Meta para elegir o crear la WhatsApp Business Account que quieres conectar.</p>
-<button id="waBtn" onclick="launchSignup()">Continuar con WhatsApp Business</button>
+<button id="waBtn" onclick="launchSignup(false)">Continuar con WhatsApp Business</button>
+<p style="margin-top:20px;font-size:13px;">¿Ya atiendes con la app WhatsApp Business en tu celular? Conéctala sin dejar de usarla:</p>
+<button id="waAppBtn" onclick="launchSignup(true)">Ya uso la app WhatsApp Business</button>
 <div class="status" id="waStatus"></div>
 <p style="margin-top:24px;"><a href="/admin">Cancelar y volver al dashboard</a></p>
 <script src="https://connect.facebook.net/es_LA/sdk.js"></script>
@@ -78,7 +80,9 @@ window.addEventListener('message', (event) => {
   try {
     const data = JSON.parse(event.data);
     if (data.type === 'WA_EMBEDDED_SIGNUP') {
-      if (data.event === 'FINISH') {
+      // Embedded Signup v4: FINISH, FINISH_ONLY_WABA,
+      // FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING (coexistencia), etc.
+      if (String(data.event).startsWith('FINISH')) {
         waSessionData = data.data || {};
       } else if (data.event === 'CANCEL') {
         setStatus('Cancelaste la conexión en el paso: ' + (data.data && data.data.current_step || 'desconocido'));
@@ -92,8 +96,8 @@ function setStatus(text) { document.getElementById('waStatus').textContent = tex
 </script>
 
 <script>
-function launchSignup() {
-  const btn = document.getElementById('waBtn');
+function launchSignup(coexistence) {
+  const btn = document.getElementById(coexistence ? 'waAppBtn' : 'waBtn');
   btn.disabled = true;
   setStatus('Abriendo ventana de Meta...');
   FB.login((response) => {
@@ -111,7 +115,9 @@ function launchSignup() {
     config_id: '${configId}',
     response_type: 'code',
     override_default_response_type: true,
-    extras: { featureType: '', sessionInfoVersion: '3' }
+    // v4: extras vacío salvo la coexistencia con la app WhatsApp Business
+    // (el número sigue funcionando en el celular del negocio).
+    extras: coexistence ? { setup: {}, featureType: 'whatsapp_business_app_onboarding' } : { setup: {} }
   });
 }
 async function finishConnection(code) {
@@ -134,6 +140,7 @@ async function finishConnection(code) {
   } catch (err) {
     setStatus('Error: ' + err.message);
     document.getElementById('waBtn').disabled = false;
+    document.getElementById('waAppBtn').disabled = false;
   }
 }
 </script>`);
@@ -195,32 +202,40 @@ export async function onRequestPostExchange(context) {
       console.error('WhatsApp connect: fallo al suscribir la app a la WABA:', await subRes.text());
     }
 
-    // 4. Registrar el número en Cloud API (obligatorio para poder enviar
-    // mensajes). El PIN es de verificación en dos pasos de WhatsApp, no una
-    // credencial que Germán deba recordar -- se genera al azar acá porque
-    // solo se usa internamente, vía API, nunca se ingresa a mano.
-    const pin = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
-    const registerRes = await fetch(
-      `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/register?access_token=${encodeURIComponent(longLivedToken)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messaging_product: 'whatsapp', pin })
-      }
-    );
-    if (!registerRes.ok) {
-      const registerErr = await registerRes.text();
-      console.error('WhatsApp connect: fallo al registrar el número:', registerErr);
-      throw new Error('No se pudo registrar el número en WhatsApp Cloud API. Puede que ya esté registrado en otra plataforma (ver Meta Business Manager).');
-    }
-
-    // 5. Datos del número para mostrar en el dashboard.
+    // 4. Datos del número. is_on_biz_app = coexistencia con la app WhatsApp
+    // Business: el número ya está registrado y llamar a /register lo
+    // sacaría de la app del celular, así que se omite.
     const infoRes = await fetch(
-      `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}?fields=display_phone_number,verified_name&access_token=${encodeURIComponent(longLivedToken)}`
+      `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}?fields=display_phone_number,verified_name,is_on_biz_app&access_token=${encodeURIComponent(longLivedToken)}`
     );
     const infoData = await infoRes.json();
+    if (!infoRes.ok) {
+      // Sin saber si es coexistencia no se registra: podría desconectar el celular.
+      throw new Error(`Meta no entregó los datos del número: ${JSON.stringify(infoData)}`);
+    }
     const displayPhoneNumber = infoData.display_phone_number || null;
     const businessName = infoData.verified_name || null;
+
+    // 5. Registrar el número en Cloud API (obligatorio para poder enviar
+    // mensajes), salvo en coexistencia. El PIN es de verificación en dos pasos de WhatsApp, no una
+    // credencial que Germán deba recordar -- se genera al azar acá porque
+    // solo se usa internamente, vía API, nunca se ingresa a mano.
+    if (infoData.is_on_biz_app !== true) {
+      const pin = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+      const registerRes = await fetch(
+        `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/register?access_token=${encodeURIComponent(longLivedToken)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messaging_product: 'whatsapp', pin })
+        }
+      );
+      if (!registerRes.ok) {
+        const registerErr = await registerRes.text();
+        console.error('WhatsApp connect: fallo al registrar el número:', registerErr);
+        throw new Error('No se pudo registrar el número en WhatsApp Cloud API. Puede que ya esté registrado en otra plataforma (ver Meta Business Manager).');
+      }
+    }
 
     await upsertWhatsappConnection({
       phone_number_id: phoneNumberId,

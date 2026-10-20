@@ -53,6 +53,14 @@ describe('prompt de Dominga', () => {
     for (const p of [web, messaging]) expect(p).toMatch(/texto plano/i);
   });
 
+  it('tono chileno neutro: ni coloquial ni formal', () => {
+    for (const p of [web, messaging]) {
+      expect(p).toMatch(/ni coloquial ni formal/i);
+      // Ya no le pide modismos como antes ("súper", "cachar", "al tiro").
+      expect(p).not.toMatch(/con chispa|"cachar"|"súper"/i);
+    }
+  });
+
   it('usa las fechas reales de hoy y mañana', () => {
     expect(web).toMatch(/Hoy es \S+, \d{4}-\d{2}-\d{2}/);
   });

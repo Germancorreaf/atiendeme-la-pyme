@@ -19,6 +19,15 @@ describe('static/public routes', () => {
     }
   });
 
+  it('los saludos del chat web usan un tono chileno neutro (ni modismos ni fórmulas formales)', async () => {
+    const html = await (await SELF.fetch('https://example.com/')).text();
+    const lines = [...html.matchAll(/(?:first|second): '([^']+)'/g)].map((m) => JSON.parse(`"${m[1]}"`));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(line).not.toMatch(/al toque|altiro|al tiro|no más|estimado|usted|24\/7/i);
+    }
+  });
+
   it('carga Microsoft Clarity, la CSP lo permite y el chat queda enmascarado en las grabaciones', async () => {
     for (const path of ['/', '/chatbot-ia-para-veterinarias']) {
       const res = await SELF.fetch('https://example.com' + path);

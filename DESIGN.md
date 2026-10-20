@@ -104,7 +104,7 @@ components:
 
 El sitio se ve y se siente como un panel de sistema que nunca se apaga: fondo casi negro, tipografía monoespaciada, un único acento ámbar usado con moderación, cursores parpadeantes, indicadores de estado ("SYS.OK", puntos verdes de "en línea"), y bordes/sombras duras sin difuminar — como si fuera una terminal de operador, no una landing de marketing genérica. Esto no es decoración: el producto literalmente sigue trabajando cuando el dueño de la pyme no está (de noche, fines de semana, feriados), y la estética de "sistema siempre encendido" refuerza ese mensaje sin necesidad de decirlo con palabras.
 
-La personalidad es **técnica pero cercana** — precisión de panel de control, sin volverse fría o corporativa. La voz de Dominga (el asistente del producto) es directa, con chispa, chilena; el sistema visual traduce esa misma cercanía a través de interacciones táctiles y directas: los botones y tarjetas se "empujan" físicamente al interactuar, como un botón real, no como una animación decorativa.
+La personalidad es **técnica pero cercana** — precisión de panel de control, sin volverse fría o corporativa. La voz de Dominga (el asistente del producto) es chilena, cálida y profesional, ni coloquial ni formal; el sistema visual traduce esa misma cercanía a través de interacciones táctiles y directas: los botones y tarjetas se "empujan" físicamente al interactuar, como un botón real, no como una animación decorativa.
 
 **Key Characteristics:**
 - Monoespaciado (JetBrains Mono) para todo el cuerpo, labels y navegación; Space Grotesk en bold/uppercase para titulares grandes.

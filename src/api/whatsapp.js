@@ -13,7 +13,7 @@
 
 import { callClaude } from '../lib/anthropic.js';
 import { buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
-import { checkAllLimits } from '../lib/rateLimit.js';
+import { limitRequest } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { detectEscalation } from '../lib/escalation.js';
@@ -104,11 +104,8 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
   if (!isSafeWhatsappId(from) || !phoneNumberId) return;
   if (await alreadyProcessed(message.id, env.RATE_LIMIT_KV)) return;
 
-  const rlCheck = await checkAllLimits(`whatsapp:${from}`, env.RATE_LIMIT_KV, {
-    maxRequests: 30,
-    windowSeconds: 60,
-    maxBurstRequests: 5,
-    burstWindowSeconds: 5
+  const rlCheck = await limitRequest(env, `whatsapp:${from}`, {
+    kv: { maxRequests: 30, windowSeconds: 60, maxBurstRequests: 5, burstWindowSeconds: 5 }
   });
   if (!rlCheck.allowed) return;
 

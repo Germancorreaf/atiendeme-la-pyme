@@ -63,6 +63,17 @@ describe('POST /api/chat validation', () => {
   });
 });
 
+describe('POST /api/chat rate limit', () => {
+  it('responde 429 cuando el limitador nativo de Cloudflare dice que no', async () => {
+    const env = { RL_BURST: { limit: async () => ({ success: false }) }, RL_MINUTE: { limit: async () => ({ success: true }) } };
+    const res = await onRequestPost({
+      request: postRequest({ messages: [{ role: 'user', content: 'hola' }], sessionId: '123e4567-e89b-12d3-a456-426614174000' }),
+      env,
+    });
+    expect(res.status).toBe(429);
+  });
+});
+
 describe('POST /api/chat escalation flow (integration)', () => {
   const originalFetch = globalThis.fetch;
 

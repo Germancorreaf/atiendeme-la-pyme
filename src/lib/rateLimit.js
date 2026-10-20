@@ -156,3 +156,29 @@ export async function checkAllLimits(
 
   return { allowed: true };
 }
+
+// Ventana de cada limitador nativo (wrangler.toml [[ratelimits]]), para el
+// Retry-After. Cloudflare solo admite períodos de 10 o 60 segundos.
+const NATIVE_PERIODS = { RL_BURST: 10, RL_MINUTE: 60, RL_LOGIN: 60 };
+
+/**
+ * Límite por clave (IP, número, usuario) con el Rate Limiting nativo de
+ * Cloudflare. A diferencia del contador en KV de arriba, no lee-y-escribe una
+ * clave por request: no falla abierto en ráfagas (KV acepta 1 escritura por
+ * segundo por clave) ni gasta la cuota de escrituras de KV.
+ *
+ * Si los bindings no existen (tests, desarrollo local) se usa el límite por
+ * KV con las opciones de `kv`.
+ */
+export async function limitRequest(env, key, { native = ['RL_BURST', 'RL_MINUTE'], kv = {} } = {}) {
+  if (native.every((name) => env[name])) {
+    for (const name of native) {
+      const { success } = await env[name].limit({ key });
+      if (!success) {
+        return { allowed: false, reason: 'Rate limit exceeded', retryAfter: NATIVE_PERIODS[name] || 60 };
+      }
+    }
+    return { allowed: true };
+  }
+  return checkAllLimits(key, env.RATE_LIMIT_KV, kv);
+}

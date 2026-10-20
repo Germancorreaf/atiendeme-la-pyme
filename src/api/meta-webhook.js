@@ -12,7 +12,7 @@
 
 import { callClaude } from '../lib/anthropic.js';
 import { buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
-import { checkAllLimits } from '../lib/rateLimit.js';
+import { limitRequest } from '../lib/rateLimit.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { getConnectionByPageId, getConnectionByIgId, usesInstagramToken } from '../lib/metaConnections.js';
 import { detectEscalation } from '../lib/escalation.js';
@@ -116,11 +116,8 @@ async function handleEvent(event, entryId, isInstagram, context) {
   const instagramHost = isInstagram && usesInstagramToken(connection);
   const sessionId = `${channel}_${senderId}`;
 
-  const rlCheck = await checkAllLimits(sessionId, env.RATE_LIMIT_KV, {
-    maxRequests: 30,
-    windowSeconds: 60,
-    maxBurstRequests: 5,
-    burstWindowSeconds: 5
+  const rlCheck = await limitRequest(env, sessionId, {
+    kv: { maxRequests: 30, windowSeconds: 60, maxBurstRequests: 5, burstWindowSeconds: 5 }
   });
   if (!rlCheck.allowed) return;
 

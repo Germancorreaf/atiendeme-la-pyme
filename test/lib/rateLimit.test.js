@@ -4,6 +4,7 @@ import {
   checkRateLimit,
   checkBurstLimit,
   checkAllLimits,
+  limitRequest,
 } from '../../src/lib/rateLimit.js';
 
 // Each test gets a unique identifier so entries from one test never leak
@@ -99,5 +100,33 @@ describe('checkAllLimits', () => {
     const second = await checkAllLimits(id, env.RATE_LIMIT_KV, opts);
     expect(second.allowed).toBe(false);
     expect(second.reason).toBe('Burst limit exceeded');
+  });
+});
+
+describe('limitRequest (Rate Limiting nativo de Cloudflare)', () => {
+  const allow = { limit: async () => ({ success: true }) };
+  const deny = { limit: async () => ({ success: false }) };
+
+  it('bloquea cuando un limitador nativo dice que no, sin tocar KV', async () => {
+    const kvTouched = { get: async () => { throw new Error('no debería usar KV'); }, put: async () => {} };
+    const res = await limitRequest({ RL_BURST: allow, RL_MINUTE: deny, RATE_LIMIT_KV: kvTouched }, 'ip-1');
+    expect(res.allowed).toBe(false);
+    expect(res.retryAfter).toBe(60);
+  });
+
+  it('deja pasar cuando todos los limitadores nativos aceptan', async () => {
+    expect((await limitRequest({ RL_BURST: allow, RL_MINUTE: allow }, 'ip-2')).allowed).toBe(true);
+  });
+
+  it('login usa su propio limitador', async () => {
+    const res = await limitRequest({ RL_LOGIN: deny }, 'ip-3', { native: ['RL_LOGIN'] });
+    expect(res.allowed).toBe(false);
+  });
+
+  it('sin bindings (desarrollo/tests) cae al límite por KV', async () => {
+    const id = uniqueId('fallback');
+    const opts = { kv: { maxRequests: 100, windowSeconds: 60, maxBurstRequests: 1, burstWindowSeconds: 5 } };
+    expect((await limitRequest({ RATE_LIMIT_KV: env.RATE_LIMIT_KV }, id, opts)).allowed).toBe(true);
+    expect((await limitRequest({ RATE_LIMIT_KV: env.RATE_LIMIT_KV }, id, opts)).allowed).toBe(false);
   });
 });

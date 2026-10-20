@@ -12,7 +12,7 @@ import {
 } from '../lib/errors.js';
 
 import { callClaude } from '../lib/anthropic.js';
-import { checkAllLimits } from '../lib/rateLimit.js';
+import { limitRequest } from '../lib/rateLimit.js';
 import { buildSystemPrompt } from '../lib/dominga-prompt.js';
 import { detectEscalation } from '../lib/escalation.js';
 import { sendEscalationNotification } from '../lib/email.js';
@@ -154,16 +154,9 @@ export async function onRequestPost(context) {
     }
 
     const clientIP = context.request.headers.get('CF-Connecting-IP') || 'unknown-ip';
-    const rlCheck = await checkAllLimits(
-      clientIP,
-      context.env.RATE_LIMIT_KV,
-      {
-        maxRequests: 30,
-        windowSeconds: 60,
-        maxBurstRequests: 5,
-        burstWindowSeconds: 5
-      }
-    );
+    const rlCheck = await limitRequest(context.env, `chat:${clientIP}`, {
+      kv: { maxRequests: 30, windowSeconds: 60, maxBurstRequests: 5, burstWindowSeconds: 5 }
+    });
 
     if (!rlCheck.allowed) {
       throw new ApiError(

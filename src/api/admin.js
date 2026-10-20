@@ -4,7 +4,7 @@
 // Auth con una sola contrasena compartida.
 // Requiere los secrets ADMIN_DASHBOARD_PASSWORD y ADMIN_SESSION_SECRET.
 
-import { checkAllLimits } from '../lib/rateLimit.js';
+import { limitRequest } from '../lib/rateLimit.js';
 import { timingSafeEqual } from '../lib/timingSafe.js';
 import { checkSessionAuth, createSessionCookie, clearSessionCookie } from '../lib/adminSession.js';
 import { listConnections } from '../lib/metaConnections.js';
@@ -66,13 +66,11 @@ function tooManyAttemptsResponse(retryAfter) {
 
 async function checkAdminBruteForce(request, env) {
     const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown-ip';
-    // Login endpoint: mas estricto que el chat publico. 10 intentos / 5 min,
-    // con rafaga de 3 en 5s, por IP.
-    return checkAllLimits(clientIP, env.RATE_LIMIT_KV, {
-        maxRequests: 10,
-        windowSeconds: 300,
-        maxBurstRequests: 3,
-        burstWindowSeconds: 5
+    // Login: 5 intentos por minuto por IP (RL_LOGIN en wrangler.toml). Sin el
+    // binding (tests/desarrollo) cae a KV: 10 intentos / 5 min, ráfaga 3 en 5s.
+    return limitRequest(env, `login:${clientIP}`, {
+        native: ['RL_LOGIN'],
+        kv: { maxRequests: 10, windowSeconds: 300, maxBurstRequests: 3, burstWindowSeconds: 5 }
     });
 }
 

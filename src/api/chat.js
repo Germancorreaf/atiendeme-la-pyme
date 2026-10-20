@@ -16,11 +16,7 @@ import { limitRequest } from '../lib/rateLimit.js';
 import { buildSystemPrompt } from '../lib/dominga-prompt.js';
 import { detectEscalation } from '../lib/escalation.js';
 import { sendEscalationNotification } from '../lib/email.js';
-
-// Dominga deriva a hola@atiendemelapyme.cl: nuestros datos no son un lead.
-function isOwnContact(contact) {
-  return /@atiendemelapyme\.cl$/i.test(String(contact || ''));
-}
+import { appendChatMessages } from '../lib/chatSessions.js';
 
 function extractLeadContact(messages) {
   // Solo lo que escribió el visitante: las respuestas de Dominga citan
@@ -50,13 +46,11 @@ function extractLeadContact(messages) {
 }
 
 /**
- * Agrega los mensajes nuevos al historial guardado en vez de reemplazarlo.
- *
- * Antes se hacía upsert de `messages` con el historial que manda el navegador,
- * que vive solo en memoria: si el visitante recargaba la página y volvía a
- * escribir (el sessionId persiste en localStorage), se borraba la conversación
- * anterior, y también los mensajes del chat en vivo que guarda ChatRoom.
- * `escalated` queda marcado aunque el siguiente intercambio sea normal.
+ * Agrega el mensaje nuevo y la respuesta al historial guardado, en una sola
+ * operación (appendChatMessages): recargar la página o escribir dos veces
+ * seguidas no borra ni pisa la conversación, ni los mensajes del chat en
+ * vivo que guarda ChatRoom. `escalated` queda marcado aunque el siguiente
+ * intercambio sea normal.
  */
 async function saveChatSession(sessionId, newMessages, escalation, context) {
   const { env } = context;
@@ -64,50 +58,26 @@ async function saveChatSession(sessionId, newMessages, escalation, context) {
     console.warn('Supabase not configured, skipping session save');
     return null;
   }
-  const headers = {
-    'Content-Type': 'application/json',
-    'apikey': env.SUPABASE_SERVICE_KEY,
-    'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`
-  };
 
   try {
+    // Se lee lo ya guardado solo para encontrar el contacto que el visitante
+    // dejó en mensajes anteriores; escribir no depende de esta lectura.
+    let previous = [];
     const existingRes = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodeURIComponent(sessionId)}&select=messages,lead_contact,escalated,escalation_reason`,
-      { headers }
+      `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodeURIComponent(sessionId)}&select=messages`,
+      { headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` } }
     );
-    if (!existingRes.ok) {
-      // Sin poder leer lo guardado, escribir borraría el historial existente.
-      console.error(`Supabase read failed [${existingRes.status}], session not saved`);
-      return null;
+    if (existingRes.ok) {
+      const rows = await existingRes.json();
+      previous = Array.isArray(rows) && Array.isArray(rows[0]?.messages) ? rows[0].messages : [];
     }
-    const rows = await existingRes.json();
-    const existing = Array.isArray(rows) && rows[0] ? rows[0] : {};
-    const messages = [...(Array.isArray(existing.messages) ? existing.messages : []), ...newMessages];
-    const leadContact = extractLeadContact(messages);
+    const leadContact = extractLeadContact([...previous, ...newMessages]);
 
-    const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/chat_sessions?on_conflict=session_id`,
-      {
-        method: 'POST',
-        headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          messages,
-          lead_contact: leadContact?.contact || (isOwnContact(existing.lead_contact) ? null : existing.lead_contact) || null,
-          escalated: Boolean(existing.escalated) || Boolean(escalation?.escalate),
-          escalation_reason: escalation?.reason || existing.escalation_reason || null,
-          updated_at: new Date().toISOString()
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        `Supabase save failed [${response.status}]: ${errorText.substring(0, 200)}`
-      );
-      return null;
-    }
+    await appendChatMessages(env, sessionId, newMessages, {
+      ...(leadContact ? { lead_contact: leadContact.contact } : {}),
+      escalated: Boolean(escalation?.escalate),
+      ...(escalation?.reason ? { escalation_reason: escalation.reason } : {})
+    });
 
     return { success: true, leadContact };
   } catch (err) {

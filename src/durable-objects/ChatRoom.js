@@ -11,6 +11,8 @@
 // escalamiento (ver src/lib/escalation.js), cuando el widget abre una
 // conexión y el equipo puede "tomar" la conversación en vivo.
 
+import { appendChatMessages } from '../lib/chatSessions.js';
+
 // Mismo tope que validateContent() del chat REST.
 const MAX_MESSAGE_LENGTH = 5000;
 
@@ -117,38 +119,14 @@ export class ChatRoom {
    * el admin con el resto de la conversación.
    */
   async persistMessage(sessionId, role, content) {
-    if (!sessionId || !this.env.SUPABASE_URL || !this.env.SUPABASE_SERVICE_KEY) return;
-
+    if (!sessionId) return;
     try {
-      const getRes = await fetch(
-        `${this.env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodeURIComponent(sessionId)}&select=messages`,
-        {
-          headers: {
-            apikey: this.env.SUPABASE_SERVICE_KEY,
-            Authorization: `Bearer ${this.env.SUPABASE_SERVICE_KEY}`
-          }
-        }
-      );
-      if (!getRes.ok) return;
-      const rows = await getRes.json();
-      const current = Array.isArray(rows) && Array.isArray(rows[0]?.messages) ? rows[0].messages : [];
-      const updated = [...current, { role, content }];
-
-      await fetch(
-        `${this.env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodeURIComponent(sessionId)}`,
-        {
-          method: 'PATCH',
-          headers: {
-            apikey: this.env.SUPABASE_SERVICE_KEY,
-            Authorization: `Bearer ${this.env.SUPABASE_SERVICE_KEY}`,
-            'Content-Type': 'application/json',
-            Prefer: 'return=minimal'
-          },
-          body: JSON.stringify({ messages: updated, updated_at: new Date().toISOString() })
-        }
-      );
+      // Una sola operación: no pisa los mensajes que guardan /api/chat o el
+      // otro lado del chat en vivo al mismo tiempo.
+      await appendChatMessages(this.env, sessionId, [{ role, content }]);
     } catch (err) {
       console.error('[ChatRoom] persist error:', err.message);
     }
   }
+
 }

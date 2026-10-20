@@ -235,11 +235,12 @@ export async function onRequestPostExchange(context) {
     const businessName = infoData.verified_name || null;
 
     // 5. Registrar el número en Cloud API (obligatorio para poder enviar
-    // mensajes), salvo en coexistencia. El PIN es de verificación en dos pasos de WhatsApp, no una
-    // credencial que Germán deba recordar -- se genera al azar acá porque
-    // solo se usa internamente, vía API, nunca se ingresa a mano.
+    // mensajes), salvo en coexistencia. El PIN es la verificación en dos
+    // pasos de WhatsApp: se genera al azar y se guarda en la conexión
+    // (two_step_pin), porque hace falta para re-registrar o migrar el número.
+    let pin = null;
     if (infoData.is_on_biz_app !== true) {
-      const pin = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+      pin = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
       const registerRes = await fetch(
         `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/register?access_token=${encodeURIComponent(longLivedToken)}`,
         {
@@ -260,7 +261,8 @@ export async function onRequestPostExchange(context) {
       waba_id: wabaId,
       display_phone_number: displayPhoneNumber,
       business_name: businessName,
-      access_token: longLivedToken
+      access_token: longLivedToken,
+      ...(pin ? { two_step_pin: pin } : {})
     }, env);
 
     return new Response(

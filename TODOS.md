@@ -107,34 +107,6 @@
 
 ## Infraestructura
 
-### Índice único de horarios en Supabase (correrlo a mano)
-
-**What:** Crear el índice en el SQL Editor de Supabase (proyecto `ewhqshvmrinqsevjfjtz`):
-
-```sql
-create unique index if not exists scheduled_appointments_unique_slot
-  on public.scheduled_appointments (appointment_date, appointment_time);
-```
-
-**Why:** `src/api/schedule.js` ya revisa choques de horario y falla cerrado, pero dos pedidos exactamente simultáneos podrían pasar el chequeo a la vez. Con el índice, la base rechaza el segundo (409) y el código ya lo maneja.
-
-**Effort:** XS
-**Priority:** P2
-
-### PIN de verificación en dos pasos de WhatsApp no se guarda
-
-**What:** `src/api/whatsapp-connect.js` ya genera el PIN con `crypto.getRandomValues`, pero no lo guarda. Si hay que re-registrar o migrar el número, nadie lo conoce (se resetea desde Meta Business Manager). Guardarlo en `whatsapp_connections` o documentar el reseteo.
-
-**Effort:** S
-**Priority:** P3
-
-### Guardado de mensajes sin transacción
-
-**What:** `saveExchange` (`src/lib/chatSessions.js`), `saveChatSession` (`src/api/chat.js`) y `ChatRoom.persistMessage` leen la conversación y la reescriben completa. Si llegan dos mensajes de la misma persona casi al mismo tiempo, uno puede pisar al otro en el historial guardado (la respuesta sí se envía). Arreglo de raíz: una función de Postgres que agregue mensajes a `messages` en una sola operación (`rpc`).
-
-**Effort:** S
-**Priority:** P3
-
 ### Otros menores
 
 - **Modelo de borradores de correo:** `src/lib/email-inbound.js` usa el modelo por defecto de `src/lib/anthropic.js` (`claude-sonnet-4-5-20250929`). Cambiarlo es decisión de costo/calidad.
@@ -142,6 +114,10 @@ create unique index if not exists scheduled_appointments_unique_slot
 - **robots.txt administrado por Cloudflare:** bloquea bots de entrenamiento de IA (no los de búsqueda). Decidir si mantenerlo (se cambia en Cloudflare, no en el código).
 
 ## Completed
+
+### Índice de horarios, PIN de WhatsApp y guardado atómico (hecho 2026-10-20)
+
+SQL en `supabase/2026-10-20-guardado-atomico-pin-indice.sql`, aplicado en producción: índice único de horas en `scheduled_appointments`; `whatsapp_connections.two_step_pin` (se llena al registrar un número); función `append_chat_messages` (solo `service_role`) que agrega mensajes en una sola operación — la usan el chat web, WhatsApp/Instagram/Messenger y el chat en vivo, así que dos mensajes seguidos ya no se pisan.
 
 ### Pendientes de la revisión de código que esperaban al App Review (hecho 2026-10)
 

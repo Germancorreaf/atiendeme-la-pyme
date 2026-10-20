@@ -125,12 +125,14 @@ describe('POST /api/chat escalation flow (integration)', () => {
         );
       }
 
+      if (href.includes('supabase.co') && href.includes('/rpc/append_chat_messages')) {
+        // Guardado atómico: llegan solo los mensajes nuevos; la base los agrega.
+        const b = JSON.parse(opts.body);
+        onSupabaseInsert?.({ session_id: b.p_session_id, messages: b.p_messages, ...b.p_fields });
+        return new Response('null', { status: 200 });
+      }
       if (href.includes('supabase.co') && href.includes('chat_sessions')) {
-        if ((opts?.method || 'GET') === 'GET') {
-          return new Response(JSON.stringify(existingRows), { status: 200 });
-        }
-        onSupabaseInsert?.(JSON.parse(opts.body));
-        return new Response('[]', { status: 200 });
+        return new Response(JSON.stringify(existingRows), { status: 200 });
       }
 
       if (href.includes('api.resend.com')) {
@@ -169,7 +171,7 @@ describe('POST /api/chat escalation flow (integration)', () => {
     expect(savedBody).not.toBeNull();
     expect(savedBody).not.toHaveProperty('message_count');
     expect(savedBody.escalated).toBe(false);
-    expect(savedBody.escalation_reason).toBeNull();
+    expect(savedBody).not.toHaveProperty('escalation_reason');
   });
 
   it('saves escalated:true and sends a notification when the user asks for a human', async () => {
@@ -194,7 +196,7 @@ describe('POST /api/chat escalation flow (integration)', () => {
     expect(notifiedTo).toBe('german@example.com');
   });
 
-  it('appends to the stored conversation instead of overwriting it (e.g. after a page reload)', async () => {
+  it('envía solo el intercambio nuevo: la base lo agrega sin pisar lo guardado (p. ej. tras recargar la página)', async () => {
     let savedBody = null;
     const stored = [
       { role: 'user', content: 'hola, tienen hora?' },
@@ -216,13 +218,16 @@ describe('POST /api/chat escalation flow (integration)', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(savedBody.messages).toHaveLength(5);
-    expect(savedBody.messages.slice(0, 3)).toEqual(stored);
-    expect(savedBody.messages[3]).toEqual({ role: 'user', content: 'quiero agendar' });
-    expect(savedBody.lead_contact).toBe('ana@example.com');
-    // Un intercambio normal no "des-escala" una conversación ya escalada.
-    expect(savedBody.escalated).toBe(true);
-    expect(savedBody.escalation_reason).toBe('user_requested_human');
+    // Solo lo nuevo: append_chat_messages lo agrega a los 3 mensajes guardados.
+    expect(savedBody.messages).toEqual([
+      { role: 'user', content: 'quiero agendar' },
+      { role: 'assistant', content: '¡Claro! ¿A qué hora te acomoda?' },
+    ]);
+    // Sin contacto nuevo no se envía lead_contact: la base conserva ana@example.com.
+    expect(savedBody).not.toHaveProperty('lead_contact');
+    // escalated:false no "des-escala": la función hace escalated = escalated OR nuevo.
+    expect(savedBody.escalated).toBe(false);
+    expect(savedBody).not.toHaveProperty('escalation_reason');
   });
   // Dominga deriva a hola@atiendemelapyme.cl: eso no es un contacto del visitante.
   it('no guarda el correo de Atiéndeme la Pyme que menciona Dominga como lead', async () => {
@@ -238,7 +243,7 @@ describe('POST /api/chat escalation flow (integration)', () => {
       env: baseEnv,
     });
     expect(res.status).toBe(200);
-    expect(savedBody.lead_contact).toBeNull();
+    expect(savedBody).not.toHaveProperty('lead_contact');
     expect((await res.json()).leadDetected).toBe(false);
   });
 

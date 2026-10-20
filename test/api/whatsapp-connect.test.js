@@ -10,9 +10,11 @@ afterEach(() => vi.unstubAllGlobals());
 
 async function exchange(isOnBizApp, infoOk = true, ids = { waba_id: 'W', phone_number_id: 'P' }) {
   const calls = [];
+  const upserts = [];
   vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
     const u = String(url);
     calls.push(u);
+    if (u.includes('/rest/v1/whatsapp_connections')) { upserts.push(JSON.parse(init.body)); return new Response('[]', { status: 201 }); }
     const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { 'Content-Type': 'application/json' } });
     if (u.includes('oauth/access_token')) return json({ access_token: 'tok' });
     if (u.includes('subscribed_apps')) return json({ success: true });
@@ -27,19 +29,21 @@ async function exchange(isOnBizApp, infoOk = true, ids = { waba_id: 'W', phone_n
     method: 'POST', headers: { Cookie: cookie }, body: JSON.stringify({ code: 'c', ...ids }),
   });
   const res = await onRequestPostExchange({ request: req, env });
-  return { res, calls, registered: calls.some((u) => u.includes('/register')) };
+  return { res, calls, upserts, registered: calls.some((u) => u.includes('/register')) };
 }
 
 describe('conectar WhatsApp', () => {
-  it('número nuevo: se registra en Cloud API', async () => {
-    const { res, registered } = await exchange(false);
+  it('número nuevo: se registra en Cloud API y se guarda su PIN de verificación en dos pasos', async () => {
+    const { res, registered, upserts } = await exchange(false);
     expect(res.status).toBe(200);
     expect(registered).toBe(true);
+    expect(upserts.at(-1).two_step_pin).toMatch(/^\d{6}$/);
   });
-  it('coexistencia con la app WhatsApp Business: NO se registra (lo sacaría del celular)', async () => {
-    const { res, registered } = await exchange(true);
+  it('coexistencia con la app WhatsApp Business: NO se registra (lo sacaría del celular) ni guarda PIN', async () => {
+    const { res, registered, upserts } = await exchange(true);
     expect(res.status).toBe(200);
     expect(registered).toBe(false);
+    expect(upserts.at(-1)).not.toHaveProperty('two_step_pin');
   });
   it('si Meta no entrega los datos del número, falla sin registrar', async () => {
     const { res, registered } = await exchange(undefined, false);

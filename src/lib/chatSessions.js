@@ -17,6 +17,26 @@ function supabaseHeaders(env, extra = {}) {
   return { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`, ...extra };
 }
 
+/**
+ * Agrega mensajes a una conversación en una sola operación (función
+ * append_chat_messages de Supabase, ver supabase/2026-10-20-*.sql): dos
+ * mensajes casi simultáneos ya no se pisan. `fields` (lead_contact,
+ * sender_name, sender_avatar_url, escalated, escalation_reason) solo se
+ * escriben si vienen; escalated nunca vuelve a false.
+ * La usan el chat web, los canales de mensajería y el chat en vivo.
+ */
+export async function appendChatMessages(env, sessionId, messages, fields = {}) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return;
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/append_chat_messages`, {
+    method: 'POST',
+    headers: supabaseHeaders(env, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ p_session_id: sessionId, p_messages: messages, p_fields: fields })
+  });
+  if (!res.ok) {
+    throw new Error(`append_chat_messages [${res.status}]: ${(await res.text()).slice(0, 200)}`);
+  }
+}
+
 async function loadSession(sessionId, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return null;
   const response = await fetch(
@@ -49,39 +69,18 @@ async function getClaudeReply(userMessage, history, context, systemPrompt, chann
   }
 }
 
-/**
- * Agrega el intercambio a la conversación. Vuelve a leer la fila justo antes
- * de escribir (no reusa la lectura previa a Claude) para achicar la ventana
- * en que dos mensajes seguidos se pisan.
- * sender_name / sender_avatar_url solo se escriben si vienen: no se pisa un
- * perfil ya guardado. Una conversación escalada sigue escalada.
- */
 async function saveExchange(sessionId, { userMessage, reply, leadContact, senderName, senderAvatarUrl, escalation }, env) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return;
+  const now = new Date().toISOString();
   try {
-    const existing = await loadSession(sessionId, env);
-    const now = new Date().toISOString();
-    const messages = [
-      ...(existing?.messages || []),
+    await appendChatMessages(env, sessionId, [
       { role: 'user', content: userMessage, timestamp: now },
       { role: 'assistant', content: reply, timestamp: now }
-    ];
-    const url = existing
-      ? `${env.SUPABASE_URL}/rest/v1/chat_sessions?session_id=eq.${encodeURIComponent(sessionId)}`
-      : `${env.SUPABASE_URL}/rest/v1/chat_sessions`;
-    await fetch(url, {
-      method: existing ? 'PATCH' : 'POST',
-      headers: supabaseHeaders(env, { 'Content-Type': 'application/json' }),
-      body: JSON.stringify({
-        session_id: sessionId,
-        messages,
-        lead_contact: leadContact,
-        ...(senderName ? { sender_name: senderName } : {}),
-        ...(senderAvatarUrl ? { sender_avatar_url: senderAvatarUrl } : {}),
-        escalated: Boolean(existing?.escalated) || Boolean(escalation.escalate),
-        escalation_reason: escalation.reason || existing?.escalation_reason || null,
-        updated_at: now
-      })
+    ], {
+      lead_contact: leadContact,
+      ...(senderName ? { sender_name: senderName } : {}),
+      ...(senderAvatarUrl ? { sender_avatar_url: senderAvatarUrl } : {}),
+      escalated: Boolean(escalation.escalate),
+      ...(escalation.reason ? { escalation_reason: escalation.reason } : {})
     });
   } catch (err) {
     console.error('Error saving message to Supabase:', err.message);

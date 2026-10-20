@@ -19,8 +19,12 @@ function stubNetwork(modelReply) {
     const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { 'Content-Type': 'application/json' } });
     if (u.includes('/rest/v1/whatsapp_connections')) return json([{ phone_number_id: 'PN1', access_token: 'tok' }]);
     if (u.includes('/rest/v1/meta_connections')) return json([{ page_id: 'PAGE1', page_access_token: 'tok' }]);
+    if (u.includes('/rest/v1/rpc/append_chat_messages')) {
+      const b = JSON.parse(init.body);
+      saved.push({ session_id: b.p_session_id, messages: b.p_messages, ...b.p_fields });
+      return json(null);
+    }
     if (u.includes('/rest/v1/chat_sessions') && (!init.method || init.method === 'GET')) return json([]);
-    if (u.includes('/rest/v1/chat_sessions')) { saved.push(JSON.parse(init.body)); return json({}); }
     if (u.includes('api.anthropic.com')) return json({ content: [{ type: 'text', text: modelReply }] });
     if (u.includes('api.resend.com')) { emails.push(JSON.parse(init.body)); return json({ id: 'e' }); }
     return json({});

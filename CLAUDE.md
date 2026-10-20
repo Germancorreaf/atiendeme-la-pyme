@@ -30,6 +30,7 @@ Datos en Supabase; modelo: API de Anthropic. Idioma del proyecto: español de Ch
 - `src/durable-objects/ChatRoom.js` — chat en vivo/escalamiento a humano.
 - `test/` — espejo de `src/`. Sin tests aún: `email-inbound`, `email-template`,
   `google-calendar`, `reminder-cron`, `vertical-pages`, `whatsappConnections`, `timingSafe`.
+- `supabase/` — SQL que se corre a mano en el SQL Editor de Supabase (con fecha), para tener registro.
 - `PRODUCT.md` (propuesta de valor, reglas de honestidad) · `DESIGN.md` (sistema de diseño) · `TODOS.md`.
 
 ## Reglas que no se negocian

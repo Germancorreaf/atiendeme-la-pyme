@@ -17,6 +17,7 @@ import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { getConnectionByPageId, getConnectionByIgId, usesInstagramToken } from '../lib/metaConnections.js';
 import { detectEscalation } from '../lib/escalation.js';
 import { sendEscalationNotification } from '../lib/email.js';
+import { alreadyProcessed } from '../lib/dedup.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -48,15 +49,6 @@ export async function onRequestGet(context) {
 // Página/Messenger firmados con META_APP_SECRET.
 async function verifySignature(request, rawBody, env) {
   return verifyMetaSignature(request, rawBody, [env.INSTAGRAM_APP_SECRET, env.META_APP_SECRET]);
-}
-
-async function alreadyProcessed(messageId, env) {
-  if (!messageId || !env.RATE_LIMIT_KV) return false;
-  const key = `metamsg:${messageId}`;
-  const existing = await env.RATE_LIMIT_KV.get(key);
-  if (existing) return true;
-  await env.RATE_LIMIT_KV.put(key, '1', { expirationTtl: 300 });
-  return false;
 }
 
 export async function onRequestPost(context) {
@@ -104,7 +96,7 @@ async function processEvents(rawBody, context) {
 async function handleEvent(event, entryId, isInstagram, context) {
   const { env } = context;
   if (!event.message || event.message.is_echo || !event.message.text) return;
-  if (await alreadyProcessed(event.message.mid, env)) return;
+  if (await alreadyProcessed(event.message.mid, env.RATE_LIMIT_KV)) return;
 
   const senderId = event.sender?.id;
   if (!isSafeMetaId(senderId)) return;

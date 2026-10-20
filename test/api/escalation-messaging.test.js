@@ -84,3 +84,49 @@ describe.each([
     expect(saved.at(-1).escalated).toBe(false);
   });
 });
+
+describe('webhook de WhatsApp: entregas repetidas y respuesta rápida', () => {
+  it('el mismo mensaje entregado dos veces por Meta se responde una sola vez', async () => {
+    const sent = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      const u = String(url);
+      const json = (d) => new Response(JSON.stringify(d), { headers: { 'Content-Type': 'application/json' } });
+      if (u.includes('/rest/v1/chat_sessions') && (!init.method || init.method === 'GET')) return json([]);
+      if (u.includes('api.anthropic.com')) return json({ content: [{ type: 'text', text: 'Hola 👋' }] });
+      if (u.includes('graph.facebook.com') && u.endsWith('/messages')) { sent.push(1); return json({}); }
+      return json([]);
+    }));
+    const body = JSON.stringify({ entry: [{ changes: [{ value: {
+      metadata: { phone_number_id: 'PN1' },
+      messages: [{ id: 'wamid.DUP', type: 'text', from: '56922220000', text: { body: 'hola' } }],
+    } }] }] });
+    for (let i = 0; i < 2; i++) {
+      const req = new Request('https://example.com/webhook/whatsapp', { method: 'POST', body, headers: { 'X-Hub-Signature-256': 'sha256=' + await computeHmacSha256Hex(SECRET, body) } });
+      const waited = [];
+      await whatsappPost({ request: req, env: { ...env(), WHATSAPP_ACCESS_TOKEN: 't' }, ctx: { waitUntil: (p) => waited.push(p) } });
+      await Promise.all(waited);
+    }
+    expect(sent).toHaveLength(1);
+  });
+
+  it('responde 200 a Meta sin esperar a Claude (el trabajo sigue en segundo plano)', async () => {
+    let releaseClaude;
+    vi.stubGlobal('fetch', vi.fn(async (url) => {
+      if (String(url).includes('api.anthropic.com')) await new Promise((r) => { releaseClaude = r; });
+      return new Response('[]', { headers: { 'Content-Type': 'application/json' } });
+    }));
+    const body = JSON.stringify({ entry: [{ changes: [{ value: {
+      metadata: { phone_number_id: 'PN1' },
+      messages: [{ id: 'wamid.SLOW', type: 'text', from: '56922220001', text: { body: 'hola' } }],
+    } }] }] });
+    const req = new Request('https://example.com/webhook/whatsapp', { method: 'POST', body, headers: { 'X-Hub-Signature-256': 'sha256=' + await computeHmacSha256Hex(SECRET, body) } });
+    const waited = [];
+    const res = await whatsappPost({ request: req, env: { ...env(), WHATSAPP_ACCESS_TOKEN: 't' }, ctx: { waitUntil: (p) => waited.push(p) } });
+    expect(res.status).toBe(200);
+    expect(waited).toHaveLength(1);
+    // Recién ahora el proceso en segundo plano llega a Claude: se libera.
+    await vi.waitFor(() => expect(releaseClaude).toBeTypeOf('function'));
+    releaseClaude();
+    await Promise.all(waited);
+  });
+});

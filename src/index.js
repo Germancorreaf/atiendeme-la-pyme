@@ -1460,7 +1460,7 @@ export default {
                 return await instagramGet({ request, env });
             }
             if (pathname === '/webhook/whatsapp' && request.method === 'POST') {
-                return await whatsappPost({ request, env });
+                return await whatsappPost({ request, env, ctx });
             }
             if (pathname === '/webhook/whatsapp' && request.method === 'GET') {
                 return await whatsappGet({ request, env });

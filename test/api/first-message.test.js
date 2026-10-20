@@ -30,8 +30,10 @@ describe('primer mensaje por WhatsApp', () => {
     const sig = 'sha256=' + await computeHmacSha256Hex('s', body);
     const req = new Request('https://example.com/webhook/whatsapp', { method: 'POST', body, headers: { 'X-Hub-Signature-256': sig } });
     const env = { META_APP_SECRET: 's', SUPABASE_URL: 'https://supabase.test', SUPABASE_SERVICE_KEY: 'k', ANTHROPIC_API_KEY: 'a', RATE_LIMIT_KV: workerEnv.RATE_LIMIT_KV };
-    const res = await onRequestPost({ request: req, env, ctx: { waitUntil: () => {} } });
+    const waited = [];
+    const res = await onRequestPost({ request: req, env, ctx: { waitUntil: (p) => waited.push(p) } });
     expect(res.status).toBe(200);
+    await Promise.all(waited);
     expect(modelInputs.length).toBe(1);
     expect(JSON.stringify(modelInputs[0])).toContain('¿Tienen hora mañana a las 10?');
     expect(sent).toEqual([`${AI_DISCLOSURE_LINE}\n\nSí, mañana a las 10:00 hay hora.`]);

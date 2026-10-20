@@ -18,6 +18,7 @@ import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { detectEscalation } from '../lib/escalation.js';
 import { sendEscalationNotification } from '../lib/email.js';
+import { alreadyProcessed } from '../lib/dedup.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -42,94 +43,107 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  const { request, env } = context;
+  const { request, env, ctx } = context;
 
+  // Sin firma válida de Meta (X-Hub-Signature-256) se descarta el POST:
+  // si no, cualquiera que conozca la URL podría hacer gastar Claude y
+  // mandar WhatsApps desde el número del negocio.
+  const rawBody = await request.text();
+  if (!(await verifyMetaSignature(request, rawBody, [env.META_APP_SECRET, env.INSTAGRAM_APP_SECRET]))) {
+    console.warn('WhatsApp webhook: firma X-Hub-Signature-256 inválida o ausente, se rechaza');
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  // Meta espera 200 rápido; si no, reintenta la entrega (y el cliente recibe
+  // la respuesta dos veces). Claude + Supabase + envío siguen en segundo plano.
+  const processing = processEntries(rawBody, context);
+  if (ctx && typeof ctx.waitUntil === 'function') {
+    ctx.waitUntil(processing);
+  } else {
+    await processing;
+  }
+  return new Response('EVENT_RECEIVED', { status: 200 });
+}
+
+async function processEntries(rawBody, context) {
+  let body;
   try {
-    // Sin firma válida de Meta (X-Hub-Signature-256) se descarta el POST:
-    // si no, cualquiera que conozca la URL podría hacer gastar Claude y
-    // mandar WhatsApps desde el número del negocio.
-    const rawBody = await request.text();
-    if (!(await verifyMetaSignature(request, rawBody, [env.META_APP_SECRET, env.INSTAGRAM_APP_SECRET]))) {
-      console.warn('WhatsApp webhook: firma X-Hub-Signature-256 inválida o ausente, se rechaza');
-      return new Response('Forbidden', { status: 403 });
-    }
-    const body = JSON.parse(rawBody);
-    const entries = body.entry || [];
+    body = JSON.parse(rawBody);
+  } catch {
+    return;
+  }
 
-    for (const entry of entries) {
-      const changes = entry.changes || [];
+  for (const entry of body.entry || []) {
+    for (const change of entry.changes || []) {
+      const value = change.value || {};
+      const phoneNumberId = value.metadata?.phone_number_id;
+      // El nombre de perfil de WhatsApp viaja junto a los mensajes en
+      // value.contacts (no hace falta llamada aparte a la Graph API).
+      // WhatsApp no expone foto de perfil vía API, así que sender_avatar_url
+      // queda siempre null para este canal.
+      const contactName = value.contacts?.[0]?.profile?.name || null;
 
-      for (const change of changes) {
-        const value = change.value || {};
-        const messages = value.messages || [];
-        const phoneNumberId = value.metadata?.phone_number_id;
-        // El nombre de perfil de WhatsApp viaja junto a los mensajes en
-        // value.contacts (no hace falta llamada aparte a la Graph API).
-        // WhatsApp no expone foto de perfil vía API, así que sender_avatar_url
-        // queda siempre null para este canal.
-        const contactName = value.contacts?.[0]?.profile?.name || null;
-
-        for (const message of messages) {
-          // Solo procesamos mensajes de texto reales; ignoramos otros tipos
-          // (imagen, audio, ubicación, etc.) y notificaciones de estado.
-          if (message.type !== 'text' || !message.text?.body) continue;
-
-          const from = message.from;
-          if (!isSafeWhatsappId(from)) continue;
-          if (!phoneNumberId) continue;
-
-          const rlCheck = await checkAllLimits(`whatsapp:${from}`, env.RATE_LIMIT_KV, {
-            maxRequests: 30,
-            windowSeconds: 60,
-            maxBurstRequests: 5,
-            burstWindowSeconds: 5
-          });
-          if (!rlCheck.allowed) continue;
-
-          // Busca la conexión de este número (cliente conectado vía
-          // Embedded Signup, ver whatsapp-connect.js); si no hay ninguna,
-          // cae al número de prueba fijo por variables de entorno
-          // (WHATSAPP_ACCESS_TOKEN), para no romper ese número original.
-          const connection = await getConnectionByPhoneNumberId(phoneNumberId, env);
-          const accessToken = connection?.access_token || env.WHATSAPP_ACCESS_TOKEN;
-          if (!accessToken) {
-            console.error(`WhatsApp: sin token para phone_number_id ${phoneNumberId}, se ignora el mensaje`);
-            continue;
-          }
-
-          // Namespace por número de negocio: un mismo cliente final puede
-          // escribirle a más de un negocio conectado, y no deben mezclarse
-          // el historial ni el contexto entre bots distintos.
-          const sessionId = `whatsapp_${phoneNumberId}_${from}`;
-          const userMessage = message.text.body;
-
-          // Historial completo (decide la divulgación de IA) y últimos 10
-          // mensajes (lo único que se le pasa al modelo).
-          const fullHistory = await getConversationHistory(sessionId, env, null);
-          const history = fullHistory.slice(-10);
-          // El primer mensaje también va a Claude (ver meta-webhook.js): la
-          // divulgación de IA la fuerza withAiDisclosure con historial vacío.
-          const reply = withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
-
-          const escalation = detectEscalation(userMessage, reply, { messaging: true });
-          await saveMessage(sessionId, from, userMessage, reply, env, contactName, escalation);
-          await sendMessage(from, reply, phoneNumberId, accessToken);
-          if (escalation.escalate) {
-            await sendEscalationNotification({
-              sessionId, reason: escalation.reason, userMessage, botReply: reply,
-              leadContact: `+${from}`, channel: 'WhatsApp'
-            }, env);
-          }
+      for (const message of value.messages || []) {
+        try {
+          await handleMessage(message, phoneNumberId, contactName, context);
+        } catch (err) {
+          console.error('WhatsApp webhook message error:', err.message);
         }
       }
     }
+  }
+}
 
-    // Meta espera 200 rápido; si no, reintenta la entrega del webhook.
-    return new Response('EVENT_RECEIVED', { status: 200 });
-  } catch (error) {
-    console.error('WhatsApp webhook error:', error.message);
-    // 200 igual: evita que Meta reintente un payload que ya falló una vez.
-    return new Response('EVENT_RECEIVED', { status: 200 });
+async function handleMessage(message, phoneNumberId, contactName, context) {
+  const { env } = context;
+  // Solo procesamos mensajes de texto reales; ignoramos otros tipos
+  // (imagen, audio, ubicación, etc.) y notificaciones de estado.
+  if (message.type !== 'text' || !message.text?.body) return;
+
+  const from = message.from;
+  if (!isSafeWhatsappId(from) || !phoneNumberId) return;
+  if (await alreadyProcessed(message.id, env.RATE_LIMIT_KV)) return;
+
+  const rlCheck = await checkAllLimits(`whatsapp:${from}`, env.RATE_LIMIT_KV, {
+    maxRequests: 30,
+    windowSeconds: 60,
+    maxBurstRequests: 5,
+    burstWindowSeconds: 5
+  });
+  if (!rlCheck.allowed) return;
+
+  // Busca la conexión de este número (cliente conectado vía Embedded
+  // Signup, ver whatsapp-connect.js); si no hay ninguna, usa el token del
+  // número propio (WHATSAPP_ACCESS_TOKEN, usuario del sistema).
+  const connection = await getConnectionByPhoneNumberId(phoneNumberId, env);
+  const accessToken = connection?.access_token || env.WHATSAPP_ACCESS_TOKEN;
+  if (!accessToken) {
+    console.error(`WhatsApp: sin token para phone_number_id ${phoneNumberId}, se ignora el mensaje`);
+    return;
+  }
+
+  // Namespace por número de negocio: un mismo cliente final puede
+  // escribirle a más de un negocio conectado, y no deben mezclarse
+  // el historial ni el contexto entre bots distintos.
+  const sessionId = `whatsapp_${phoneNumberId}_${from}`;
+  const userMessage = message.text.body;
+
+  // Historial completo (decide la divulgación de IA) y últimos 10
+  // mensajes (lo único que se le pasa al modelo).
+  const fullHistory = await getConversationHistory(sessionId, env, null);
+  const history = fullHistory.slice(-10);
+  // El primer mensaje también va a Claude (ver meta-webhook.js): la
+  // divulgación de IA la fuerza withAiDisclosure con historial vacío.
+  const reply = withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
+
+  const escalation = detectEscalation(userMessage, reply, { messaging: true });
+  await saveMessage(sessionId, from, userMessage, reply, env, contactName, escalation);
+  await sendMessage(from, reply, phoneNumberId, accessToken);
+  if (escalation.escalate) {
+    await sendEscalationNotification({
+      sessionId, reason: escalation.reason, userMessage, botReply: reply,
+      leadContact: `+${from}`, channel: 'WhatsApp'
+    }, env);
   }
 }
 

@@ -36,8 +36,10 @@ async function deliver(from) {
   const sig = 'sha256=' + await computeHmacSha256Hex('test-app-secret', body);
   const req = new Request('https://example.com/webhook/whatsapp', { method: 'POST', body, headers: { 'Content-Type': 'application/json', 'X-Hub-Signature-256': sig } });
   const env = { META_APP_SECRET: 'test-app-secret', SUPABASE_URL: 'https://supabase.test', SUPABASE_SERVICE_KEY: 'k', ANTHROPIC_API_KEY: 'a', RATE_LIMIT_KV: workerEnv.RATE_LIMIT_KV };
-  const res = await onRequestPost({ request: req, env, ctx: { waitUntil: () => {} } });
+  const waited = [];
+  const res = await onRequestPost({ request: req, env, ctx: { waitUntil: (p) => waited.push(p) } });
   expect(res.status).toBe(200);
+  await Promise.all(waited);
 }
 
 afterEach(() => vi.unstubAllGlobals());

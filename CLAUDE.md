@@ -43,11 +43,11 @@ Datos en Supabase; modelo: API de Anthropic. Idioma del proyecto: español de Ch
   (`graph.instagram.com` vs `graph.facebook.com`) depende del **tipo de token**, no del canal
   (`usesInstagramToken`, `pickInstagramConnection`). Mezclarlos da "Cannot parse access token".
 
-## App Review de Meta (en curso)
-Las solicitudes y los videos de revisión muestran **textos y botones reales del panel** (`Conectar Instagram`,
-`Conectar Página de Facebook`, `Desconectar`, `Conversaciones`, tarjeta "Conexión con Meta"). Mientras la
-revisión siga abierta **no renombres esos textos ni cambies los scopes de OAuth** (`OAUTH_SCOPES` en
-`meta-connect.js`) ni la URL del webhook sin avisar a Germán.
+## App Review de Meta
+Instagram/Messenger: aprobado (2026-10-20). WhatsApp (Tech Provider): pendiente. Mientras la revisión de
+WhatsApp siga abierta, **no renombres los textos y botones del panel que salen en los videos** (`Conectar WhatsApp`,
+`Desconectar`, tarjeta "Conexión con Meta") ni cambies `OAUTH_SCOPES` (`meta-connect.js`) ni las URLs de
+los webhooks sin avisar a Germán.
 
 ## Convenciones
 - Commits en español, estilo `tipo(ámbito): qué y por qué` (`fix(instagram): …`, `chore: …`).

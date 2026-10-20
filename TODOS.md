@@ -2,17 +2,20 @@
 
 ## Producto
 
-### Integración nativa con Meta (Instagram + Messenger) — reemplaza a ManyChat
+### Meta: pasar a producción (Instagram + Messenger aprobados) y WhatsApp como Tech Provider
 
-**What:** Se construyó el reemplazo de ManyChat como intermediario de Instagram/Messenger: flujo OAuth "Facebook Login for Business" (`src/api/meta-connect.js`, rutas `/admin/meta/connect` y `/admin/meta/callback`, protegidas por la sesión de admin) que conecta una Página de Facebook y su cuenta de Instagram vinculada, guarda el Page Access Token en una tabla nueva de Supabase (`meta_connections`) y suscribe la app a `messages`/`messaging_postbacks` de esa Página; webhook nativo (`src/api/meta-webhook.js`, ruta `/webhook/meta`) que verifica el challenge de Meta, valida la firma `X-Hub-Signature-256` (HMAC timing-safe), deduplica por `message.mid` en KV, procesa en segundo plano (`ctx.waitUntil`) y responde vía Send API (`POST /{PAGE_ID}/messages`) usando la misma lógica de Claude que ya usan los otros canales.
+**Estado (2026-10-20):** Meta aprobó casi todo el App Review de Instagram/Messenger; falta WhatsApp. ManyChat ya no existe en el código ni en los secrets del Worker.
 
-**Why:** Al preparar el screencast para el permiso `instagram_business_basic` del App Review de Meta, se descubrió que el diálogo de autorización dentro de ManyChat pide acceso para "Manychat", no para la app "Atiéndeme la pyme" (App ID `4305884926391021`) — y ManyChat no soporta bring-your-own-app. No había forma honesta de grabar la evidencia que pide Meta mientras el flujo pasara por ManyChat. Ver memoria de proyecto para el contexto completo del App Review.
+**Pendiente (lo hace Germán en el panel de Meta):**
+1. Revisar qué permisos quedaron sin aprobar. Ojo con `instagram_business_manage_messages`: no figuraba en la solicitud enviada y lo usa "Conectar Instagram" para responder DMs.
+2. Poner la app en modo Live.
+3. Probar con una cuenta que NO tenga rol en la app (cliente piloto): conectar y recibir un mensaje real.
+4. WhatsApp / Tech Provider: verificación del negocio (si falta) → Advanced Access para `whatsapp_business_messaging` y `whatsapp_business_management` con video real de "Conectar WhatsApp" + un mensaje real → idealmente una configuración de Facebook Login for Business propia para WhatsApp (su ID va en `WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID` en `wrangler.toml`; hoy reusa `META_LOGIN_CONFIG_ID`) → webhook en `https://atiendemelapyme.cl/webhook/whatsapp` suscrito a `messages`.
+5. Revocar en Meta el token viejo de Página (`FACEBOOK_PAGE_TOKEN`, que ningún código usa) y borrarlo: `npx wrangler secret delete FACEBOOK_PAGE_TOKEN`.
 
-**Context:** El 2026-09-09 se retiró por completo el código de ManyChat (`src/api/chat-manychat.js` y las rutas `/api/chat-manychat` en `src/index.js`) durante una auditoría de seguridad disparada por una advertencia de Google Search Console de "páginas engañosas" en el dominio — el código propio resultó estar limpio, pero se aprovechó para eliminar el intermediario que ya no correspondía tener corriendo. Falta como acción de seguimiento (no ejecutada por el asistente, requiere que Germán la corra): `wrangler secret delete MANYCHAT_SHARED_SECRET` y `wrangler secret delete ANTHROPIC_API_KEY_MANYCHAT` para no dejar esas credenciales vivas sin usarlas. Pendiente para dejar la integración nativa lista para probarse de punta a punta con la cuenta real @atiendemelapyme: (1) Germán tiene que correr él mismo `wrangler secret put META_APP_SECRET` y `wrangler secret put META_VERIFY_TOKEN` (el asistente no debe generar ni tipear esos valores por regla explícita), (2) registrar `https://atiendemelapyme.cl/admin/meta/callback` como Valid OAuth Redirect URI en el panel de Meta, (3) configurar el webhook `/webhook/meta` con ese mismo verify token en Meta, (4) entrar a `/admin` y presionar "Conectar Instagram/Facebook", (5) probar un mensaje real de punta a punta. Una vez validado, ese mismo flujo de conexión sirve como screencast genuino para `instagram_business_basic` — pendiente grabarlo y subir el resto de videos de "Uso permitido" antes de poder enviar la revisión (que requiere confirmación fresca de Germán antes de presionar el botón final, sin excepción).
+**Landing:** decir "Tech Provider de Meta para WhatsApp Business" solo cuando Meta lo apruebe; nunca "oficial", "partner" ni el logo de Meta.
 
-**Effort:** L (código hecho; falta la prueba end-to-end con cuenta real, que solo puede hacer Germán)
 **Priority:** P1
-**Depends on:** Que Germán configure los secrets/webhook en el panel de Meta y pruebe la conexión real.
 
 ### Plan Experto — voicebot es entregable bajo pedido, no corre por defecto
 
@@ -90,22 +93,6 @@
 
 ## Infraestructura
 
-## Revisión de código (2026-09-14) — pendientes para después del App Review de Meta
-
-Hallazgos de una revisión completa del código que **no se implementaron a propósito**: cambian el comportamiento del producto o tocan la integración con Meta/WhatsApp, y Germán prefiere no arriesgar nada mientras la app está en revisión. Retomar cuando el App Review esté aprobado. (La limpieza sin riesgo de esa misma revisión sí se hizo: open redirect del login, errores 5xx sin detalles internos, 404 en `/constructor`, fechas imposibles, voseo en el prompt, código muerto, envío de correos unificado.)
-
-### 🔴 Verificar la firma de Meta en el webhook de WhatsApp
-
-**What:** `src/api/whatsapp.js` (`POST /webhook/whatsapp`) procesa cualquier POST sin validar `X-Hub-Signature-256`. `src/api/meta-webhook.js` ya lo hace bien (`verifySignature` + `timingSafeEqual`); hay que reusar esa misma lógica en WhatsApp.
-
-**Why:** Cualquiera que conozca la URL puede mandar un payload falso con un `phone_number_id` conectado y un `from` arbitrario: el bot llama a Claude (gasto) y envía un WhatsApp desde el número del negocio a ese número (spam desde la cuenta, riesgo de bloqueo de Meta). El rate limit es por `from`, que controla el atacante.
-
-**Context:** Antes de implementarlo, confirmar qué App Secret firma los webhooks de WhatsApp (probablemente `META_APP_SECRET`, la app del Embedded Signup; revisar también el número de prueba que usa `WHATSAPP_ACCESS_TOKEN`). Si se usa el secret equivocado, se rechazan todos los mensajes reales — probar con un mensaje real inmediatamente después del deploy. Agregar tests como los de `test/api/meta-webhook.test.js`.
-
-**Effort:** S
-**Priority:** P1
-**Depends on:** App Review de Meta aprobado.
-
 ### Índice único de horarios en Supabase (correrlo a mano)
 
 **What:** Crear el índice en el SQL Editor de Supabase (proyecto `ewhqshvmrinqsevjfjtz`):
@@ -115,70 +102,38 @@ create unique index if not exists scheduled_appointments_unique_slot
   on public.scheduled_appointments (appointment_date, appointment_time);
 ```
 
-**Why:** `src/api/schedule.js` ya revisa choques de horario (demos de 20 min) y falla cerrado, pero dos pedidos exactamente simultáneos podrían pasar el chequeo a la vez. Con el índice, la base rechaza el segundo (409) y el código ya lo maneja sin crear el evento en Google Calendar.
-
-**Context:** Verificado el 2026-09-14 que no hay horarios duplicados en la tabla, así que el índice se crea sin errores. No se aplicó desde la sesión porque el sistema de permisos bloqueó cambios directos en la base de producción.
+**Why:** `src/api/schedule.js` ya revisa choques de horario y falla cerrado, pero dos pedidos exactamente simultáneos podrían pasar el chequeo a la vez. Con el índice, la base rechaza el segundo (409) y el código ya lo maneja.
 
 **Effort:** XS
 **Priority:** P2
-**Depends on:** None
 
-### El primer mensaje en WhatsApp/Instagram/Messenger ignora lo que escribió el cliente
+### PIN de verificación en dos pasos de WhatsApp no se guarda
 
-**What:** En `src/api/whatsapp.js` y `src/api/meta-webhook.js`, si no hay historial se responde con `getRandomGreeting()` en vez de pasar el mensaje a Claude. Si el cliente escribe "¿tienen hora mañana a las 10?", recibe un saludo genérico y su pregunta queda sin respuesta.
-
-**Why:** El chat web evita esto a propósito (ver el comentario en `src/api/chat.js`: "el primer mensaje que llega acá es siempre un mensaje real del usuario, y siempre debe ir a Claude"). Además, los saludos hablan de "tu negocio" como si el cliente fuera un dueño de pyme — sirve para la cuenta de Atiéndeme la Pyme, pero no para los bots de clientes conectados.
-
-**Context:** Tocar solo después del App Review: cambia lo que se ve en los screencasts de mensajería.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** App Review de Meta aprobado.
-
-### "Desconectar" cuentas con un link GET (CSRF)
-
-**What:** `/admin/meta/connections/delete` y `/admin/whatsapp/connections/delete` borran conexiones con un GET. La cookie de sesión es `SameSite=Lax`, que sí se envía en navegaciones GET desde otro sitio.
-
-**Why:** Un link malicioso abierto con la sesión de admin activa podría desconectar una cuenta de Instagram/Facebook/WhatsApp de un cliente.
-
-**Context:** Cambiar a `POST` (formulario con botón en `src/api/admin.js`, `connectionsCardHtml` y `whatsappConnectionsCardHtml`) y actualizar las rutas en `src/index.js`. Riesgo bajo, pero toca las rutas de Meta: esperar al App Review.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** App Review de Meta aprobado.
-
-### PIN de verificación en dos pasos de WhatsApp: aleatorio débil y no se guarda
-
-**What:** `onRequestPostExchange` en `src/api/whatsapp-connect.js` registra el número con un PIN de 6 dígitos generado con `Math.random()` y no lo guarda en ningún lado.
-
-**Why:** `Math.random` no es criptográficamente seguro, y si más adelante hay que re-registrar el número o migrarlo, nadie conoce el PIN (hay que resetearlo desde Meta Business Manager).
-
-**Context:** Usar `crypto.getRandomValues` y guardar el PIN en `whatsapp_connections` (columna nueva, con el mismo tratamiento que `access_token`), o documentar el proceso de reseteo.
+**What:** `src/api/whatsapp-connect.js` ya genera el PIN con `crypto.getRandomValues`, pero no lo guarda. Si hay que re-registrar o migrar el número, nadie lo conoce (se resetea desde Meta Business Manager). Guardarlo en `whatsapp_connections` o documentar el reseteo.
 
 **Effort:** S
 **Priority:** P3
-**Depends on:** App Review de Meta aprobado.
 
 ### Código duplicado en los webhooks de mensajería
 
-**What:** `getConversationHistory`, `getClaudeReply` y `saveMessage` están casi idénticos en `src/api/whatsapp.js` y `src/api/meta-webhook.js`, y los headers de Supabase se repiten en ~20 lugares. Extraer a un módulo compartido (ej. `src/lib/chatSessions.js`). `saveMessage` además hace leer-y-escribir sin transacción (dos mensajes seguidos pueden pisarse).
-
-**Why:** Mantenibilidad: un arreglo en un canal hoy no llega al otro.
-
-**Context:** No se hizo en la revisión porque los tests no cubren esa parte del flujo y la integración con Meta está en revisión. Agregar tests del camino completo (historial → Claude → guardar → Send API, con `fetch` falso) antes de refactorizar.
+**What:** `getConversationHistory`, `getClaudeReply` y `saveMessage` están casi idénticos en `src/api/whatsapp.js` y `src/api/meta-webhook.js`. `saveMessage` hace leer-y-escribir sin transacción (dos mensajes seguidos pueden pisarse). Extraer a un módulo compartido, con tests del camino completo antes de refactorizar.
 
 **Effort:** M
 **Priority:** P3
-**Depends on:** App Review de Meta aprobado.
+**Depends on:** Que el App Review de WhatsApp termine (toca `whatsapp.js`).
 
 ### Otros menores
 
-- **Modelo de borradores de correo:** `src/lib/email-inbound.js` usa el modelo por defecto de `src/lib/anthropic.js` (`claude-sonnet-4-5-20250929`). Sigue activo y sin fecha de retiro (revisado 2026-09-14); cambiarlo es decisión de costo/calidad, sin urgencia.
-- **Webhook legado `/webhook/instagram`:** solo responde la verificación GET. Si la suscripción antigua ya no está en el panel de Meta, borrar `src/api/instagram.js` y su ruta.
-- **Términos con "usted" (auditoría web 2026-09-14):** `/terminos` dice "usted acepta estos Términos... Si no está de acuerdo" y la marca usa "tú". No se cambió porque la URL de términos/privacidad está registrada en la app de Meta en revisión; es solo redacción, pasarla a "tú" después del App Review.
-- **robots.txt administrado por Cloudflare:** el dashboard de Cloudflare antepone su bloque "Managed Content" (`Content-Signal: ai-train=no` + `Disallow` para GPTBot, ClaudeBot, Google-Extended, CCBot, etc.). Lighthouse lo marca como "robots.txt no válido" por la directiva `Content-Signal`, que Google ignora sin problema. Los bots de búsqueda con IA (OAI-SearchBot, Claude-SearchBot, PerplexityBot) no están bloqueados, así que el sitio sigue apareciendo en respuestas de IA; solo se bloquea el entrenamiento. Decidir si mantenerlo (se cambia en Cloudflare > AI Crawl Control / robots.txt administrado, no en el código).
+- **Modelo de borradores de correo:** `src/lib/email-inbound.js` usa el modelo por defecto de `src/lib/anthropic.js` (`claude-sonnet-4-5-20250929`). Cambiarlo es decisión de costo/calidad.
+- **Webhook legado `/webhook/instagram`:** solo responde la verificación GET y usa `FACEBOOK_VERIFY_TOKEN`. Si la suscripción antigua ya no está en el panel de Meta, borrar `src/api/instagram.js`, su ruta y ese secret.
+- **robots.txt administrado por Cloudflare:** bloquea bots de entrenamiento de IA (no los de búsqueda). Decidir si mantenerlo (se cambia en Cloudflare, no en el código).
 
 ## Completed
+
+### Pendientes de la revisión de código que esperaban al App Review (hecho 2026-10)
+
+Firma `X-Hub-Signature-256` en el webhook de WhatsApp, PIN con `crypto.getRandomValues` y sessionId válido en el WebSocket (`c96b014`); el primer mensaje en WhatsApp/Instagram/Messenger va a Claude con divulgación de IA, "Desconectar" por POST (CSRF) y `/terminos` en "tú" (`7bf4c4c`, desplegado 2026-10-20). Secrets de ManyChat confirmados borrados del Worker.
+
 
 ### Pendientes no-Meta de la revisión de código (hecho 2026-09-14)
 

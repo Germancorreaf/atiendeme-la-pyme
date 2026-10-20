@@ -49,6 +49,10 @@ describe('prompt de Dominga', () => {
     expect(web).toMatch(/no inventes/i);
   });
 
+  it('pide texto plano: el chat web y WhatsApp muestran los ** y # tal cual', () => {
+    for (const p of [web, messaging]) expect(p).toMatch(/texto plano/i);
+  });
+
   it('usa las fechas reales de hoy y mañana', () => {
     expect(web).toMatch(/Hoy es \S+, \d{4}-\d{2}-\d{2}/);
   });

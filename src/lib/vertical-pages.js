@@ -123,7 +123,7 @@ const SHARED_HEADER_NAV = `<header class="nav-header">
 </nav>`;
 
 const SHARED_FOOTER = `<footer>
-    <span class="cell"><span class="ok-dot"></span>SYS.OK — © 2026 ATIÉNDEME LA PYME</span>
+    <span class="cell"><span class="ok-dot"></span>SYS.OK — © 2026 ATIÉNDEME LA PYME · HIGH LIFE SPA · RUT 77.794.178-K</span>
     <div class="links">
       <a href="/terminos">Términos</a>
       <a href="/privacidad">Privacidad</a>

@@ -75,6 +75,7 @@ describe.each([
     expect(systemPrompts[0]).toContain('Clínica Sonrisa');
     expect(systemPrompts[0]).not.toContain('Atiéndeme la Pyme');
     expect(systemPrompts[0]).not.toContain('$149.990');
+    expect(systemPrompts[0]).toMatch(/texto plano/i);
   });
 
   it('se identifica como la IA del negocio del cliente', async () => {

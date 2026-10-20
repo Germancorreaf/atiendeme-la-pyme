@@ -405,8 +405,8 @@ h2{font-family:var(--display);font-size:19px;letter-spacing:-.01em;font-weight:7
 .conn-row a{font-size:12px;color:var(--muted);white-space:nowrap;flex-shrink:0;}
 .conn-row a:hover{color:var(--alert);}
 .conn-row form{margin:0;flex-shrink:0;}
-.link-btn{background:none;border:none;padding:0;font:inherit;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;}
-.link-btn:hover{color:var(--alert);text-decoration:underline;}
+.conn-row .link-btn{background:none;border:none;padding:0;font:inherit;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;}
+.conn-row .link-btn:hover{color:var(--alert);text-decoration:underline;}
 .conn-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:8px;}
 .conn-sub{color:var(--muted);font-size:11.5px;}
 

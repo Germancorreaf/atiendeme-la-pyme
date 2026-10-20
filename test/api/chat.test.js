@@ -180,6 +180,42 @@ describe('POST /api/chat escalation flow (integration)', () => {
     expect(savedBody.escalated).toBe(true);
     expect(savedBody.escalation_reason).toBe('user_requested_human');
   });
+  // Dominga deriva a hola@atiendemelapyme.cl: eso no es un contacto del visitante.
+  it('no guarda el correo de Atiéndeme la Pyme que menciona Dominga como lead', async () => {
+    let savedBody = null;
+    fakeExternalServices('Esa pregunta la responden mejor en hola@atiendemelapyme.cl', {
+      onSupabaseInsert: (body) => { savedBody = body; },
+    });
+    const res = await onRequestPost({
+      request: postRequest({
+        messages: [{ role: 'user', content: '¿hacen facturas exentas?' }],
+        sessionId: '123e4567-e89b-12d3-a456-426614174000',
+      }),
+      env: baseEnv,
+    });
+    expect(res.status).toBe(200);
+    expect(savedBody.lead_contact).toBeNull();
+    expect((await res.json()).leadDetected).toBe(false);
+  });
+
+  it('el correo real del visitante reemplaza un lead_contact mal guardado con el nuestro', async () => {
+    let savedBody = null;
+    fakeExternalServices('¡Gracias Juan! Te escribimos.', {
+      onSupabaseInsert: (body) => { savedBody = body; },
+      existingRows: [{
+        messages: [{ role: 'assistant', content: 'Escríbenos a hola@atiendemelapyme.cl' }],
+        lead_contact: 'hola@atiendemelapyme.cl',
+      }],
+    });
+    await onRequestPost({
+      request: postRequest({
+        messages: [{ role: 'user', content: 'mi correo es juan@gmail.com' }],
+        sessionId: '123e4567-e89b-12d3-a456-426614174000',
+      }),
+      env: baseEnv,
+    });
+    expect(savedBody.lead_contact).toBe('juan@gmail.com');
+  });
 });
 
 describe('GET /api/chat', () => {

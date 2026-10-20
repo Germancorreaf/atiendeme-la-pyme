@@ -17,12 +17,20 @@ import { buildSystemPrompt } from '../lib/dominga-prompt.js';
 import { detectEscalation } from '../lib/escalation.js';
 import { sendEscalationNotification } from '../lib/email.js';
 
+// Dominga deriva a hola@atiendemelapyme.cl: nuestros datos no son un lead.
+function isOwnContact(contact) {
+  return /@atiendemelapyme\.cl$/i.test(String(contact || ''));
+}
+
 function extractLeadContact(messages) {
+  // Solo lo que escribió el visitante: las respuestas de Dominga citan
+  // nuestro correo y nuestro WhatsApp.
   const fullText = messages
+    .filter((m) => m.role === 'user')
     .map((m) => m.content)
     .join(' ');
 
-  const emailMatch = fullText.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  const emailMatch = fullText.match(/[\w.+-]+@(?!atiendemelapyme\.cl\b)[\w-]+\.[\w.-]+/i);
   if (emailMatch) {
     return {
       contact: emailMatch[0],
@@ -85,7 +93,7 @@ async function saveChatSession(sessionId, newMessages, escalation, context) {
         body: JSON.stringify({
           session_id: sessionId,
           messages,
-          lead_contact: leadContact?.contact || existing.lead_contact || null,
+          lead_contact: leadContact?.contact || (isOwnContact(existing.lead_contact) ? null : existing.lead_contact) || null,
           escalated: Boolean(existing.escalated) || Boolean(escalation?.escalate),
           escalation_reason: escalation?.reason || existing.escalation_reason || null,
           updated_at: new Date().toISOString()

@@ -130,3 +130,18 @@ describe('webhook de WhatsApp: entregas repetidas y respuesta rápida', () => {
     await Promise.all(waited);
   });
 });
+
+describe('Instagram/Messenger: historial separado por negocio', () => {
+  it('la misma persona escribiéndole a dos Páginas conectadas queda en dos conversaciones distintas', async () => {
+    const { saved } = stubNetwork('Hola 👋');
+    for (const [page, mid] of [['PAGE_A', 'mid.sep.a'], ['PAGE_B', 'mid.sep.b']]) {
+      const body = JSON.stringify({ object: 'page', entry: [{ id: page, messaging: [{ sender: { id: '5550001' }, message: { mid, text: 'hola' } }] }] });
+      const req = new Request('https://example.com/webhook/meta', { method: 'POST', body, headers: { 'X-Hub-Signature-256': 'sha256=' + await computeHmacSha256Hex(SECRET, body) } });
+      const waited = [];
+      await metaPost({ request: req, env: env(), ctx: { waitUntil: (p) => waited.push(p) } });
+      await Promise.all(waited);
+    }
+    const ids = saved.map((b) => b.session_id);
+    expect(ids).toEqual(['messenger_PAGE_A_5550001', 'messenger_PAGE_B_5550001']);
+  });
+});

@@ -114,7 +114,9 @@ async function handleEvent(event, entryId, isInstagram, context) {
   // una conexión hecha vía Página de Facebook usa token de Facebook aunque el
   // mensaje venga de Instagram.
   const instagramHost = isInstagram && usesInstagramToken(connection);
-  const sessionId = `${channel}_${senderId}`;
+  // Separado por negocio (Página / cuenta de Instagram), igual que WhatsApp:
+  // una persona que le escribe a dos clientes no debe mezclar historiales.
+  const sessionId = `${channel}_${entryId}_${senderId}`;
 
   const rlCheck = await limitRequest(env, sessionId, {
     kv: { maxRequests: 30, windowSeconds: 60, maxBurstRequests: 5, burstWindowSeconds: 5 }

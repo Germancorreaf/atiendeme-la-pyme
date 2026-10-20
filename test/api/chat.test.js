@@ -74,6 +74,39 @@ describe('POST /api/chat rate limit', () => {
   });
 });
 
+describe('POST /api/chat tamaño del historial', () => {
+  it('no manda más de 8000 caracteres de historial a Claude, y siempre incluye el último mensaje', async () => {
+    const originalFetch = globalThis.fetch;
+    let sentToModel = null;
+    globalThis.fetch = async (url, opts) => {
+      if (String(url).includes('api.anthropic.com')) {
+        sentToModel = JSON.parse(opts.body).messages;
+        return new Response(JSON.stringify({ content: [{ type: 'text', text: 'ok' }] }), { status: 200 });
+      }
+      return new Response('[]', { status: 200 });
+    };
+    try {
+      const big = 'x'.repeat(4900);
+      const messages = Array.from({ length: 20 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: big }));
+      messages.push({ role: 'user', content: 'pregunta final' });
+      const res = await onRequestPost({
+        request: postRequest({ messages, sessionId: '123e4567-e89b-12d3-a456-426614174000' }),
+        // Limitadores que siempre aceptan: no consume el cupo de KV que
+        // comparten los demás tests de este archivo (misma IP).
+        env: { ANTHROPIC_API_KEY: 'a', RL_BURST: { limit: async () => ({ success: true }) }, RL_MINUTE: { limit: async () => ({ success: true }) } },
+      });
+      expect(res.status).toBe(200);
+      const total = sentToModel.reduce((n, m) => n + m.content.length, 0);
+      expect(total).toBeLessThanOrEqual(8000);
+      expect(sentToModel.at(-1).content).toBe('pregunta final');
+      // La API de Anthropic exige que la conversación empiece con el usuario.
+      expect(sentToModel[0].role).toBe('user');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 describe('POST /api/chat escalation flow (integration)', () => {
   const originalFetch = globalThis.fetch;
 

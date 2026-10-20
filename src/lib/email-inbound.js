@@ -15,6 +15,24 @@ import { buildEmailSystemPrompt } from './dominga-prompt.js';
 import { renderEmailShell, escapeHtml, COLORS } from './email-template.js';
 import { sendViaResend } from './email.js';
 
+const MAX_BODY_CHARS = 6000;
+
+// Texto legible de un correo HTML: suficiente para redactar un borrador.
+function htmlToText(html) {
+  return String(html || '')
+    .replace(/<(style|script|head)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<br\s*\/?>|<\/(p|div|li|tr|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n+/g, '\n\n');
+}
+
 function buildMailtoLink(toEmail, subject, body) {
   const params = new URLSearchParams({ subject, body });
   return `mailto:${encodeURIComponent(toEmail)}?${params.toString().replace(/\+/g, '%20')}`;
@@ -77,7 +95,9 @@ export async function handleInboundEmail(message, env, ctx) {
     const fromEmail = parsed.from?.address || message.from;
     const fromName = parsed.from?.name || '';
     const subject = parsed.subject || '';
-    const bodyText = (parsed.text || '').trim();
+    // Muchos correos traen solo HTML; antes se descartaban sin borrador. El
+    // tope evita mandar a Claude un correo enorme (o spam) completo.
+    const bodyText = (parsed.text || htmlToText(parsed.html)).trim().slice(0, MAX_BODY_CHARS);
 
     if (!bodyText) {
       console.warn('[EMAIL-INBOUND] Correo sin texto plano, se omite:', fromEmail);

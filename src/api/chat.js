@@ -116,16 +116,26 @@ async function saveChatSession(sessionId, newMessages, escalation, context) {
   }
 }
 
+// El historial lo manda el navegador: sin tope de caracteres, una sola
+// llamada podía llevar ~100.000 (20 mensajes x 5.000) a Claude.
+const MAX_HISTORY_CHARS = 8000;
+
+/**
+ * Últimos mensajes que caben en MAX_HISTORY_CHARS (y como máximo
+ * maxMessages). El último mensaje siempre va: el validador limita cada
+ * mensaje a 5.000 caracteres.
+ */
 function limitHistory(messages, maxMessages = 20) {
-  if (messages.length <= maxMessages) {
-    return messages;
+  const kept = [];
+  let total = 0;
+  for (const msg of messages.slice(-maxMessages).reverse()) {
+    total += msg.content.length;
+    if (kept.length > 0 && total > MAX_HISTORY_CHARS) break;
+    kept.unshift(msg);
   }
-
-  console.warn(
-    `History truncated: ${messages.length} > ${maxMessages} messages`
-  );
-
-  return messages.slice(-maxMessages);
+  // La API de Anthropic exige que la conversación empiece con el usuario.
+  while (kept.length > 1 && kept[0].role !== 'user') kept.shift();
+  return kept;
 }
 
 export async function onRequestPost(context) {

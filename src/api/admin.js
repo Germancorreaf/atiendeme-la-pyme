@@ -9,6 +9,7 @@ import { timingSafeEqual } from '../lib/timingSafe.js';
 import { checkSessionAuth, createSessionCookie, clearSessionCookie } from '../lib/adminSession.js';
 import { listConnections } from '../lib/metaConnections.js';
 import { listWhatsappConnections } from '../lib/whatsappConnections.js';
+import { googleAccountEmail } from '../lib/google-calendar.js';
 
 function escHtml(x) {
     return String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -895,6 +896,15 @@ $('#psi-run').addEventListener('click',async()=>{
   }finally{btn.disabled=false;}
 });
 
+// ---------- sistema: cuenta de Google para la agenda de clientes ----------
+(async()=>{
+  try{
+    const res=await fetch('/api/admin/google-account');
+    const d=await res.json();
+    $('#google-account').textContent=d.email||'(no se pudo consultar)';
+  }catch(e){$('#google-account').textContent='(no se pudo consultar)';}
+})();
+
 // vista inicial según el hash
 show((location.hash||'#inicio').slice(1));
 `;
@@ -1138,6 +1148,11 @@ async function onRequestGetAdmin(context) {
       </div>
 
       <div class="section">
+        <div class="section-head"><h2>Agenda de clientes</h2></div>
+        <p class="empty" style="margin:0;">Para que el bot de un cliente agende solo, el cliente comparte su Google Calendar con <b id="google-account">…</b> con el permiso <b>Hacer cambios en los eventos</b>. Después, en Supabase (tabla <code>clientes</code>), pones ese calendario en <code>calendar_id</code> junto a su horario y la duración de cada hora.</p>
+      </div>
+
+      <div class="section">
         <div class="section-head"><h2>Accesos</h2></div>
         <div class="links-list">
           <a href="https://calendar.google.com" target="_blank" rel="noopener">Google Calendar${icon('external', 15)}</a>
@@ -1253,4 +1268,23 @@ async function onRequestGetPagespeed(context) {
     });
 }
 
-export { onRequestGetAdmin, onRequestGetPagespeed, onRequestPostAdminLogin, onRequestPostAdminLogout };
+async function onRequestGetGoogleAccount(context) {
+    const { request, env } = context;
+    if (!(await checkSessionAuth(request, env))) {
+        return new Response('No autorizado', { status: 401 });
+    }
+    try {
+        const email = await googleAccountEmail(env);
+        return new Response(JSON.stringify({ email }), {
+            headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
+        });
+    } catch (err) {
+        console.error('Google account lookup error:', err.message);
+        return new Response(JSON.stringify({ email: null }), {
+            status: 502,
+            headers: { 'Content-Type': 'application/json; charset=utf-8' }
+        });
+    }
+}
+
+export { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout };

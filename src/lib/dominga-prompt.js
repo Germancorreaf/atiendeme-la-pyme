@@ -98,8 +98,12 @@ function businessNameOf(connection) {
     || 'este negocio';
 }
 
-/** System prompt del asistente de IA de un cliente (canales de mensajería). */
-export function buildClientPrompt({ businessName, info }) {
+/**
+ * System prompt del asistente de IA de un cliente (canales de mensajería).
+ * Con `booking`, el bot tiene las herramientas consultar_disponibilidad y
+ * agendar_hora (ver lib/booking.js) y reserva en el calendario del cliente.
+ */
+export function buildClientPrompt({ businessName, info, booking = false }) {
   const { todayISO, tomorrowISO, weekday } = getTodayInfo();
   return `Eres la asistente de IA de ${businessName}. Respondes los mensajes que sus clientes le escriben por chat.
 
@@ -115,7 +119,9 @@ REGLAS:
 - Responde solo con la información de arriba. No inventes precios, horarios, disponibilidad, promociones ni políticas.
 - Si algo no está en la información o no estás segura, responde: "Te dejo anotado tu mensaje y el equipo te responde a la brevedad."
 - Si piden hablar con una persona, no digas que los transfieres en el momento; responde: "Te dejo anotado tu mensaje y el equipo te responde a la brevedad."
-- Si quieren agendar o reservar: pide su nombre, su correo y el día y la hora que prefieren, y diles "Te lo confirmamos por correo a la brevedad". No des la hora por confirmada: la confirma el equipo.
+- ${booking
+    ? 'Si quieren agendar o reservar: usa consultar_disponibilidad con la fecha real y ofrece 2 o 3 horas libres. Nunca ofrezcas una hora que la herramienta no devolvió. Cuando la persona elija una hora y tengas su nombre, usa agendar_hora. Confirma la hora solo si agendar_hora respondió ok; si falla, ofrece otras horas libres.'
+    : 'Si quieren agendar o reservar: pide su nombre, su correo y el día y la hora que prefieren, y diles "Te lo confirmamos por correo a la brevedad". No des la hora por confirmada: la confirma el equipo.'}
 - Español de Chile, ni coloquial ni formal: cálido, claro y profesional. Sin modismos ("al tiro", "cachai", "po") ni fórmulas rígidas ("estimado/a", "usted"). Siempre "tú". Máximo 2-3 frases cortas por mensaje y como mucho 1 emoji.
 - Texto plano: nada de asteriscos, almohadillas ni tablas (el chat los muestra tal cual).
 - No menciones a otras empresas ni que eres un producto de otra empresa.
@@ -127,8 +133,11 @@ REGLAS:
  * tiene bot_prompt, o Dominga de Atiéndeme la Pyme si no.
  * @returns {{ systemPrompt: string, disclosureLine: string, businessName: string | null }}
  */
-export function botFor(connection) {
-  const info = typeof connection?.bot_prompt === 'string' ? connection.bot_prompt.trim() : '';
+export function botFor(connection, cliente = null, { booking = false } = {}) {
+  // La configuración del cliente (tabla clientes) manda; bot_prompt en la
+  // conexión sigue funcionando para conexiones sin cliente asignado.
+  const raw = cliente?.bot_prompt ?? connection?.bot_prompt;
+  const info = typeof raw === 'string' ? raw.trim() : '';
   if (!info) {
     return {
       // canScheduleViaJSON: false porque estos canales reenvían la respuesta
@@ -138,9 +147,9 @@ export function botFor(connection) {
       businessName: null
     };
   }
-  const businessName = businessNameOf(connection);
+  const businessName = cliente?.nombre || businessNameOf(connection);
   return {
-    systemPrompt: buildClientPrompt({ businessName, info }),
+    systemPrompt: buildClientPrompt({ businessName, info, booking }),
     disclosureLine: `Soy la asistente de IA de ${businessName}.`,
     businessName
   };

@@ -37,6 +37,7 @@ function stubNetwork({ connection, modelReply = 'La limpieza cuesta $30.000 😊
 const env = () => ({
   META_APP_SECRET: SECRET, SUPABASE_URL: 'https://supabase.test', SUPABASE_SERVICE_KEY: 'k', ANTHROPIC_API_KEY: 'a',
   WHATSAPP_ACCESS_TOKEN: 't', RESEND_API_KEY: 'r', DRAFT_NOTIFICATION_EMAIL: 'german@example.com',
+  GOOGLE_CLIENT_ID: 'gc', GOOGLE_CLIENT_SECRET: 'gs', GOOGLE_REFRESH_TOKEN: 'gr',
   RATE_LIMIT_KV: workerEnv.RATE_LIMIT_KV,
 });
 
@@ -106,5 +107,59 @@ describe('cuentas propias (sin bot_prompt)', () => {
     const { systemPrompts } = stubNetwork({ connection: { page_id: 'PAGE_CLINICA', page_access_token: 'tok', bot_prompt: '   ' } });
     await deliverMessenger('hola');
     expect(systemPrompts[0]).toContain('Atiéndeme la Pyme');
+  });
+});
+
+describe('cliente con agenda conectada (tabla clientes)', () => {
+  const CLIENTE = {
+    id: 'c1', nombre: 'Clínica Sonrisa', bot_prompt: CLINICA,
+    calendar_id: 'clinica@example.com', slot_minutes: 60, horario: { lun: [['09:00', '13:00']] },
+  };
+
+  function stubWithCalendar({ cliente = CLIENTE, modelResponses }) {
+    const anthropicBodies = [];
+    const googleCalls = [];
+    const sent = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      const u = String(url);
+      const json = (d) => new Response(JSON.stringify(d), { headers: { 'Content-Type': 'application/json' } });
+      if (u.includes('/rest/v1/whatsapp_connections')) return json([{ phone_number_id: 'PN_CLINICA', access_token: 'tok', business_name: 'Nombre en Meta', cliente_id: 'c1' }]);
+      if (u.includes('/rest/v1/clientes')) return json(cliente ? [cliente] : []);
+      if (u.includes('/rest/v1/chat_sessions')) return json([]);
+      if (u.includes('/rest/v1/rpc/')) return json(null);
+      if (u.includes('api.anthropic.com')) { anthropicBodies.push(JSON.parse(init.body)); return json(modelResponses.shift()); }
+      if (u.includes('oauth2.googleapis.com')) return json({ access_token: 'g' });
+      if (u.includes('googleapis.com/calendar')) { googleCalls.push(u); return json({ items: [] }); }
+      if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST') { sent.push(JSON.parse(init.body).text.body); return json({}); }
+      return json({});
+    }));
+    return { anthropicBodies, googleCalls, sent };
+  }
+
+  it('Claude recibe las herramientas, consulta el calendario del cliente y responde con horas reales', async () => {
+    const { anthropicBodies, googleCalls, sent } = stubWithCalendar({ modelResponses: [
+      { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tu1', name: 'consultar_disponibilidad', input: { fecha: '2027-03-01' } }] },
+      { stop_reason: 'end_turn', content: [{ type: 'text', text: 'El lunes tengo 09:00, 10:00 u 11:00, ¿cuál prefieres?' }] },
+    ] });
+    await deliverWhatsapp('¿Tienen hora el lunes 1 de marzo?');
+
+    expect(anthropicBodies[0].tools.map((t) => t.name)).toEqual(['consultar_disponibilidad', 'agendar_hora']);
+    expect(anthropicBodies[0].system).toContain('Clínica Sonrisa');
+    expect(anthropicBodies[0].system).toContain('consultar_disponibilidad');
+    expect(anthropicBodies[0].system).not.toContain('Te lo confirmamos por correo');
+    expect(googleCalls[0]).toContain('/calendars/clinica%40example.com/events');
+    expect(JSON.parse(anthropicBodies[1].messages.at(-1).content[0].content).horas_libres)
+      .toEqual(['09:00', '10:00', '11:00', '12:00']);
+    expect(sent[0]).toContain('09:00, 10:00 u 11:00');
+  });
+
+  it('cliente sin agenda conectada: sin herramientas, el equipo confirma por correo', async () => {
+    const { anthropicBodies } = stubWithCalendar({
+      cliente: { ...CLIENTE, calendar_id: null },
+      modelResponses: [{ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Te lo confirmamos por correo a la brevedad.' }] }],
+    });
+    await deliverWhatsapp('quiero una hora');
+    expect(anthropicBodies[0]).not.toHaveProperty('tools');
+    expect(anthropicBodies[0].system).toContain('Te lo confirmamos por correo');
   });
 });

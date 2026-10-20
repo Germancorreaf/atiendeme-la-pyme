@@ -5,10 +5,12 @@
 // enviar -> avisar. Lo propio de cada canal (firma, duplicados, límites,
 // conexión, cómo se envía) queda en su webhook.
 
-import { callClaude } from './anthropic.js';
+import { callClaude, callClaudeWithTools } from './anthropic.js';
 import { botFor, withAiDisclosure } from './dominga-prompt.js';
 import { detectEscalation } from './escalation.js';
 import { sendEscalationNotification } from './email.js';
+import { getCliente } from './clients.js';
+import { BOOKING_TOOLS, bookingRunner, hasBooking } from './booking.js';
 
 // Mensajes de historial que se le pasan al modelo.
 const HISTORY_FOR_MODEL = 10;
@@ -56,12 +58,15 @@ async function getConversationHistory(sessionId, env, channel) {
   }
 }
 
-async function getClaudeReply(userMessage, history, context, systemPrompt, channel) {
+async function getClaudeReply(userMessage, history, context, systemPrompt, channel, runTool = null) {
   const messages = [
     ...history.map((msg) => ({ role: msg.role, content: msg.content })),
     { role: 'user', content: userMessage }
   ];
   try {
+    if (runTool) {
+      return await callClaudeWithTools(messages, systemPrompt, context, { tools: BOOKING_TOOLS, runTool });
+    }
     return await callClaude(messages, systemPrompt, context);
   } catch (err) {
     console.error(`Claude call failed for ${channel}:`, err.message);
@@ -112,9 +117,14 @@ export async function replyToMessage({ sessionId, userMessage, connection, chann
   // primer mensaje también va a Claude: un saludo genérico dejaría sin
   // respuesta lo que la persona preguntó; la divulgación de IA la fuerza
   // withAiDisclosure (historial vacío => siempre se antepone la línea).
-  const bot = botFor(connection);
+  // Cliente de la conexión (bot_prompt, nombre y agenda). Si tiene agenda
+  // conectada, el bot consulta y reserva en su Google Calendar.
+  const cliente = connection?.cliente_id ? await getCliente(env, connection.cliente_id) : null;
+  const booking = hasBooking(cliente);
+  const bot = botFor(connection, cliente, { booking });
+  const runTool = booking ? bookingRunner(cliente, env, { sessionId, contact: notifyContact || leadContact, channel }) : null;
   const reply = withAiDisclosure(
-    await getClaudeReply(userMessage, history, context, bot.systemPrompt, channel),
+    await getClaudeReply(userMessage, history, context, bot.systemPrompt, channel, runTool),
     fullHistory, Date.now(), bot.disclosureLine
   );
 

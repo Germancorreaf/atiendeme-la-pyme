@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { env as workerEnv } from 'cloudflare:test';
-import { onRequestGetAdmin, onRequestPostAdminLogin, onRequestPostAdminLogout } from '../../src/api/admin.js';
+import { onRequestGetAdmin, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout } from '../../src/api/admin.js';
 import { createSessionCookie } from '../../src/lib/adminSession.js';
 
 const baseEnv = {
@@ -156,5 +156,27 @@ describe('POST /admin/logout', () => {
     const res = await onRequestGetAdmin({ request: getAdminRequest(clearedPair), env: baseEnv });
     const html = await res.text();
     expect(html).toContain('action="/admin/login"');
+  });
+});
+
+describe('GET /api/admin/google-account (con qué correo comparten su calendario los clientes)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const env = { ...baseEnv, GOOGLE_CLIENT_ID: 'c', GOOGLE_CLIENT_SECRET: 's', GOOGLE_REFRESH_TOKEN: 'r' };
+
+  it('sin sesión de admin -> 401', async () => {
+    const res = await onRequestGetGoogleAccount({ request: new Request('https://example.com/api/admin/google-account'), env });
+    expect(res.status).toBe(401);
+  });
+
+  it('con sesión, devuelve el correo de la cuenta de Google del sistema', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url) => {
+      const u = String(url);
+      if (u.includes('oauth2.googleapis.com')) return new Response(JSON.stringify({ access_token: 'g' }));
+      if (u.endsWith('/calendars/primary')) return new Response(JSON.stringify({ id: 'agenda@example.com' }));
+      return new Response('{}', { status: 404 });
+    }));
+    const cookie = (await createSessionCookie(env.ADMIN_SESSION_SECRET)).split(';')[0];
+    const res = await onRequestGetGoogleAccount({ request: new Request('https://example.com/api/admin/google-account', { headers: { Cookie: cookie } }), env });
+    expect(await res.json()).toEqual({ email: 'agenda@example.com' });
   });
 });

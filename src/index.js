@@ -4,7 +4,7 @@ import { onRequestPost as whatsappPost, onRequestGet as whatsappGet } from './ap
 import { onRequestPost as metaWebhookPost, onRequestGet as metaWebhookGet } from './api/meta-webhook.js';
 import { onRequestGetConnect as metaConnectGet, onRequestGetCallback as metaCallbackGet, onRequestGetConnectFacebook as metaConnectFacebookGet, onRequestGetCallbackFacebook as metaCallbackFacebookGet, onRequestPostConnectFacebookConfirm as metaConnectFacebookConfirmPost, onRequestGetDeleteConnection as metaDeleteConnectionGet } from './api/meta-connect.js';
 import { onRequestGetConnect as whatsappConnectGet, onRequestPostExchange as whatsappConnectExchangePost, onRequestGetDeleteConnection as whatsappDeleteConnectionGet } from './api/whatsapp-connect.js';
-import { onRequestGetAdmin, onRequestGetPagespeed, onRequestPostAdminLogin, onRequestPostAdminLogout } from './api/admin.js';
+import { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 import { getVerticalPage, VERTICAL_SLUGS } from './lib/vertical-pages.js';
@@ -1585,6 +1585,9 @@ export default {
             }
             if (pathname === '/api/admin/pagespeed' && request.method === 'GET') {
                 return await onRequestGetPagespeed({ request, env });
+            }
+            if (pathname === '/api/admin/google-account' && request.method === 'GET') {
+                return await onRequestGetGoogleAccount({ request, env });
             }
             const verticalSlug = pathname.replace(/^\/|\/$/g, '');
             const verticalPage = getVerticalPage(verticalSlug);

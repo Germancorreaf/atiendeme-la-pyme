@@ -142,7 +142,8 @@ export async function sendConfirmationEmail(options, env) {
 
 const ESCALATION_REASON_LABELS = {
   user_requested_human: 'El visitante pidió hablar con una persona',
-  bot_could_not_resolve: 'Dominga no pudo resolver la consulta'
+  bot_could_not_resolve: 'Dominga no pudo resolver la consulta',
+  wants_to_schedule: 'Quiere agendar: Dominga le prometió confirmar por correo'
 };
 
 /**
@@ -152,7 +153,7 @@ const ESCALATION_REASON_LABELS = {
  * un secret nuevo.
  */
 export async function sendEscalationNotification(options, env) {
-  const { sessionId, reason, userMessage, botReply, leadContact } = options;
+  const { sessionId, reason, userMessage, botReply, leadContact, channel = 'Chat web' } = options;
 
   const notifyTo = env.DRAFT_NOTIFICATION_EMAIL;
   if (!env.RESEND_API_KEY || !notifyTo) {
@@ -164,7 +165,7 @@ export async function sendEscalationNotification(options, env) {
 
   const bodyHtml = `
     <div class="greeting">
-      🙋 <strong>Chat web necesita una persona</strong>
+      🙋 <strong>${escapeHtml(channel)}: la conversación necesita una persona</strong>
     </div>
     <p style="color:${COLORS.textMuted};margin:0 0 24px;">${escapeHtml(reasonLabel)}${leadContact ? ` — contacto dejado: <strong style="color:${COLORS.text};">${escapeHtml(leadContact)}</strong>` : ''}</p>
 
@@ -185,7 +186,7 @@ export async function sendEscalationNotification(options, env) {
     footerNote: sessionId ? `session_id: ${escapeHtml(sessionId)}` : ''
   });
 
-  return sendViaResend({ to: notifyTo, subject: `[Chat] ${reasonLabel}`, html }, env, '[ESCALATION]');
+  return sendViaResend({ to: notifyTo, subject: `[${channel}] ${reasonLabel}`, html }, env, '[ESCALATION]');
 }
 
 export async function sendReminderEmail(options, env) {

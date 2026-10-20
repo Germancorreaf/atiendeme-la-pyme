@@ -50,4 +50,15 @@ describe('detectEscalation', () => {
     expect(() => detectEscalation()).not.toThrow();
     expect(detectEscalation().escalate).toBe(false);
   });
+
+  it('promesa de confirmar la cita por correo: solo en canales de mensajería', () => {
+    const reply = '¡Listo! Te confirmo por correo el jueves a las 10:00.';
+    expect(detectEscalation('quiero agendar', reply, { messaging: true }).reason).toBe('wants_to_schedule');
+    expect(detectEscalation('quiero agendar', reply).escalate).toBe(false);
+  });
+
+  it('"te llega la confirmación por correo" del chat web no es una promesa pendiente', () => {
+    const reply = 'Listo, quedó agendada. Te llega la confirmación por correo.';
+    expect(detectEscalation('agendar', reply, { messaging: true }).escalate).toBe(false);
+  });
 });

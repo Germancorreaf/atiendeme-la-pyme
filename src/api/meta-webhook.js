@@ -15,6 +15,8 @@ import { buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { getConnectionByPageId, getConnectionByIgId, usesInstagramToken } from '../lib/metaConnections.js';
+import { detectEscalation } from '../lib/escalation.js';
+import { sendEscalationNotification } from '../lib/email.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -149,8 +151,15 @@ async function handleEvent(event, entryId, isInstagram, context) {
     ? await fetchProfile(isInstagram, senderId, connection.page_access_token, instagramHost)
     : null;
 
-  await saveMessage(sessionId, senderId, userMessage, reply, env, profile);
+  const escalation = detectEscalation(userMessage, reply, { messaging: true });
+  await saveMessage(sessionId, senderId, userMessage, reply, env, profile, escalation);
   await sendMessage(instagramHost, connection.page_id, connection.page_access_token, senderId, reply);
+  if (escalation.escalate) {
+    await sendEscalationNotification({
+      sessionId, reason: escalation.reason, userMessage, botReply: reply,
+      leadContact: profile?.name || null, channel: isInstagram ? 'Instagram' : 'Messenger'
+    }, env);
+  }
 }
 
 // Perfil público del remitente (nombre/username + foto), vía la misma Graph
@@ -213,7 +222,7 @@ async function getClaudeReply(userMessage, history, context) {
   }
 }
 
-async function saveMessage(sessionId, senderId, userMessage, botResponse, env, profile) {
+async function saveMessage(sessionId, senderId, userMessage, botResponse, env, profile, escalation = {}) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return;
 
   try {
@@ -229,6 +238,9 @@ async function saveMessage(sessionId, senderId, userMessage, botResponse, env, p
       { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
       { role: 'assistant', content: botResponse, timestamp: new Date().toISOString() }
     ];
+    // Una conversación escalada sigue escalada aunque el siguiente
+    // intercambio sea normal (igual que el chat web).
+    const prev = existing[0] || {};
 
     const method = existing.length > 0 ? 'PATCH' : 'POST';
     const url = existing.length > 0
@@ -249,6 +261,8 @@ async function saveMessage(sessionId, senderId, userMessage, botResponse, env, p
         // profile solo viene poblado en el primer mensaje (ver handleEvent);
         // si es null, se omiten estas claves y no se pisa lo ya guardado.
         ...(profile ? { sender_name: profile.name, sender_avatar_url: profile.avatarUrl } : {}),
+        escalated: Boolean(prev.escalated) || Boolean(escalation.escalate),
+        escalation_reason: escalation.reason || prev.escalation_reason || null,
         updated_at: new Date().toISOString()
       })
     });

@@ -16,6 +16,8 @@ import { buildSystemPrompt, withAiDisclosure } from '../lib/dominga-prompt.js';
 import { checkAllLimits } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
+import { detectEscalation } from '../lib/escalation.js';
+import { sendEscalationNotification } from '../lib/email.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -109,8 +111,15 @@ export async function onRequestPost(context) {
           // divulgación de IA la fuerza withAiDisclosure con historial vacío.
           const reply = withAiDisclosure(await getClaudeReply(userMessage, history, context), fullHistory);
 
-          await saveMessage(sessionId, from, userMessage, reply, env, contactName);
+          const escalation = detectEscalation(userMessage, reply, { messaging: true });
+          await saveMessage(sessionId, from, userMessage, reply, env, contactName, escalation);
           await sendMessage(from, reply, phoneNumberId, accessToken);
+          if (escalation.escalate) {
+            await sendEscalationNotification({
+              sessionId, reason: escalation.reason, userMessage, botReply: reply,
+              leadContact: `+${from}`, channel: 'WhatsApp'
+            }, env);
+          }
         }
       }
     }
@@ -167,7 +176,7 @@ async function getClaudeReply(userMessage, history, context) {
   }
 }
 
-async function saveMessage(sessionId, from, userMessage, botResponse, env, contactName) {
+async function saveMessage(sessionId, from, userMessage, botResponse, env, contactName, escalation = {}) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return;
 
   try {
@@ -191,6 +200,9 @@ async function saveMessage(sessionId, from, userMessage, botResponse, env, conta
     // WhatsApp manda el nombre de perfil en casi todos los mensajes; si por
     // algún motivo no viene en este, no pisamos uno ya guardado.
     const senderName = contactName || (existing.length > 0 ? existing[0].sender_name : null) || null;
+    // Una conversación escalada sigue escalada aunque el siguiente
+    // intercambio sea normal (igual que el chat web).
+    const prev = existing[0] || {};
 
     const method = existing.length > 0 ? 'PATCH' : 'POST';
     const url = existing.length > 0
@@ -209,6 +221,8 @@ async function saveMessage(sessionId, from, userMessage, botResponse, env, conta
         messages,
         lead_contact: from,
         sender_name: senderName,
+        escalated: Boolean(prev.escalated) || Boolean(escalation.escalate),
+        escalation_reason: escalation.reason || prev.escalation_reason || null,
         updated_at: new Date().toISOString()
       })
     });

@@ -607,7 +607,7 @@ function titleOf(s){
 }
 const lastUserMsg=(s)=>{const m=(Array.isArray(s.messages)?s.messages:[]).filter(x=>x.role==='user');return m.length?m[m.length-1].content:'';};
 const lastMsg=(s)=>{const m=Array.isArray(s.messages)?s.messages:[];return m.length?m[m.length-1].content:'';};
-const REASONS={user_requested_human:'Pidió hablar con una persona',bot_could_not_resolve:'Dominga no supo responder'};
+const REASONS={user_requested_human:'Pidió hablar con una persona',bot_could_not_resolve:'Dominga no supo responder',wants_to_schedule:'Quiere agendar (confirmar por correo)'};
 
 // ---------- color e identidad por canal (WhatsApp/Instagram/Messenger/sitio) ----------
 const CH_CLASS={WhatsApp:'ch-whatsapp',Instagram:'ch-instagram',Messenger:'ch-messenger','Sitio web':'ch-web'};

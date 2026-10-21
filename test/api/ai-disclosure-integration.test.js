@@ -59,15 +59,15 @@ describe('divulgación de IA forzada en el flujo real del webhook', () => {
   it('Messenger: conversación existente que nunca se identificó -> la respuesta enviada lleva la línea', async () => {
     const sent = stubNetwork({ storedMessages: legacyHistory, modelReply: modelWithoutDisclosure });
     await deliver('page', 'PAGE1', '1234567890', 'mid.fb.1');
-    expect(sent).toHaveLength(1);
-    expect(sent[0]).toBe(`${AI_DISCLOSURE_LINE}\n\n${modelWithoutDisclosure}`);
+    // La divulgación va en su propio globo, el primero.
+    expect(sent).toEqual([AI_DISCLOSURE_LINE, modelWithoutDisclosure]);
   });
 
   it('Instagram: igual', async () => {
     const sent = stubNetwork({ storedMessages: legacyHistory, modelReply: modelWithoutDisclosure });
     await deliver('instagram', 'IG1', '9876543210', 'mid.ig.1');
-    expect(sent).toHaveLength(1);
-    expect(sent[0].startsWith(AI_DISCLOSURE_LINE)).toBe(true);
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toBe(AI_DISCLOSURE_LINE);
   });
 
   it('conversación ya identificada y reciente -> no se repite la línea', async () => {
@@ -83,7 +83,6 @@ describe('divulgación de IA forzada en el flujo real del webhook', () => {
   it('conversación nueva -> saludo fijo que ya se identifica como IA', async () => {
     const sent = stubNetwork({ storedMessages: [], modelReply: 'no se usa' });
     await deliver('page', 'PAGE1', '1234567892', 'mid.fb.3');
-    expect(sent).toHaveLength(1);
     expect(sent[0]).toMatch(/asistente de IA|tu asistente de IA/i);
   });
 });

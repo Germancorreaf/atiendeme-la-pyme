@@ -2,6 +2,11 @@
 
 ## Producto
 
+- **WhatsApp: globos separados y botones** (cuando se apruebe su App Review). Instagram y Messenger ya mandan
+  la respuesta en varios globos y las opciones como botones de respuesta rápida (`splitReply` en `chatSessions.js`).
+  En WhatsApp falta: un mensaje por globo y botones con `type: 'interactive'` (máx. 3, 20 caracteres). Hoy se une
+  todo en un mensaje con "Opciones: …" como texto (`joinReply`).
+
 ### Meta: pasar a producción (Instagram + Messenger aprobados) y WhatsApp como Tech Provider
 
 **Estado (2026-10-20, verificado en el panel):** app Publicada. Aprobados todos los permisos de Instagram/Messenger (`instagram_business_manage_messages`, `pages_messaging`, `pages_manage_metadata`, `pages_show_list`, `instagram_business_basic`, `instagram_basic`, `business_management`, `public_profile`). Negocio verificado (portfolio 104592773922483). ManyChat ya no existe en el código ni en los secrets del Worker.

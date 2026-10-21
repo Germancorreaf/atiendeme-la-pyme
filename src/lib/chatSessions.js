@@ -92,6 +92,38 @@ async function saveExchange(sessionId, { userMessage, reply, leadContact, sender
   }
 }
 
+// Las respuestas por chat van en varios globos (separados por una línea en
+// blanco) y pueden terminar con "OPCIONES: a | b | c", que Instagram y
+// Messenger muestran como botones de respuesta rápida (máx. 20 caracteres).
+const MAX_BUBBLES = 4;
+const MAX_OPTIONS = 3;
+const MAX_OPTION_CHARS = 20;
+
+export function splitReply(reply) {
+  let options = [];
+  const text = String(reply).split('\n').filter((line) => {
+    const m = line.match(/^\s*OPCIONES:\s*(.+)$/i);
+    if (m) options = m[1].split('|').map((o) => o.trim()).filter(Boolean).slice(0, MAX_OPTIONS);
+    return !m;
+  }).join('\n');
+  let bubbles = text.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  if (bubbles.length > MAX_BUBBLES) {
+    bubbles = [...bubbles.slice(0, MAX_BUBBLES - 1), bubbles.slice(MAX_BUBBLES - 1).join('\n\n')];
+  }
+  // Una opción demasiado larga para un botón va como texto.
+  if (options.some((o) => o.length > MAX_OPTION_CHARS)) {
+    bubbles.push(`Opciones: ${options.join(' · ')}`);
+    options = [];
+  }
+  if (!bubbles.length) bubbles = [options.length ? '¿Cuál prefieres?' : String(reply).trim()];
+  return { bubbles, options };
+}
+
+/** Une globos y opciones en un solo mensaje (canales sin botones). */
+export function joinReply({ bubbles, options }) {
+  return [...bubbles, ...(options.length ? [`Opciones: ${options.join(' · ')}`] : [])].join('\n\n');
+}
+
 /**
  * Responde un mensaje entrante de un canal de mensajería.
  * @param {object} opts
@@ -103,7 +135,7 @@ async function saveExchange(sessionId, { userMessage, reply, leadContact, sender
  * @param {string} [opts.notifyContact] - contacto que va en el aviso al dueño.
  * @param {string|null} [opts.senderName]
  * @param {() => Promise<{name, avatarUrl}|null>} [opts.loadProfile] - solo en el primer mensaje.
- * @param {(reply: string) => Promise<void>} opts.send
+ * @param {(parts: {bubbles: string[], options: string[]}) => Promise<void>} opts.send - ver splitReply.
  * @param {object} opts.context - { env, ... } del Worker.
  */
 export async function replyToMessage({ sessionId, userMessage, connection, channel, leadContact, notifyContact = null, senderName = null, loadProfile, send, context }) {
@@ -138,7 +170,7 @@ export async function replyToMessage({ sessionId, userMessage, connection, chann
     senderName: senderName || profile?.name || null,
     senderAvatarUrl: profile?.avatarUrl || null
   }, env);
-  await send(reply);
+  await send(splitReply(reply));
 
   if (escalation.escalate) {
     await sendEscalationNotification({

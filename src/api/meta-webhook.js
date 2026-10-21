@@ -129,7 +129,12 @@ async function handleEvent(event, entryId, isInstagram, context) {
     // Perfil (nombre/username + foto): saveExchange no pisa uno ya guardado
     // si esta llamada se omite o falla.
     loadProfile: () => fetchProfile(isInstagram, senderId, connection.page_access_token, instagramHost),
-    send: (reply) => sendMessage(instagramHost, connection.page_id, connection.page_access_token, senderId, reply),
+    send: async ({ bubbles, options }) => {
+      for (const [i, bubble] of bubbles.entries()) {
+        const last = i === bubbles.length - 1;
+        await sendMessage(instagramHost, connection.page_id, connection.page_access_token, senderId, bubble, last ? options : []);
+      }
+    },
     context
   });
 }
@@ -157,7 +162,7 @@ async function fetchProfile(isInstagram, senderId, accessToken, useInstagramHost
   }
 }
 
-async function sendMessage(isInstagram, recipientOrPageId, accessToken, recipientId, messageText) {
+async function sendMessage(isInstagram, recipientOrPageId, accessToken, recipientId, messageText, options = []) {
   const url = isInstagram
     ? `https://graph.instagram.com/${GRAPH_API_VERSION}/${recipientOrPageId}/messages?access_token=${encodeURIComponent(accessToken)}`
     : `https://graph.facebook.com/${GRAPH_API_VERSION}/${recipientOrPageId}/messages?access_token=${encodeURIComponent(accessToken)}`;
@@ -167,7 +172,11 @@ async function sendMessage(isInstagram, recipientOrPageId, accessToken, recipien
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         recipient: { id: recipientId },
-        message: { text: messageText }
+        message: {
+          text: messageText,
+          // Botones de respuesta rápida: al tocarlos llega su texto como un mensaje normal.
+          ...(options.length && { quick_replies: options.map((o) => ({ content_type: 'text', title: o, payload: o })) })
+        }
       })
     });
     if (!response.ok) {

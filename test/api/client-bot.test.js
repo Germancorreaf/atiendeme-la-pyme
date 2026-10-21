@@ -82,9 +82,8 @@ describe.each([
   it('se identifica como la IA del negocio del cliente', async () => {
     const { sent } = stubNetwork({ connection });
     await deliver();
-    expect(sent).toHaveLength(1);
     expect(sent[0].startsWith('Soy la asistente de IA de Clínica Sonrisa.')).toBe(true);
-    expect(sent[0]).not.toContain('Atiéndeme la Pyme');
+    expect(sent.join(' ')).not.toContain('Atiéndeme la Pyme');
   });
 
   it('el aviso de escalamiento dice de qué cliente es', async () => {
@@ -92,6 +91,39 @@ describe.each([
     await deliver('quiero hablar con una persona');
     expect(emails).toHaveLength(1);
     expect(emails[0].subject).toContain('Clínica Sonrisa');
+  });
+});
+
+describe('globos y botones de respuesta rápida', () => {
+  const connection = { page_id: 'PAGE_CLINICA', page_access_token: 'tok', page_name: 'Clínica Sonrisa', bot_prompt: CLINICA };
+  const reply = 'Soy la asistente de IA de Clínica Sonrisa.\n\nEl viernes tengo horas libres.\n\n¿Cuál prefieres?\nOPCIONES: 10:00 | 11:00 | 15:00';
+
+  function stubMessenger() {
+    const bodies = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      const u = String(url);
+      const json = (d) => new Response(JSON.stringify(d), { headers: { 'Content-Type': 'application/json' } });
+      if (u.includes('/rest/v1/meta_connections')) return json([connection]);
+      if (u.includes('/rest/v1/chat_sessions')) return json([]);
+      if (u.includes('api.anthropic.com')) return json({ content: [{ type: 'text', text: reply }] });
+      if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST') { bodies.push(JSON.parse(init.body).message); return json({}); }
+      return json({});
+    }));
+    return bodies;
+  }
+
+  it('Messenger/Instagram: un globo por párrafo y las opciones como botones en el último', async () => {
+    const bodies = stubMessenger();
+    await deliverMessenger('¿tienes hora el viernes?');
+    expect(bodies.map((b) => b.text)).toEqual(['Soy la asistente de IA de Clínica Sonrisa.', 'El viernes tengo horas libres.', '¿Cuál prefieres?']);
+    expect(bodies.slice(0, 2).every((b) => !b.quick_replies)).toBe(true);
+    expect(bodies[2].quick_replies).toEqual(['10:00', '11:00', '15:00'].map((o) => ({ content_type: 'text', title: o, payload: o })));
+  });
+
+  it('WhatsApp: un solo mensaje, con las opciones como texto', async () => {
+    const { sent } = stubNetwork({ connection: { phone_number_id: 'PN_CLINICA', access_token: 'tok', bot_prompt: CLINICA, business_name: 'Clínica Sonrisa' }, modelReply: reply });
+    await deliverWhatsapp('¿tienes hora el viernes?');
+    expect(sent).toEqual(['Soy la asistente de IA de Clínica Sonrisa.\n\nEl viernes tengo horas libres.\n\n¿Cuál prefieres?\n\nOpciones: 10:00 · 11:00 · 15:00']);
   });
 });
 

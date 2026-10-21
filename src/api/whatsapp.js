@@ -17,7 +17,7 @@ import { limitRequest } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { alreadyProcessed } from '../lib/dedup.js';
-import { replyToMessage } from '../lib/chatSessions.js';
+import { joinReply, replyToMessage } from '../lib/chatSessions.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -129,7 +129,8 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
     leadContact: from,
     notifyContact: `+${from}`,
     senderName: contactName,
-    send: (reply) => sendMessage(from, reply, phoneNumberId, accessToken),
+    // ponytail: WhatsApp sigue en un solo mensaje y sin botones mientras dure su App Review (TODOS.md).
+    send: (parts) => sendMessage(from, joinReply(parts), phoneNumberId, accessToken),
     context
   });
 }

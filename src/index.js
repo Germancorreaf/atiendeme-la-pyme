@@ -4,7 +4,7 @@ import { onRequestPost as whatsappPost, onRequestGet as whatsappGet } from './ap
 import { onRequestPost as metaWebhookPost, onRequestGet as metaWebhookGet } from './api/meta-webhook.js';
 import { onRequestGetConnect as metaConnectGet, onRequestGetCallback as metaCallbackGet, onRequestGetConnectFacebook as metaConnectFacebookGet, onRequestGetCallbackFacebook as metaCallbackFacebookGet, onRequestPostConnectFacebookConfirm as metaConnectFacebookConfirmPost, onRequestGetDeleteConnection as metaDeleteConnectionGet, onRequestGetInvite as metaInviteGet } from './api/meta-connect.js';
 import { onRequestGetConnect as whatsappConnectGet, onRequestPostExchange as whatsappConnectExchangePost, onRequestGetDeleteConnection as whatsappDeleteConnectionGet } from './api/whatsapp-connect.js';
-import { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout, onRequestPostClienteSave } from './api/admin.js';
+import { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout, onRequestPostClienteSave, onRequestPostClienteDraft } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 import { refreshInstagramTokens } from './lib/metaConnections.js';
@@ -1551,6 +1551,9 @@ export default {
             }
             if (pathname === '/webhook/meta' && request.method === 'GET') {
                 return await metaWebhookGet({ request, env });
+            }
+            if (pathname === '/admin/clientes/borrador' && request.method === 'POST') {
+                return await onRequestPostClienteDraft({ request, env });
             }
             if (pathname === '/admin/clientes/save' && request.method === 'POST') {
                 return await onRequestPostClienteSave({ request, env });

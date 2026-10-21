@@ -10,8 +10,9 @@ import { checkSessionAuth, createSessionCookie, clearSessionCookie, isCrossSiteR
 import { listConnections } from '../lib/metaConnections.js';
 import { listWhatsappConnections } from '../lib/whatsappConnections.js';
 import { googleAccountEmail } from '../lib/google-calendar.js';
-import { listClientes, saveCliente, parseHorario, formatHorario, DAYS } from '../lib/clients.js';
+import { getCliente, listClientes, saveCliente, parseHorario, formatHorario, DAYS } from '../lib/clients.js';
 import { inviteToken } from '../lib/clientInvite.js';
+import { draftFromOnboarding } from '../lib/onboardingDraft.js';
 
 function escHtml(x) {
     return String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,6 +57,7 @@ function clienteFormHtml(c = {}, connections = [], link = '') {
           <div class="cli-days">${days}</div>
           ${c.id ? `<p class="cli-hint">Cuentas conectadas: ${accounts.length ? accounts.join(', ') : 'ninguna todavía'}.</p>
           <label>Link de onboarding para el cliente (sus respuestas, su calendario y conectar Instagram o Facebook)<input readonly value="${escHtml(link)}" onclick="this.select();navigator.clipboard&&navigator.clipboard.writeText(this.value);this.nextElementSibling.textContent='Copiado';"><span class="cli-hint"></span></label>
+          ${c.onboarding?.text ? `<div><button class="btn" type="button" data-draft="${escHtml(c.id)}">Rellenar con las respuestas del onboarding</button> <span class="cli-hint" data-draft-status></span></div>` : ''}
           ${c.onboarding?.text ? `<details><summary class="cli-hint" style="cursor:pointer;">Respuestas del onboarding (enviadas el ${escHtml(new Date(c.onboarding.sent_at).toLocaleString('es-CL', { timeZone: 'America/Santiago' }))})</summary><pre class="cli-answers">${escHtml(c.onboarding.text)}</pre></details>` : '<p class="cli-hint">Todavía no envía sus respuestas del onboarding.</p>'}` : ''}
           <button class="btn btn-primary" type="submit">${c.id ? 'Guardar cambios' : 'Crear cliente'}</button>
         </form>`;
@@ -69,6 +71,28 @@ function clientesSectionHtml(clientes, connections, links, origin) {
         ${items || '<p class="empty">Todavía no hay clientes.</p>'}
         <details class="cli-item"${clientes.length ? '' : ' open'}><summary>+ Nuevo cliente</summary>${clienteFormHtml()}</details>
       </div>`;
+}
+
+// POST /admin/clientes/borrador?id=: borrador del bot desde las respuestas del
+// onboarding. No guarda nada: el panel rellena el formulario y Germán decide.
+async function onRequestPostClienteDraft(context) {
+    const { request, env } = context;
+    if (!(await checkSessionAuth(request, env))) return new Response('Unauthorized', { status: 401 });
+    if (isCrossSiteRequest(request)) return new Response('Forbidden', { status: 403 });
+    const json = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'Content-Type': 'application/json', ...ADMIN_SECURITY_HEADERS } });
+    const cliente = await getCliente(env, new URL(request.url).searchParams.get('id'));
+    if (!cliente?.onboarding?.text) return json({ error: 'Este cliente todavía no envía sus respuestas.' }, 404);
+    try {
+        const draft = await draftFromOnboarding(cliente.onboarding.text, { env });
+        return json({
+            bot_prompt: draft.bot_prompt,
+            slot_minutes: draft.slot_minutes,
+            horario: Object.fromEntries(DAYS.map(([key]) => [key, formatHorario(draft.horario, key)]))
+        });
+    } catch (err) {
+        console.error('Borrador del bot:', err.message);
+        return json({ error: 'No se pudo generar el borrador. Intenta de nuevo.' }, 502);
+    }
 }
 
 async function onRequestPostClienteSave(context) {
@@ -979,6 +1003,27 @@ $('#psi-run').addEventListener('click',async()=>{
   }catch(e){$('#google-account').textContent='(no se pudo consultar)';}
 })();
 
+// ---------- sistema: rellenar un cliente con sus respuestas del onboarding ----------
+document.querySelectorAll('[data-draft]').forEach(btn=>{
+  btn.addEventListener('click',async()=>{
+    const form=btn.closest('form');
+    const status=btn.parentElement.querySelector('[data-draft-status]');
+    const hasText=form.querySelector('[name=bot_prompt]').value.trim();
+    if(hasText&&!confirm('Esto reemplaza en el formulario la información para el bot y el horario. No se guarda hasta que toques "Guardar cambios". ¿Seguir?'))return;
+    btn.disabled=true;status.textContent='Leyendo sus respuestas… (unos segundos)';
+    try{
+      const res=await fetch('/admin/clientes/borrador?id='+encodeURIComponent(btn.dataset.draft),{method:'POST'});
+      const d=await res.json();
+      if(!res.ok)throw new Error(d.error||'error');
+      form.querySelector('[name=bot_prompt]').value=d.bot_prompt||'';
+      Object.keys(d.horario||{}).forEach(k=>{const i=form.querySelector('[name=h_'+k+']');if(i)i.value=d.horario[k];});
+      if(d.slot_minutes)form.querySelector('[name=slot_minutes]').value=d.slot_minutes;
+      status.textContent='Listo: revisa y toca "Guardar cambios".';
+    }catch(e){status.textContent='No se pudo: '+e.message;}
+    finally{btn.disabled=false;}
+  });
+});
+
 // vista inicial según el hash
 show((location.hash||'#inicio').slice(1));
 `;
@@ -1360,4 +1405,4 @@ async function onRequestGetGoogleAccount(context) {
     }
 }
 
-export { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout, onRequestPostClienteSave };
+export { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout, onRequestPostClienteSave, onRequestPostClienteDraft };

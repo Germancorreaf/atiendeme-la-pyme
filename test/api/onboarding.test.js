@@ -98,3 +98,34 @@ describe('onboarding personal', () => {
     expect(empty.status).toBe(400);
   });
 });
+
+describe('onboarding -> bot del cliente', () => {
+  function stubWithClaude({ cliente }) {
+    const calls = { writes: [], emails: [] };
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      const u = String(url);
+      const json = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'Content-Type': 'application/json' } });
+      if (u.includes('/rest/v1/clientes') && (init.method || 'GET') === 'GET') return json([cliente]);
+      if (u.includes('/rest/v1/clientes')) { calls.writes.push(JSON.parse(init.body)); return json([cliente]); }
+      if (u.includes('api.anthropic.com')) return json({ content: [{ type: 'text', text: '{"bot_prompt":"SERVICIOS Y PRECIOS\\nLimpieza: $30.000","horario":{"lun":"09:00-18:00"},"slot_minutes":30}' }], stop_reason: 'end_turn' });
+      if (u.includes('api.resend.com')) { calls.emails.push(JSON.parse(init.body)); return json({ id: 'e' }); }
+      return json({});
+    }));
+    return calls;
+  }
+  const send = async () => onRequestPostOnboardingSend({ request: await req('/enviar', { method: 'POST', body: JSON.stringify({ text: 'RESPUESTAS', answers: {} }) }), env: { ...env, ANTHROPIC_API_KEY: 'a' } });
+
+  it('un cliente nuevo queda con la información del bot y el horario armados desde sus respuestas', async () => {
+    const calls = stubWithClaude({ cliente: { id: ID, nombre: 'Clínica', bot_prompt: null, horario: null } });
+    expect((await send()).status).toBe(200);
+    expect(calls.writes[1]).toEqual({ bot_prompt: 'SERVICIOS Y PRECIOS\nLimpieza: $30.000', horario: { lun: [['09:00', '18:00']] }, slot_minutes: 30 });
+    expect(calls.emails[0].html).toContain('borrador');
+  });
+
+  it('lo que Germán ya escribió en el panel no se pisa', async () => {
+    const calls = stubWithClaude({ cliente: { id: ID, nombre: 'Clínica', bot_prompt: 'Info revisada', horario: { mar: ['10:00', '14:00'] } } });
+    await send();
+    expect(calls.writes).toHaveLength(1); // solo las respuestas
+    expect(calls.emails[0].html).toContain('no se cambió nada');
+  });
+});

@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { onRequestGetInvite, onRequestGetConnect, onRequestGetCallback, onRequestPostConnectFacebookConfirm } from '../../src/api/meta-connect.js';
-import { onRequestPostClienteSave } from '../../src/api/admin.js';
+import { onRequestPostClienteSave, onRequestPostClienteDraft } from '../../src/api/admin.js';
 import { inviteToken, verifyInvite } from '../../src/lib/clientInvite.js';
 import { parseHorario, formatHorario } from '../../src/lib/clients.js';
 import { createSessionCookie } from '../../src/lib/adminSession.js';
@@ -134,5 +134,30 @@ describe('clientes en el panel', () => {
   it('sin sesión del panel no se puede guardar', async () => {
     stubSupabase();
     expect((await save({ nombre: 'X' }, { session: false })).status).toBe(401);
+  });
+});
+
+describe('rellenar un cliente desde el panel con sus respuestas', () => {
+  const draftReq = async ({ session = true } = {}) => new Request(`https://example.com/admin/clientes/borrador?id=${ID}`, {
+    method: 'POST', headers: session ? { Cookie: (await createSessionCookie(env.ADMIN_SESSION_SECRET)).split(';')[0] } : {}
+  });
+
+  it('devuelve el borrador con el horario listo para el formulario, sin guardar nada', async () => {
+    const writes = stubSupabase({ clientes: [{ id: ID, nombre: 'Clínica', onboarding: { text: 'RESPUESTAS' } }] });
+    const real = globalThis.fetch;
+    vi.stubGlobal('fetch', vi.fn(async (url, init) => String(url).includes('api.anthropic.com')
+      ? new Response(JSON.stringify({ content: [{ type: 'text', text: '{"bot_prompt":"NEGOCIO","horario":{"lun":"9:00-13:00, 15:00-19:00"},"slot_minutes":null}' }], stop_reason: 'end_turn' }))
+      : real(url, init)));
+    const res = await onRequestPostClienteDraft({ request: await draftReq(), env: { ...env, ANTHROPIC_API_KEY: 'a' } });
+    const d = await res.json();
+    expect(d.bot_prompt).toBe('NEGOCIO');
+    expect(d.horario).toMatchObject({ lun: '09:00-13:00, 15:00-19:00', mar: '' });
+    expect(writes).toHaveLength(0);
+  });
+
+  it('sin respuestas o sin sesión, no hay borrador', async () => {
+    stubSupabase();
+    expect((await onRequestPostClienteDraft({ request: await draftReq(), env })).status).toBe(404);
+    expect((await onRequestPostClienteDraft({ request: await draftReq({ session: false }), env })).status).toBe(401);
   });
 });

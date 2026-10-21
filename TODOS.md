@@ -79,7 +79,10 @@
    responde el manual (marca, asistente, redes), conecta él mismo su Instagram o Página de Facebook, escribe su Gmail y
    comparte su Google Calendar con **gcorref@gmail.com** ("Hacer cambios en los eventos"), con ✅ cuando queda bien, y
    toca "Enviar". Llega un correo y sus respuestas quedan en el panel (y su Gmail en "Calendario" si estaba vacío).
-3. Con sus respuestas, completar en el panel la información para el bot y el horario por día (`09:00-13:00, 15:00-19:00`).
+   Con sus respuestas, Claude arma la información para el bot, el horario y la duración de cada hora
+   (`lib/onboardingDraft.js`), solo en los campos que estaban vacíos.
+3. Revisar ese borrador en el panel y corregir lo que haga falta. "Rellenar con las respuestas del onboarding" lo vuelve
+   a generar en el formulario (no guarda hasta "Guardar cambios").
    (WhatsApp: cuando Meta apruebe Tech Provider; hoy se asigna `cliente_id` a mano en `whatsapp_connections`.)
 4. Probar: escribirle al bot pidiendo hora y revisar que el evento aparece en su calendario.
 

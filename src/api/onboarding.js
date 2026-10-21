@@ -12,6 +12,7 @@ import { saveCliente } from '../lib/clients.js';
 import { calendarAccess, googleAccountEmail } from '../lib/google-calendar.js';
 import { sendViaResend } from '../lib/email.js';
 import { checkRateLimit } from '../lib/rateLimit.js';
+import { draftFromOnboarding } from '../lib/onboardingDraft.js';
 
 const MAX_BODY = 100_000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -88,11 +89,33 @@ export async function onRequestPostOnboardingSend({ request, env }) {
     ...(!cliente.calendar_id && EMAIL_RE.test(calendar) && { calendar_id: calendar })
   });
 
+  // Con las respuestas, Claude arma el borrador del bot. Solo se usa en lo que
+  // todavía está vacío: lo que Germán ya escribió en el panel no se pisa.
+  let applied = [];
+  try {
+    const draft = await draftFromOnboarding(text, { env });
+    const fields = {};
+    if (!cliente.bot_prompt?.trim() && draft.bot_prompt) fields.bot_prompt = draft.bot_prompt;
+    if (!cliente.horario && Object.keys(draft.horario).length) {
+      fields.horario = draft.horario;
+      if (draft.slot_minutes) fields.slot_minutes = draft.slot_minutes;
+    }
+    if (Object.keys(fields).length) {
+      await saveCliente(env, { id: cliente.id, ...fields });
+      applied = Object.keys(fields);
+    }
+  } catch (err) {
+    console.error('onboarding: borrador del bot:', err.message);
+  }
+
   if (env.RESEND_API_KEY && env.DRAFT_NOTIFICATION_EMAIL) {
+    const draftNote = applied.length
+      ? `<p>Con sus respuestas se armó un borrador de ${applied.includes('bot_prompt') ? 'la información del bot' : ''}${applied.includes('bot_prompt') && applied.includes('horario') ? ' y ' : ''}${applied.includes('horario') ? 'el horario' : ''}: revísalo en el panel antes de conectar sus cuentas.</p>`
+      : '<p>El cliente ya tenía configuración: no se cambió nada. En el panel puedes generar un borrador nuevo desde sus respuestas.</p>';
     await sendViaResend({
       to: env.DRAFT_NOTIFICATION_EMAIL,
       subject: `Onboarding recibido: ${cliente.nombre}`,
-      html: `<p><b>${esc(cliente.nombre)}</b> envió sus respuestas del manual de onboarding. Están en el panel → Sistema → Clientes.</p><pre style="white-space:pre-wrap;font-family:inherit;">${esc(text)}</pre>`
+      html: `<p><b>${esc(cliente.nombre)}</b> envió sus respuestas del manual de onboarding. Están en el panel → Sistema → Clientes.</p>${draftNote}<pre style="white-space:pre-wrap;font-family:inherit;">${esc(text)}</pre>`
     }, env, '[ONBOARDING]');
   }
   return json({ ok: true, enviado: sentAt });

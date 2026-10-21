@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { env as workerEnv } from 'cloudflare:test';
-import { MessageBuffer, DEBOUNCE_MS } from '../../src/durable-objects/MessageBuffer.js';
+import { MessageBuffer, DEBOUNCE_MS, GREETING_DEBOUNCE_MS } from '../../src/durable-objects/MessageBuffer.js';
 import { onRequestPost as metaPost } from '../../src/api/meta-webhook.js';
 import { computeHmacSha256Hex } from '../../src/lib/metaSignature.js';
 
@@ -63,6 +63,7 @@ describe('MessageBuffer', () => {
     await buffer.fetch(job('Hola'));
     await buffer.fetch(job('¿tienes hora mañana?'));
     expect(state.alarmAt()).toBeGreaterThanOrEqual(before + DEBOUNCE_MS);
+    expect(state.alarmAt()).toBeLessThan(before + GREETING_DEBOUNCE_MS);
     expect(claudeInputs).toHaveLength(0); // todavía espera
 
     await buffer.alarm();
@@ -71,6 +72,19 @@ describe('MessageBuffer', () => {
 
     await buffer.alarm(); // nada pendiente: no responde de nuevo
     expect(sent).toHaveLength(1);
+  });
+
+  it('un saludo solo espera más: casi siempre viene la consulta detrás', async () => {
+    stubNetwork();
+    for (const saludo of ['Hola', 'hola!', 'Buenas tardes', 'Holaa 👋']) {
+      const state = fakeState();
+      const before = Date.now();
+      await new MessageBuffer(state, env()).fetch(job(saludo));
+      expect(state.alarmAt()).toBeGreaterThanOrEqual(before + GREETING_DEBOUNCE_MS);
+    }
+    const state = fakeState();
+    await new MessageBuffer(state, env()).fetch(job('Hola, ¿tienes hora mañana?'));
+    expect(state.alarmAt()).toBeLessThan(Date.now() + GREETING_DEBOUNCE_MS);
   });
 
   it('el webhook marca visto, muestra "escribiendo…" y deja el mensaje en el buffer de esa conversación', async () => {

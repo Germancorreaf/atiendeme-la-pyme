@@ -11,6 +11,10 @@
 import { respondToMeta } from '../api/meta-webhook.js';
 
 export const DEBOUNCE_MS = 5000;
+// Un saludo solo ("Hola", "buenas tardes") casi siempre viene seguido de la
+// consulta: se espera más para responder a los dos juntos.
+export const GREETING_DEBOUNCE_MS = 15000;
+const GREETING_ONLY = /^\s*(hola+|holi|buen[oa]s?( d[ií]as| tardes| noches)?|alo|al[oó]|hey|qu[eé] tal)[\s!.,¿?👋😊🙂]*$/i;
 
 export class MessageBuffer {
   constructor(state, env) {
@@ -24,7 +28,7 @@ export class MessageBuffer {
     const pending = (await this.state.storage.get('pending')) || [];
     pending.push(job);
     await this.state.storage.put('pending', pending);
-    await this.state.storage.setAlarm(Date.now() + DEBOUNCE_MS);
+    await this.state.storage.setAlarm(Date.now() + (GREETING_ONLY.test(job.text) ? GREETING_DEBOUNCE_MS : DEBOUNCE_MS));
     return new Response('ok');
   }
 

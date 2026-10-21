@@ -79,7 +79,7 @@
 3. Conectar sus cuentas desde el panel (Instagram / Página de Facebook; WhatsApp cuando Meta apruebe Tech Provider) y poner el `id` del cliente en `cliente_id` de esas filas.
 4. Probar: escribirle al bot pidiendo hora y revisar que el evento aparece en su calendario.
 
-**Pendiente:** prueba de punta a punta en producción con un calendario real.
+**Probado** en producción por Instagram el 2026-10-21 con un cliente de prueba y el calendario de gcorref@gmail.com: consulta horas libres, botones, junta mensajes seguidos, "escribiendo…" y reserva. Cliente de prueba borrado después.
 
 **Priority:** P1
 

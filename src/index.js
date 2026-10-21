@@ -7,6 +7,7 @@ import { onRequestGetConnect as whatsappConnectGet, onRequestPostExchange as wha
 import { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
+import { refreshInstagramTokens } from './lib/metaConnections.js';
 import { getVerticalPage, VERTICAL_SLUGS } from './lib/vertical-pages.js';
 import { checkSessionAuth } from './lib/adminSession.js';
 
@@ -1614,6 +1615,7 @@ export default {
     },
     async scheduled(event, env, ctx) {
         ctx.waitUntil(processReminders(env));
+        ctx.waitUntil(refreshInstagramTokens(env));
     },
     async email(message, env, ctx) {
         ctx.waitUntil(handleInboundEmail(message, env, ctx));

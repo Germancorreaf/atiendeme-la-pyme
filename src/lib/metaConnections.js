@@ -109,3 +109,36 @@ export async function upsertConnection(connection, env) {
     throw new Error(`No se pudo guardar la conexión de Meta: ${err}`);
   }
 }
+
+/**
+ * Renueva los tokens de Instagram (los de "Conectar Instagram" vencen a los 60
+ * días; cada renovación da otros 60). Corre en el cron diario. Los tokens de
+ * Página de Facebook no vencen. Meta no renueva un token con menos de 24 h:
+ * ese error se ignora, se renueva al día siguiente.
+ */
+export async function refreshInstagramTokens(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return { refreshed: 0, failed: 0 };
+  const headers = { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` };
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/meta_connections?select=page_id,ig_business_account_id,page_access_token`, { headers });
+  const rows = res.ok ? await res.json() : [];
+  let refreshed = 0;
+  let failed = 0;
+  for (const row of rows.filter(usesInstagramToken)) {
+    try {
+      const r = await fetch(`https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${encodeURIComponent(row.page_access_token)}`);
+      const data = await r.json();
+      if (!r.ok || !data.access_token) throw new Error(JSON.stringify(data.error || data).slice(0, 200));
+      const save = await fetch(`${env.SUPABASE_URL}/rest/v1/meta_connections?page_id=eq.${encodeURIComponent(row.page_id)}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page_access_token: data.access_token, updated_at: new Date().toISOString() })
+      });
+      if (!save.ok) throw new Error(`Supabase ${save.status}`);
+      refreshed++;
+    } catch (err) {
+      failed++;
+      console.error(`Renovar token de Instagram ${row.page_id}:`, err.message);
+    }
+  }
+  return { refreshed, failed };
+}

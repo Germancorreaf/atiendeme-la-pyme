@@ -55,9 +55,18 @@ deleted_classes = ["PlanTest"]
 tag = "v3-chatroom"
 new_sqlite_classes = ["ChatRoom"]
 
+[[migrations]]
+tag = "v4-message-buffer"
+new_sqlite_classes = ["MessageBuffer"]
+
 [[durable_objects.bindings]]
 name = "CHAT_ROOM"
 class_name = "ChatRoom"
+
+# Junta los mensajes seguidos de una persona en Instagram/Messenger antes de responder.
+[[durable_objects.bindings]]
+name = "MESSAGE_BUFFER"
+class_name = "MessageBuffer"
 
 [triggers]
 crons = ["0 13 * * *"]

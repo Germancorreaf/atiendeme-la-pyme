@@ -27,7 +27,8 @@ Datos en Supabase; modelo: API de Anthropic. Idioma del proyecto: español de Ch
   `whatsapp-connect.js` (conexión de cuentas), `admin.js` (panel), `schedule.js` (agenda).
 - `src/lib/` — `dominga-prompt.js` (prompt, saludos y divulgación de IA), `chatSessions.js` (flujo común de respuesta
   de WhatsApp/Instagram/Messenger), `metaConnections.js`, `anthropic.js`, etc.
-- `src/durable-objects/ChatRoom.js` — chat en vivo/escalamiento a humano.
+- `src/durable-objects/ChatRoom.js` — chat en vivo/escalamiento a humano. `MessageBuffer.js` — junta los mensajes
+  seguidos de una persona en Instagram/Messenger (espera 5 s sin mensajes nuevos) y responde una vez a todo.
 - `test/` — espejo de `src/`. Sin tests aún: `email-inbound`, `email-template`,
   `google-calendar`, `reminder-cron`, `vertical-pages`, `whatsappConnections`, `timingSafe`.
 - `supabase/` — SQL que se corre a mano en el SQL Editor de Supabase (con fecha), para tener registro.

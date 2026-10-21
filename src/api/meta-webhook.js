@@ -98,31 +98,64 @@ async function handleEvent(event, entryId, isInstagram, context) {
   const senderId = event.sender?.id;
   if (!isSafeMetaId(senderId)) return;
 
-  const connection = isInstagram
-    ? await getConnectionByIgId(entryId, env)
-    : await getConnectionByPageId(entryId, env);
+  const connection = await connectionFor(isInstagram, entryId, env);
   if (!connection) {
     console.error(`Meta webhook: sin conexión guardada para entry ${entryId} (instagram=${isInstagram})`);
     return;
   }
 
-  const channel = isInstagram ? 'instagram' : 'messenger';
-  // El host de la Graph API depende del TIPO DE TOKEN guardado, no solo del canal:
-  // una conexión hecha vía Página de Facebook usa token de Facebook aunque el
-  // mensaje venga de Instagram.
-  const instagramHost = isInstagram && usesInstagramToken(connection);
   // Separado por negocio (Página / cuenta de Instagram), igual que WhatsApp:
   // una persona que le escribe a dos clientes no debe mezclar historiales.
-  const sessionId = `${channel}_${entryId}_${senderId}`;
+  const sessionId = sessionIdFor(isInstagram, entryId, senderId);
 
   const rlCheck = await limitRequest(env, sessionId, {
     kv: { maxRequests: 30, windowSeconds: 60, maxBurstRequests: 5, burstWindowSeconds: 5 }
   });
   if (!rlCheck.allowed) return;
 
+  // "Visto" y "escribiendo…" de inmediato, mientras se espera a que termine de escribir.
+  const host = instagramHostFor(isInstagram, connection);
+  await sendSenderAction(host, connection, senderId, 'mark_seen');
+  await sendSenderAction(host, connection, senderId, 'typing_on');
+
+  const job = { isInstagram, entryId, senderId, text: event.message.text };
+  if (env.MESSAGE_BUFFER) {
+    // Junta los mensajes seguidos antes de responder (durable-objects/MessageBuffer.js).
+    const buffer = env.MESSAGE_BUFFER.get(env.MESSAGE_BUFFER.idFromName(sessionId));
+    await buffer.fetch('https://buffer/', { method: 'POST', body: JSON.stringify(job) });
+  } else {
+    await respondToMeta(env, job, job.text, connection);
+  }
+}
+
+function connectionFor(isInstagram, entryId, env) {
+  return isInstagram ? getConnectionByIgId(entryId, env) : getConnectionByPageId(entryId, env);
+}
+
+function sessionIdFor(isInstagram, entryId, senderId) {
+  return `${isInstagram ? 'instagram' : 'messenger'}_${entryId}_${senderId}`;
+}
+
+// El host de la Graph API depende del TIPO DE TOKEN guardado, no solo del canal:
+// una conexión hecha vía Página de Facebook usa token de Facebook aunque el
+// mensaje venga de Instagram.
+function instagramHostFor(isInstagram, connection) {
+  return isInstagram && usesInstagramToken(connection);
+}
+
+/**
+ * Responde a una persona de Instagram/Messenger. `text` puede juntar varios
+ * mensajes seguidos (MessageBuffer). Lo llama el buffer o, sin él, handleEvent.
+ */
+export async function respondToMeta(env, { isInstagram, entryId, senderId }, text, connection = null) {
+  connection = connection || await connectionFor(isInstagram, entryId, env);
+  if (!connection) return;
+  const instagramHost = instagramHostFor(isInstagram, connection);
+  await sendSenderAction(instagramHost, connection, senderId, 'typing_on');
+
   await replyToMessage({
-    sessionId,
-    userMessage: event.message.text,
+    sessionId: sessionIdFor(isInstagram, entryId, senderId),
+    userMessage: text,
     connection,
     channel: isInstagram ? 'Instagram' : 'Messenger',
     leadContact: senderId,
@@ -133,10 +166,36 @@ async function handleEvent(event, entryId, isInstagram, context) {
       for (const [i, bubble] of bubbles.entries()) {
         const last = i === bubbles.length - 1;
         await sendMessage(instagramHost, connection.page_id, connection.page_access_token, senderId, bubble, last ? options : []);
+        // Entre globos, un momento de "escribiendo…" para que se lea como una conversación.
+        if (!last) {
+          await sendSenderAction(instagramHost, connection, senderId, 'typing_on');
+          await sleep(Math.min(2500, 600 + bubbles[i + 1].length * 15));
+        }
       }
     },
-    context
+    context: { env }
   });
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function messagesUrl(isInstagram, pageId, accessToken) {
+  const host = isInstagram ? 'graph.instagram.com' : 'graph.facebook.com';
+  return `https://${host}/${GRAPH_API_VERSION}/${pageId}/messages?access_token=${encodeURIComponent(accessToken)}`;
+}
+
+// "Visto" o "escribiendo…". Si falla no importa: el mensaje se envía igual.
+async function sendSenderAction(isInstagram, connection, recipientId, action) {
+  try {
+    const res = await fetch(messagesUrl(isInstagram, connection.page_id, connection.page_access_token), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient: { id: recipientId }, sender_action: action })
+    });
+    if (!res.ok) console.error(`Meta sender_action ${action}:`, (await res.text()).slice(0, 200));
+  } catch (err) {
+    console.error(`Meta sender_action ${action}:`, err.message);
+  }
 }
 
 // Perfil público del remitente (nombre/username + foto), vía la misma Graph
@@ -163,9 +222,7 @@ async function fetchProfile(isInstagram, senderId, accessToken, useInstagramHost
 }
 
 async function sendMessage(isInstagram, recipientOrPageId, accessToken, recipientId, messageText, options = []) {
-  const url = isInstagram
-    ? `https://graph.instagram.com/${GRAPH_API_VERSION}/${recipientOrPageId}/messages?access_token=${encodeURIComponent(accessToken)}`
-    : `https://graph.facebook.com/${GRAPH_API_VERSION}/${recipientOrPageId}/messages?access_token=${encodeURIComponent(accessToken)}`;
+  const url = messagesUrl(isInstagram, recipientOrPageId, accessToken);
   try {
     const response = await fetch(url, {
       method: 'POST',

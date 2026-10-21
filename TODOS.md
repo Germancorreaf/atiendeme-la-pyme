@@ -5,7 +5,8 @@
 - **WhatsApp: globos separados y botones** (cuando se apruebe su App Review). Instagram y Messenger ya mandan
   la respuesta en varios globos y las opciones como botones de respuesta rápida (`splitReply` en `chatSessions.js`).
   En WhatsApp falta: un mensaje por globo y botones con `type: 'interactive'` (máx. 3, 20 caracteres). Hoy se une
-  todo en un mensaje con "Opciones: …" como texto (`joinReply`).
+  todo en un mensaje con "Opciones: …" como texto (`joinReply`). También falta juntar mensajes seguidos
+  (`MessageBuffer`, hoy solo Meta) y el indicador de "escribiendo…" de WhatsApp.
 
 ### Meta: pasar a producción (Instagram + Messenger aprobados) y WhatsApp como Tech Provider
 

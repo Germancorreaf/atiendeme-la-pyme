@@ -24,7 +24,7 @@ function stubNetwork({ connection, modelReply = 'La limpieza cuesta $30.000 😊
     if (u.includes('/rest/v1/chat_sessions') && (!init.method || init.method === 'GET')) return json([]);
     if (u.includes('api.anthropic.com')) { systemPrompts.push(JSON.parse(init.body).system); return json({ content: [{ type: 'text', text: modelReply }] }); }
     if (u.includes('api.resend.com')) { emails.push(JSON.parse(init.body)); return json({ id: 'e' }); }
-    if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST') {
+    if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST' && !init.body.includes('sender_action')) {
       const b = JSON.parse(init.body);
       sent.push(b.text?.body ?? b.message?.text);
       return json({});
@@ -106,7 +106,7 @@ describe('globos y botones de respuesta rápida', () => {
       if (u.includes('/rest/v1/meta_connections')) return json([connection]);
       if (u.includes('/rest/v1/chat_sessions')) return json([]);
       if (u.includes('api.anthropic.com')) return json({ content: [{ type: 'text', text: reply }] });
-      if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST') { bodies.push(JSON.parse(init.body).message); return json({}); }
+      if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST' && !init.body.includes('sender_action')) { bodies.push(JSON.parse(init.body).message); return json({}); }
       return json({});
     }));
     return bodies;

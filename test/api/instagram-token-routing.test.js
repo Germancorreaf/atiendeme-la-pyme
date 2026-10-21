@@ -28,7 +28,7 @@ function stubNetwork(igRows) {
     }
     if (u.includes('/rest/v1/chat_sessions')) return json({});
     if (u.includes('api.anthropic.com')) return json({ content: [{ type: 'text', text: 'Planes desde $149.990.' }] });
-    if (u.includes('/messages') && init.method === 'POST') {
+    if (u.includes('/messages') && init.method === 'POST' && !init.body.includes('sender_action')) {
       sends.push(u);
       return json({ message_id: 'm' });
     }

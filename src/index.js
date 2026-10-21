@@ -11,6 +11,7 @@ import { getVerticalPage, VERTICAL_SLUGS } from './lib/vertical-pages.js';
 import { checkSessionAuth } from './lib/adminSession.js';
 
 export { ChatRoom } from './durable-objects/ChatRoom.js';
+export { MessageBuffer } from './durable-objects/MessageBuffer.js';
 
 // CSP de todas las páginas HTML públicas. Cloudflare inyecta su beacon de Web
 // Analytics (static.cloudflareinsights.com); sin permitirlo, el navegador lo

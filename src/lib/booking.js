@@ -41,6 +41,13 @@ export const BOOKING_TOOLS = [
   }
 ];
 
+// Una respuesta que nombra una hora (09:00, 9 am, 13 hrs…) sin haber mirado la
+// agenda en este turno se le devuelve a Claude para que la consulte primero.
+export const BOOKING_CHECK = {
+  test: (text) => /\b\d{1,2}(:\d{2}|\s?(am|pm|hrs?\b|horas\b))/i.test(text),
+  reminder: '(Mensaje del sistema, no de la persona) Antes de responder, revisa la agenda con consultar_disponibilidad: no ofrezcas ni confirmes ninguna hora que la herramienta no haya devuelto en este turno (una hora que ya quedó reservada en esta conversación sí puedes nombrarla). Luego responde de nuevo a la persona.'
+};
+
 /** ¿El cliente tiene configurada la agenda automática? */
 export function hasBooking(cliente) {
   return Boolean(cliente?.calendar_id && cliente?.horario && typeof cliente.horario === 'object');

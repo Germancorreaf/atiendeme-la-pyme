@@ -10,7 +10,7 @@ import { botFor, withAiDisclosure } from './dominga-prompt.js';
 import { detectEscalation } from './escalation.js';
 import { sendEscalationNotification } from './email.js';
 import { getCliente } from './clients.js';
-import { BOOKING_TOOLS, bookingRunner, hasBooking } from './booking.js';
+import { BOOKING_CHECK, BOOKING_TOOLS, bookingRunner, hasBooking } from './booking.js';
 
 // Mensajes de historial que se le pasan al modelo.
 const HISTORY_FOR_MODEL = 10;
@@ -65,7 +65,7 @@ async function getClaudeReply(userMessage, history, context, systemPrompt, chann
   ];
   try {
     if (runTool) {
-      return await callClaudeWithTools(messages, systemPrompt, context, { tools: BOOKING_TOOLS, runTool });
+      return await callClaudeWithTools(messages, systemPrompt, context, { tools: BOOKING_TOOLS, runTool, mustCheck: BOOKING_CHECK });
     }
     return await callClaude(messages, systemPrompt, context);
   } catch (err) {

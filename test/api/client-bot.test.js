@@ -153,6 +153,30 @@ describe('cliente con agenda conectada (tabla clientes)', () => {
     expect(sent[0]).toContain('09:00, 10:00 u 11:00');
   });
 
+  it('si ofrece horas sin mirar la agenda, se le devuelve a Claude para que consulte', async () => {
+    const { anthropicBodies, googleCalls, sent } = stubWithCalendar({ modelResponses: [
+      { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Mañana tengo 10:00, 13:00 y 16:00.' }] },
+      { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tu1', name: 'consultar_disponibilidad', input: { fecha: '2027-03-01' } }] },
+      { stop_reason: 'end_turn', content: [{ type: 'text', text: 'El lunes tengo 09:00 o 10:00.' }] },
+    ] });
+    await deliverWhatsapp('¿tienes hora el lunes?');
+
+    expect(anthropicBodies).toHaveLength(3);
+    expect(anthropicBodies[1].messages.at(-1).content).toMatch(/consultar_disponibilidad/);
+    expect(googleCalls).toHaveLength(1);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain('09:00 o 10:00');
+    expect(sent[0]).not.toContain('16:00');
+  });
+
+  it('una respuesta sin horas no se devuelve a Claude', async () => {
+    const { anthropicBodies } = stubWithCalendar({ modelResponses: [
+      { stop_reason: 'end_turn', content: [{ type: 'text', text: '¿Para qué día te gustaría?' }] },
+    ] });
+    await deliverWhatsapp('quiero una hora');
+    expect(anthropicBodies).toHaveLength(1);
+  });
+
   it('cliente sin agenda conectada: sin herramientas, el equipo confirma por correo', async () => {
     const { anthropicBodies } = stubWithCalendar({
       cliente: { ...CLIENTE, calendar_id: null },

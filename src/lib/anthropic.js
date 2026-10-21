@@ -98,12 +98,25 @@ export async function callClaude(messages, systemPrompt, context, options = {}) 
  * Claude hasta que responde con texto. El contenido del asistente se devuelve
  * tal cual en cada vuelta (incluidos los bloques de pensamiento, como pide la
  * API). Un error de la herramienta se le informa a Claude como is_error.
+ *
+ * `mustCheck` ({ test(text), reminder }): si la respuesta final pasa `test` y
+ * Claude no usó ninguna herramienta en este turno (p. ej. ofrece horas sin
+ * mirar la agenda), se le devuelve una vez con `reminder` en vez de enviarla.
  */
-export async function callClaudeWithTools(messages, systemPrompt, context, { tools, runTool, maxSteps = 5, ...options } = {}) {
+export async function callClaudeWithTools(messages, systemPrompt, context, { tools, runTool, maxSteps = 5, mustCheck = null, ...options } = {}) {
   const convo = [...messages];
+  let usedTool = false;
+  let reminded = false;
   for (let step = 0; step < maxSteps; step++) {
     const data = await requestClaude(convo, systemPrompt, context, options, tools);
-    if (data.stop_reason !== 'tool_use') return textOf(data);
+    if (data.stop_reason !== 'tool_use') {
+      const text = textOf(data);
+      if (!mustCheck || usedTool || reminded || !mustCheck.test(text)) return text;
+      reminded = true;
+      convo.push({ role: 'assistant', content: data.content }, { role: 'user', content: mustCheck.reminder });
+      continue;
+    }
+    usedTool = true;
 
     convo.push({ role: 'assistant', content: data.content });
     const results = [];

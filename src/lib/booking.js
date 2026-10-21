@@ -66,6 +66,7 @@ export function bookingRunner(cliente, env, { sessionId, contact, channel }) {
   // Marca en la descripción del evento: así se reconocen las reservas de esta
   // conversación (el historial que ve Claude no guarda las llamadas a herramientas).
   const marker = `Conversación: ${sessionId}`;
+  const dia = (fecha) => new Intl.DateTimeFormat('es-CL', { timeZone: 'UTC', weekday: 'long' }).format(new Date(`${fecha}T12:00:00Z`));
   const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
   async function slotsFor(fecha) {
@@ -83,6 +84,7 @@ export function bookingRunner(cliente, env, { sessionId, contact, channel }) {
       const { libres, mias } = await slotsFor(input.fecha);
       return {
         fecha: input.fecha,
+        dia: dia(input.fecha),
         horas_libres: libres,
         ...(mias.length && { reservas_de_esta_persona: mias }),
         ...(!libres.length && { nota: 'Ese día no hay horas libres (cerrado o con la agenda llena).' })
@@ -96,7 +98,7 @@ export function bookingRunner(cliente, env, { sessionId, contact, channel }) {
       if (!nombre) throw new Error('Falta el nombre de la persona.');
 
       const { libres, mias } = await slotsFor(fecha);
-      if (mias.includes(hora)) return { ok: true, fecha, hora, nombre, ya_estaba_reservada: true };
+      if (mias.includes(hora)) return { ok: true, fecha, dia: dia(fecha), hora, nombre, ya_estaba_reservada: true };
       if (!libres.includes(hora)) {
         throw new Error(`La hora ${hora} del ${fecha} no está disponible. Horas libres ese día: ${libres.join(', ') || 'ninguna'}.`);
       }
@@ -113,7 +115,7 @@ export function bookingRunner(cliente, env, { sessionId, contact, channel }) {
         calendarId: cliente.calendar_id,
         description: `Agendado por la asistente de IA por ${channel}.\nContacto: ${contact || 'no informado'}\n${marker}`
       }, { env });
-      return { ok: true, fecha, hora, nombre };
+      return { ok: true, fecha, dia: dia(fecha), hora, nombre };
     }
 
     throw new Error(`Herramienta desconocida: ${name}`);

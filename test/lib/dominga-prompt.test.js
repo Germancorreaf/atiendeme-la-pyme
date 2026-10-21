@@ -62,6 +62,14 @@ describe('prompt de Dominga', () => {
   });
 
   it('usa las fechas reales de hoy y mañana', () => {
-    expect(web).toMatch(/Hoy es \S+, \d{4}-\d{2}-\d{2}/);
+    expect(web).toMatch(/Hoy es \S+ \d{4}-\d{2}-\d{2}\. Próximos días: \S+ \d{4}-\d{2}-\d{2}/);
+  });
+});
+
+describe('fechas para el modelo', () => {
+  it('nextDaysLabel lista los próximos días con su nombre', async () => {
+    const { nextDaysLabel } = await import('../../src/lib/dominga-prompt.js');
+    expect(nextDaysLabel('2026-10-21', 3)).toBe('jueves 2026-10-22, viernes 2026-10-23, sábado 2026-10-24');
+    expect(nextDaysLabel('2026-12-31', 1)).toBe('viernes 2027-01-01');
   });
 });

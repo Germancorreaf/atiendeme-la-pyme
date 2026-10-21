@@ -51,7 +51,7 @@ describe('agenda automática del bot de un cliente', () => {
     const inserted = stubGoogle({ busyItems: busy10 });
     const run = bookingRunner(cliente, env, who());
     const res = await run('agendar_hora', { fecha: '2027-03-01', hora: '11:00', nombre: 'Ana', motivo: 'Limpieza' });
-    expect(res).toEqual({ ok: true, fecha: '2027-03-01', hora: '11:00', nombre: 'Ana' });
+    expect(res).toEqual({ ok: true, fecha: '2027-03-01', dia: 'lunes', hora: '11:00', nombre: 'Ana' });
     expect(inserted).toHaveLength(1);
     expect(inserted[0].url).toContain('/calendars/clinica%40example.com/events');
     expect(inserted[0].url).not.toContain('conferenceDataVersion');
@@ -75,7 +75,7 @@ describe('agenda automática del bot de un cliente', () => {
     const mine = [{ start: { dateTime: '2027-03-01T11:00:00-03:00' }, end: { dateTime: '2027-03-01T12:00:00-03:00' }, description: `Contacto: x\nConversación: ${w.sessionId}` }];
     const inserted = stubGoogle({ busyItems: [...busy10, ...mine] });
     const run = bookingRunner(cliente, env, w);
-    expect(await run('consultar_disponibilidad', { fecha: '2027-03-01' })).toEqual({ fecha: '2027-03-01', horas_libres: ['09:00', '12:00'], reservas_de_esta_persona: ['11:00'] });
+    expect(await run('consultar_disponibilidad', { fecha: '2027-03-01' })).toEqual({ fecha: '2027-03-01', dia: 'lunes', horas_libres: ['09:00', '12:00'], reservas_de_esta_persona: ['11:00'] });
     expect(await run('agendar_hora', { fecha: '2027-03-01', hora: '11:00', nombre: 'Ana' })).toMatchObject({ ok: true, ya_estaba_reservada: true });
     expect(inserted).toHaveLength(0);
     // La reserva de otra persona no cuenta como suya.

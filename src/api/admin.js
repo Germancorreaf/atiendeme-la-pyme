@@ -13,6 +13,7 @@ import { googleAccountEmail } from '../lib/google-calendar.js';
 import { getCliente, listClientes, saveCliente, parseHorario, formatHorario, DAYS } from '../lib/clients.js';
 import { inviteToken } from '../lib/clientInvite.js';
 import { draftFromOnboarding } from '../lib/onboardingDraft.js';
+import { gatherSources } from '../lib/siteScan.js';
 
 function escHtml(x) {
     return String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -58,7 +59,7 @@ function clienteFormHtml(c = {}, connections = [], link = '') {
           ${c.id ? `<p class="cli-hint">Cuentas conectadas: ${accounts.length ? accounts.join(', ') : 'ninguna todavía'}.</p>
           <label>Link de onboarding para el cliente (sus respuestas, su calendario y conectar Instagram o Facebook)<input readonly value="${escHtml(link)}" onclick="this.select();navigator.clipboard&&navigator.clipboard.writeText(this.value);this.nextElementSibling.textContent='Copiado';"><span class="cli-hint"></span></label>
           ${c.onboarding?.text ? `<div><button class="btn" type="button" data-draft="${escHtml(c.id)}">Rellenar con las respuestas del onboarding</button> <span class="cli-hint" data-draft-status></span></div>` : ''}
-          ${c.onboarding?.text ? `<details><summary class="cli-hint" style="cursor:pointer;">Respuestas del onboarding (enviadas el ${escHtml(new Date(c.onboarding.sent_at).toLocaleString('es-CL', { timeZone: 'America/Santiago' }))})</summary><pre class="cli-answers">${escHtml(c.onboarding.text)}</pre></details>` : '<p class="cli-hint">Todavía no envía sus respuestas del onboarding.</p>'}` : ''}
+          ${c.onboarding?.text ? `<details><summary class="cli-hint" style="cursor:pointer;">Respuestas del onboarding (enviadas el ${escHtml(new Date(c.onboarding.sent_at).toLocaleString('es-CL', { timeZone: 'America/Santiago' }))})</summary><pre class="cli-answers">${escHtml(c.onboarding.text)}</pre>${c.onboarding.fuentes?.length ? `<p class="cli-hint">También se leyó: ${escHtml(c.onboarding.fuentes.join(', '))}.</p>` : ''}</details>` : '<p class="cli-hint">Todavía no envía sus respuestas del onboarding.</p>'}` : ''}
           <button class="btn btn-primary" type="submit">${c.id ? 'Guardar cambios' : 'Crear cliente'}</button>
         </form>`;
 }
@@ -83,8 +84,10 @@ async function onRequestPostClienteDraft(context) {
     const cliente = await getCliente(env, new URL(request.url).searchParams.get('id'));
     if (!cliente?.onboarding?.text) return json({ error: 'Este cliente todavía no envía sus respuestas.' }, 404);
     try {
-        const draft = await draftFromOnboarding(cliente.onboarding.text, { env });
+        const sources = await gatherSources(env, cliente, cliente.onboarding.answers || {});
+        const draft = await draftFromOnboarding(cliente.onboarding.text, { env }, sources);
         return json({
+            fuentes: sources.fuentes,
             bot_prompt: draft.bot_prompt,
             slot_minutes: draft.slot_minutes,
             horario: Object.fromEntries(DAYS.map(([key]) => [key, formatHorario(draft.horario, key)]))
@@ -1018,7 +1021,7 @@ document.querySelectorAll('[data-draft]').forEach(btn=>{
       form.querySelector('[name=bot_prompt]').value=d.bot_prompt||'';
       Object.keys(d.horario||{}).forEach(k=>{const i=form.querySelector('[name=h_'+k+']');if(i)i.value=d.horario[k];});
       if(d.slot_minutes)form.querySelector('[name=slot_minutes]').value=d.slot_minutes;
-      status.textContent='Listo: revisa y toca "Guardar cambios".';
+      status.textContent='Listo'+(d.fuentes&&d.fuentes.length?' (también leí: '+d.fuentes.join(', ')+')':'')+'. Revisa y toca "Guardar cambios".';
     }catch(e){status.textContent='No se pudo: '+e.message;}
     finally{btn.disabled=false;}
   });

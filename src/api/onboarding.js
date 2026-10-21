@@ -13,6 +13,7 @@ import { calendarAccess, googleAccountEmail } from '../lib/google-calendar.js';
 import { sendViaResend } from '../lib/email.js';
 import { checkRateLimit } from '../lib/rateLimit.js';
 import { draftFromOnboarding } from '../lib/onboardingDraft.js';
+import { gatherSources } from '../lib/siteScan.js';
 
 const MAX_BODY = 100_000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -91,19 +92,21 @@ export async function onRequestPostOnboardingSend({ request, env }) {
 
   // Con las respuestas, Claude arma el borrador del bot. Solo se usa en lo que
   // todavía está vacío: lo que Germán ya escribió en el panel no se pisa.
+  // Además lee su sitio web y su Instagram (si ya lo conectó) para completar.
   let applied = [];
+  let fuentes = [];
   try {
-    const draft = await draftFromOnboarding(text, { env });
-    const fields = {};
+    const sources = await gatherSources(env, cliente, answers);
+    fuentes = sources.fuentes;
+    const draft = await draftFromOnboarding(text, { env }, sources);
+    const fields = { onboarding: { text, answers, sent_at: sentAt, fuentes } };
     if (!cliente.bot_prompt?.trim() && draft.bot_prompt) fields.bot_prompt = draft.bot_prompt;
     if (!cliente.horario && Object.keys(draft.horario).length) {
       fields.horario = draft.horario;
       if (draft.slot_minutes) fields.slot_minutes = draft.slot_minutes;
     }
-    if (Object.keys(fields).length) {
-      await saveCliente(env, { id: cliente.id, ...fields });
-      applied = Object.keys(fields);
-    }
+    await saveCliente(env, { id: cliente.id, ...fields });
+    applied = Object.keys(fields).filter((k) => k !== 'onboarding');
   } catch (err) {
     console.error('onboarding: borrador del bot:', err.message);
   }
@@ -112,10 +115,11 @@ export async function onRequestPostOnboardingSend({ request, env }) {
     const draftNote = applied.length
       ? `<p>Con sus respuestas se armó un borrador de ${applied.includes('bot_prompt') ? 'la información del bot' : ''}${applied.includes('bot_prompt') && applied.includes('horario') ? ' y ' : ''}${applied.includes('horario') ? 'el horario' : ''}: revísalo en el panel antes de conectar sus cuentas.</p>`
       : '<p>El cliente ya tenía configuración: no se cambió nada. En el panel puedes generar un borrador nuevo desde sus respuestas.</p>';
+    const sourcesNote = `<p>Fuentes leídas además de sus respuestas: ${fuentes.length ? esc(fuentes.join(', ')) : 'ninguna (sin sitio web legible ni Instagram conectado)'}.</p>`;
     await sendViaResend({
       to: env.DRAFT_NOTIFICATION_EMAIL,
       subject: `Onboarding recibido: ${cliente.nombre}`,
-      html: `<p><b>${esc(cliente.nombre)}</b> envió sus respuestas del manual de onboarding. Están en el panel → Sistema → Clientes.</p>${draftNote}<pre style="white-space:pre-wrap;font-family:inherit;">${esc(text)}</pre>`
+      html: `<p><b>${esc(cliente.nombre)}</b> envió sus respuestas del manual de onboarding. Están en el panel → Sistema → Clientes.</p>${draftNote}${sourcesNote}<pre style="white-space:pre-wrap;font-family:inherit;">${esc(text)}</pre>`
     }, env, '[ONBOARDING]');
   }
   return json({ ok: true, enviado: sentAt });

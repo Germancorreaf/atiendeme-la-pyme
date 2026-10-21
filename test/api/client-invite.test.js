@@ -152,7 +152,7 @@ describe('rellenar un cliente desde el panel con sus respuestas', () => {
     const d = await res.json();
     expect(d.bot_prompt).toBe('NEGOCIO');
     expect(d.horario).toMatchObject({ lun: '09:00-13:00, 15:00-19:00', mar: '' });
-    expect(writes).toHaveLength(0);
+    expect(writes.filter((w) => w.method)).toHaveLength(0); // solo lecturas
   });
 
   it('sin respuestas o sin sesión, no hay borrador', async () => {

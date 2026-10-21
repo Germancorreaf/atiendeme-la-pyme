@@ -79,8 +79,9 @@
    responde el manual (marca, asistente, redes), conecta él mismo su Instagram o Página de Facebook, escribe su Gmail y
    comparte su Google Calendar con **gcorref@gmail.com** ("Hacer cambios en los eventos"), con ✅ cuando queda bien, y
    toca "Enviar". Llega un correo y sus respuestas quedan en el panel (y su Gmail en "Calendario" si estaba vacío).
-   Con sus respuestas, Claude arma la información para el bot, el horario y la duración de cada hora
-   (`lib/onboardingDraft.js`), solo en los campos que estaban vacíos.
+   Con sus respuestas, más el texto de su sitio web (respuesta "¿Cuál es tu página web?") y la bio y publicaciones de su
+   Instagram si ya lo conectó (`lib/siteScan.js`), Claude arma la información para el bot, el horario y la duración de
+   cada hora (`lib/onboardingDraft.js`), solo en los campos que estaban vacíos. Las respuestas mandan sobre las fuentes.
 3. Revisar ese borrador en el panel y corregir lo que haga falta. "Rellenar con las respuestas del onboarding" lo vuelve
    a generar en el formulario (no guarda hasta "Guardar cambios").
    (WhatsApp: cuando Meta apruebe Tech Provider; hoy se asigna `cliente_id` a mano en `whatsapp_connections`.)

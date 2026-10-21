@@ -118,14 +118,14 @@ describe('onboarding -> bot del cliente', () => {
   it('un cliente nuevo queda con la información del bot y el horario armados desde sus respuestas', async () => {
     const calls = stubWithClaude({ cliente: { id: ID, nombre: 'Clínica', bot_prompt: null, horario: null } });
     expect((await send()).status).toBe(200);
-    expect(calls.writes[1]).toEqual({ bot_prompt: 'SERVICIOS Y PRECIOS\nLimpieza: $30.000', horario: { lun: [['09:00', '18:00']] }, slot_minutes: 30 });
+    expect(calls.writes[1]).toMatchObject({ bot_prompt: 'SERVICIOS Y PRECIOS\nLimpieza: $30.000', horario: { lun: [['09:00', '18:00']] }, slot_minutes: 30 });
     expect(calls.emails[0].html).toContain('borrador');
   });
 
   it('lo que Germán ya escribió en el panel no se pisa', async () => {
     const calls = stubWithClaude({ cliente: { id: ID, nombre: 'Clínica', bot_prompt: 'Info revisada', horario: { mar: ['10:00', '14:00'] } } });
     await send();
-    expect(calls.writes).toHaveLength(1); // solo las respuestas
+    expect(calls.writes.every((w) => !('bot_prompt' in w) && !('horario' in w))).toBe(true); // solo las respuestas
     expect(calls.emails[0].html).toContain('no se cambió nada');
   });
 });

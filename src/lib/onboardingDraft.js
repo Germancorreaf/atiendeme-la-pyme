@@ -14,18 +14,25 @@ Responde SOLO con un objeto JSON, sin texto antes ni después, con estas claves:
 - "horario": objeto con claves lun, mar, mie, jue, vie, sab, dom y valores como "09:00-13:00, 15:00-19:00" (24 horas). Solo los días que el dueño indicó que atiende; omite los demás. Si no dio un horario claro, usa {}.
 - "slot_minutes": duración de cada hora o cita en minutos si la indicó (número), o null.
 
+Puede venir también FUENTES PÚBLICAS: el texto de su sitio web y de su Instagram. Úsalas para completar lo que falte en las respuestas (servicios, precios, dirección, horarios, preguntas frecuentes). Si contradicen las respuestas, mandan las respuestas. De Instagram ignora promociones, sorteos o fechas puntuales: solo lo permanente.
+
 Reglas:
-- Usa solo lo que está en las respuestas. No inventes precios, servicios, horarios, políticas ni datos de contacto. Si algo no está, no lo pongas.
+- Usa solo lo que está en las respuestas y las fuentes. No inventes precios, servicios, horarios, políticas ni datos de contacto. Si algo no está, no lo pongas.
 - Ignora lo que no le sirve al asistente para atender clientes: accesos al sitio web, dominio, estadísticas, colores, logo, páginas del sitio.
 - Nada de asteriscos ni almohadillas.`;
 
 /**
+ * `sources`: texto del sitio web y del Instagram del cliente (siteScan.js), opcional.
  * @returns {Promise<{ bot_prompt: string, horario: object, slot_minutes: number|null }>}
  *   horario ya en el formato de la agenda ({ lun: [["09:00","18:00"]] }).
  */
-export async function draftFromOnboarding(answersText, context) {
+export async function draftFromOnboarding(answersText, context, { web = '', instagram = '' } = {}) {
+  const sources = [
+    web && `== SITIO WEB ==\n${web.slice(0, 30000)}`,
+    instagram && `== INSTAGRAM ==\n${instagram.slice(0, 12000)}`
+  ].filter(Boolean).join('\n\n');
   const reply = await callClaude(
-    [{ role: 'user', content: `Respuestas del formulario:\n\n${String(answersText).slice(0, 60000)}` }],
+    [{ role: 'user', content: `Respuestas del formulario:\n\n${String(answersText).slice(0, 60000)}${sources ? `\n\nFUENTES PÚBLICAS:\n\n${sources}` : ''}` }],
     SYSTEM, context, { maxTokens: 4096, effort: 'medium' }
   );
   const match = reply.match(/\{[\s\S]*\}/);

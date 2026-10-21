@@ -32,11 +32,15 @@
 // Messenger/Paginas en paralelo, esto debe revisarse.
 //
 // Protegido detras de la sesion de /admin (checkSessionAuth): solo alguien
-// ya logueado en el dashboard puede iniciar o completar esta conexion.
+// ya logueado en el dashboard puede iniciar o completar esta conexion... o un
+// cliente con su link de invitación (/conectar/<token>, ver clientInvite.js):
+// la conexión queda asignada a ese cliente (cliente_id). Mismas redirect_uri y
+// permisos que el flujo del panel.
 
 import { checkSessionAuth, isCrossSiteRequest } from '../lib/adminSession.js';
 import { timingSafeEqual } from '../lib/timingSafe.js';
 import { upsertConnection, deleteConnectionByPageId, getConnectionByPageId } from '../lib/metaConnections.js';
+import { INVITE_COOKIE_NAME, verifyInvite } from '../lib/clientInvite.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 const OAUTH_SCOPES = [
@@ -86,7 +90,8 @@ function htmlResponse(body, status = 200, extraHeaders = {}) {
     `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Conectar Meta — Atiéndeme la Pyme</title>
 <style>body{font-family:system-ui,sans-serif;background:#0A0A0A;color:#EDEDED;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;}
 .card{max-width:480px;background:#161616;border:1px solid #2A2A2A;border-radius:12px;padding:32px;line-height:1.5;}
-a{color:#43D17C;}h1{margin-top:0;font-size:20px;}</style></head>
+a{color:#43D17C;}h1{margin-top:0;font-size:20px;}
+.btn{display:block;text-align:center;background:#E8A33D;color:#0A0A0A;font-weight:700;text-decoration:none;border-radius:8px;padding:12px;}</style></head>
 <body><div class="card">${body}</div></body></html>`,
     {
       status,
@@ -102,13 +107,84 @@ a{color:#43D17C;}h1{margin-top:0;font-size:20px;}</style></head>
   );
 }
 
+// --- Quién conecta: Germán (sesión del panel) o un cliente con su link ---
+
+const DASHBOARD_LINK_RE = /<a href="\/admin">(Cancelar y volver|Volver) al dashboard<\/a>/g;
+
+/**
+ * Al iniciar, el link del cliente llega como ?invite=<token> y se guarda en una
+ * cookie (Path=/admin/meta) para el callback y la confirmación.
+ * @returns {Promise<null | { admin: true } | { invite: { token, cliente }, setCookie?: string }>}
+ */
+async function whoConnects(request, env, { starting = false } = {}) {
+  const fromQuery = starting ? new URL(request.url).searchParams.get('invite') : null;
+  if (fromQuery) {
+    const invite = await verifyInvite(env, fromQuery);
+    if (!invite) return null;
+    return { invite, setCookie: `${INVITE_COOKIE_NAME}=${encodeURIComponent(fromQuery)}; HttpOnly; Secure; SameSite=Lax; Path=${STATE_COOKIE_PATH}; Max-Age=1800` };
+  }
+  if (await checkSessionAuth(request, env)) return { admin: true };
+  const cookie = parseCookieValue(request.headers.get('Cookie'), INVITE_COOKIE_NAME);
+  const invite = cookie ? await verifyInvite(env, decodeURIComponent(cookie)) : null;
+  return invite ? { invite } : null;
+}
+
+// Para el cliente, los enlaces "Volver al dashboard" llevan de vuelta a su link.
+function pageFor(who, body, status = 200, extraHeaders = {}) {
+  const html = who?.invite
+    ? body.replace(DASHBOARD_LINK_RE, `<a href="/conectar/${escapeHtml(who.invite.token)}">Volver</a>`)
+    : body;
+  return htmlResponse(html, status, extraHeaders);
+}
+
+function connectedPage(who, accounts, extraHeaders) {
+  if (who.invite) {
+    return htmlResponse(
+      `<h1>✅ Listo, quedó conectado</h1><p>La asistente de IA de ${escapeHtml(who.invite.cliente.nombre)} ya responde los mensajes de:</p><ul>${accounts.map((a) => `<li>${escapeHtml(a)}</li>`).join('')}</ul><p>Ya puedes cerrar esta ventana.</p>`,
+      200, extraHeaders
+    );
+  }
+  return htmlResponse(
+    `<h1>✅ Conectado</h1><p>Se conectó y suscribió correctamente:</p><ul>${accounts.map((a) => `<li>${escapeHtml(a)}</li>`).join('')}</ul><p><a href="/admin">Volver al dashboard</a></p>`,
+    200, extraHeaders
+  );
+}
+
+const clienteFields = (who) => (who.invite ? { cliente_id: who.invite.cliente.id } : {});
+
+function redirectWithCookies(location, cookies) {
+  const headers = new Headers({ Location: location });
+  for (const c of cookies.filter(Boolean)) headers.append('Set-Cookie', c);
+  return new Response(null, { status: 302, headers });
+}
+
+/** Página pública del link del cliente: /conectar/<token>. */
+export async function onRequestGetInvite(context) {
+  const { request, env } = context;
+  const token = decodeURIComponent(new URL(request.url).pathname.split('/')[2] || '');
+  const invite = await verifyInvite(env, token);
+  if (!invite) {
+    return htmlResponse('<h1>Link no válido</h1><p>Este link de conexión no existe o ya no está activo. Pídele uno nuevo a Atiéndeme la Pyme (hola@atiendemelapyme.cl).</p>', 404);
+  }
+  const t = encodeURIComponent(token);
+  return htmlResponse(
+    `<h1>Conecta tu cuenta</h1>
+    <p>Con esto, la asistente de IA de <b>${escapeHtml(invite.cliente.nombre)}</b> va a responder los mensajes que te llegan por Instagram o Facebook.</p>
+    <p style="color:#8A8A8A;font-size:13px;">Inicias sesión directamente en Instagram o Facebook: nadie más ve tu contraseña. Puedes desconectarla cuando quieras.</p>
+    <p><a class="btn" href="/admin/meta/connect?invite=${t}">Conectar Instagram</a></p>
+    <p><a class="btn" href="/admin/meta/connect-facebook?invite=${t}">Conectar Página de Facebook</a></p>
+    <p style="color:#8A8A8A;font-size:13px;">Si tu Instagram está vinculado a una Página de Facebook, puedes usar cualquiera de los dos. ¿Dudas? Escríbenos a hola@atiendemelapyme.cl.</p>`
+  );
+}
+
 export async function onRequestGetConnect(context) {
   const { request, env } = context;
-  if (!(await checkSessionAuth(request, env))) {
+  const who = await whoConnects(request, env, { starting: true });
+  if (!who) {
     return new Response('Unauthorized', { status: 401 });
   }
   if (!env.INSTAGRAM_APP_ID) {
-    return htmlResponse('<h1>Falta configuración</h1><p>No está definida la variable <code>INSTAGRAM_APP_ID</code> en el Worker.</p>', 500);
+    return pageFor(who, '<h1>Falta configuración</h1><p>No está definida la variable <code>INSTAGRAM_APP_ID</code> en el Worker.</p>', 500);
   }
 
   const state = crypto.randomUUID();
@@ -119,18 +195,16 @@ export async function onRequestGetConnect(context) {
   dialogUrl.searchParams.set('response_type', 'code');
   dialogUrl.searchParams.set('state', state);
 
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: dialogUrl.toString(),
-      'Set-Cookie': `${STATE_COOKIE_NAME}=${state}; HttpOnly; Secure; SameSite=Lax; Path=${STATE_COOKIE_PATH}; Max-Age=600`
-    }
-  });
+  return redirectWithCookies(dialogUrl.toString(), [
+    `${STATE_COOKIE_NAME}=${state}; HttpOnly; Secure; SameSite=Lax; Path=${STATE_COOKIE_PATH}; Max-Age=600`,
+    who.setCookie
+  ]);
 }
 
 export async function onRequestGetCallback(context) {
   const { request, env } = context;
-  if (!(await checkSessionAuth(request, env))) {
+  const who = await whoConnects(request, env);
+  if (!who) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -140,7 +214,7 @@ export async function onRequestGetCallback(context) {
   const oauthError = url.searchParams.get('error');
   if (oauthError) {
     const description = url.searchParams.get('error_description') || oauthError;
-    return htmlResponse(
+    return pageFor(who, 
       `<h1>Conexión cancelada</h1><p>Meta devolvió: ${escapeHtml(description)}</p><p><a href="/admin">Volver al dashboard</a></p>`,
       200,
       { 'Set-Cookie': clearStateCookie }
@@ -152,7 +226,7 @@ export async function onRequestGetCallback(context) {
   const cookieState = parseCookieValue(request.headers.get('Cookie'), STATE_COOKIE_NAME);
 
   if (!code || !state || !cookieState || !timingSafeEqual(state, cookieState)) {
-    return htmlResponse(
+    return pageFor(who, 
       '<h1>Conexión inválida</h1><p>Falta el código o el estado no coincide (posible cookie expirada). Intenta conectar de nuevo desde el dashboard.</p><p><a href="/admin">Volver al dashboard</a></p>',
       400,
       { 'Set-Cookie': clearStateCookie }
@@ -160,7 +234,7 @@ export async function onRequestGetCallback(context) {
   }
 
   if (!env.INSTAGRAM_APP_ID || !env.INSTAGRAM_APP_SECRET) {
-    return htmlResponse('<h1>Falta configuración</h1><p>Definir <code>INSTAGRAM_APP_ID</code> e <code>INSTAGRAM_APP_SECRET</code> en el Worker.</p>', 500, { 'Set-Cookie': clearStateCookie });
+    return pageFor(who, '<h1>Falta configuración</h1><p>Definir <code>INSTAGRAM_APP_ID</code> e <code>INSTAGRAM_APP_SECRET</code> en el Worker.</p>', 500, { 'Set-Cookie': clearStateCookie });
   }
 
   try {
@@ -215,7 +289,8 @@ export async function onRequestGetCallback(context) {
       page_name: igUsername ? `Instagram: @${igUsername}` : null,
       page_access_token: longLivedToken,
       ig_business_account_id: igUserId,
-      ig_username: igUsername
+      ig_username: igUsername,
+      ...clienteFields(who)
     }, env);
 
     // Suscribe la app a los mensajes y comentarios de esta cuenta de Instagram.
@@ -228,14 +303,10 @@ export async function onRequestGetCallback(context) {
       console.error('Meta OAuth: fallo al suscribir la app a mensajes de Instagram:', subErr);
     }
 
-    return htmlResponse(
-      `<h1>✅ Conectado</h1><p>Se conectó y suscribió correctamente:</p><ul><li>Instagram: @${escapeHtml(igUsername || igUserId)}</li></ul><p><a href="/admin">Volver al dashboard</a></p>`,
-      200,
-      { 'Set-Cookie': clearStateCookie }
-    );
+    return connectedPage(who, [`Instagram: @${igUsername || igUserId}`], { 'Set-Cookie': clearStateCookie });
   } catch (err) {
     console.error('Meta OAuth callback error:', err.message);
-    return htmlResponse(`<h1>Error al conectar</h1><p>${escapeHtml(err.message)}</p><p><a href="/admin">Volver al dashboard</a></p>`, 500, { 'Set-Cookie': clearStateCookie });
+    return pageFor(who, `<h1>Error al conectar</h1><p>${escapeHtml(err.message)}</p><p><a href="/admin">Volver al dashboard</a></p>`, 500, { 'Set-Cookie': clearStateCookie });
   }
 }
 
@@ -279,11 +350,12 @@ export async function onRequestGetDeleteConnection(context) {
 
 export async function onRequestGetConnectFacebook(context) {
   const { request, env } = context;
-  if (!(await checkSessionAuth(request, env))) {
+  const who = await whoConnects(request, env, { starting: true });
+  if (!who) {
     return new Response('Unauthorized', { status: 401 });
   }
   if (!env.META_APP_ID || !env.META_LOGIN_CONFIG_ID) {
-    return htmlResponse('<h1>Falta configuración</h1><p>No están definidas <code>META_APP_ID</code> o <code>META_LOGIN_CONFIG_ID</code> en el Worker.</p>', 500);
+    return pageFor(who, '<h1>Falta configuración</h1><p>No están definidas <code>META_APP_ID</code> o <code>META_LOGIN_CONFIG_ID</code> en el Worker.</p>', 500);
   }
 
   const state = crypto.randomUUID();
@@ -294,18 +366,16 @@ export async function onRequestGetConnectFacebook(context) {
   dialogUrl.searchParams.set('response_type', 'code');
   dialogUrl.searchParams.set('state', state);
 
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: dialogUrl.toString(),
-      'Set-Cookie': `${FACEBOOK_STATE_COOKIE_NAME}=${state}; HttpOnly; Secure; SameSite=Lax; Path=${STATE_COOKIE_PATH}; Max-Age=600`
-    }
-  });
+  return redirectWithCookies(dialogUrl.toString(), [
+    `${FACEBOOK_STATE_COOKIE_NAME}=${state}; HttpOnly; Secure; SameSite=Lax; Path=${STATE_COOKIE_PATH}; Max-Age=600`,
+    who.setCookie
+  ]);
 }
 
 export async function onRequestGetCallbackFacebook(context) {
   const { request, env } = context;
-  if (!(await checkSessionAuth(request, env))) {
+  const who = await whoConnects(request, env);
+  if (!who) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -315,7 +385,7 @@ export async function onRequestGetCallbackFacebook(context) {
   const oauthError = url.searchParams.get('error');
   if (oauthError) {
     const description = url.searchParams.get('error_description') || oauthError;
-    return htmlResponse(
+    return pageFor(who, 
       `<h1>Conexión cancelada</h1><p>Meta devolvió: ${escapeHtml(description)}</p><p><a href="/admin">Volver al dashboard</a></p>`,
       200,
       { 'Set-Cookie': clearStateCookie }
@@ -327,7 +397,7 @@ export async function onRequestGetCallbackFacebook(context) {
   const cookieState = parseCookieValue(request.headers.get('Cookie'), FACEBOOK_STATE_COOKIE_NAME);
 
   if (!code || !state || !cookieState || !timingSafeEqual(state, cookieState)) {
-    return htmlResponse(
+    return pageFor(who, 
       '<h1>Conexión inválida</h1><p>Falta el código o el estado no coincide (posible cookie expirada). Intenta conectar de nuevo desde el dashboard.</p><p><a href="/admin">Volver al dashboard</a></p>',
       400,
       { 'Set-Cookie': clearStateCookie }
@@ -336,7 +406,7 @@ export async function onRequestGetCallbackFacebook(context) {
 
   if (!env.META_APP_ID || !env.META_APP_SECRET) {
     console.error('metaCallbackFacebook: falta config -- META_APP_ID presente?', !!env.META_APP_ID, 'META_APP_SECRET presente?', !!env.META_APP_SECRET);
-    return htmlResponse('<h1>Falta configuración</h1><p>Definir <code>META_APP_ID</code> y <code>META_APP_SECRET</code> en el Worker.</p>', 500, { 'Set-Cookie': clearStateCookie });
+    return pageFor(who, '<h1>Falta configuración</h1><p>Definir <code>META_APP_ID</code> y <code>META_APP_SECRET</code> en el Worker.</p>', 500, { 'Set-Cookie': clearStateCookie });
   }
 
   try {
@@ -450,7 +520,7 @@ export async function onRequestGetCallbackFacebook(context) {
         ${igLine}`;
     }).join('');
 
-    return htmlResponse(
+    return pageFor(who, 
       `<h1>Elige qué Página conectar</h1>
       ${businessName ? `<p style="color:#8A8A8A;font-size:13px;">Business Portfolio: ${escapeHtml(businessName)}</p>` : ''}
       <p>Tu cuenta de Facebook administra ${selectable.length === 1 ? 'esta Página' : 'estas Páginas'}. Elige cuál conectar al bot (puedes desmarcar las que no correspondan):</p>
@@ -466,17 +536,18 @@ export async function onRequestGetCallbackFacebook(context) {
     );
   } catch (err) {
     console.error('Meta OAuth callback (Facebook) error:', err.message);
-    return htmlResponse(`<h1>Error al conectar</h1><p>${escapeHtml(err.message)}</p><p><a href="/admin">Volver al dashboard</a></p>`, 500, { 'Set-Cookie': clearStateCookie });
+    return pageFor(who, `<h1>Error al conectar</h1><p>${escapeHtml(err.message)}</p><p><a href="/admin">Volver al dashboard</a></p>`, 500, { 'Set-Cookie': clearStateCookie });
   }
 }
 
 export async function onRequestPostConnectFacebookConfirm(context) {
   const { request, env } = context;
-  if (!(await checkSessionAuth(request, env))) {
+  const who = await whoConnects(request, env);
+  if (!who) {
     return new Response('Unauthorized', { status: 401 });
   }
   if (!env.RATE_LIMIT_KV) {
-    return htmlResponse('<h1>Falta configuración</h1><p>No está definido el binding <code>RATE_LIMIT_KV</code> en el Worker.</p>', 500);
+    return pageFor(who, '<h1>Falta configuración</h1><p>No está definido el binding <code>RATE_LIMIT_KV</code> en el Worker.</p>', 500);
   }
 
   const form = await request.formData();
@@ -484,13 +555,13 @@ export async function onRequestPostConnectFacebookConfirm(context) {
   const selectedIds = new Set(form.getAll('page_id').map(String));
 
   if (!selectionToken) {
-    return htmlResponse('<h1>Selección inválida</h1><p>Falta el token de selección. Intenta conectar de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 400);
+    return pageFor(who, '<h1>Selección inválida</h1><p>Falta el token de selección. Intenta conectar de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 400);
   }
 
   const kvKey = `metaselect:${selectionToken}`;
   const storedRaw = await env.RATE_LIMIT_KV.get(kvKey);
   if (!storedRaw) {
-    return htmlResponse('<h1>Selección expirada</h1><p>Pasaron más de 10 minutos o ya se usó esta selección. Conecta de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 400);
+    return pageFor(who, '<h1>Selección expirada</h1><p>Pasaron más de 10 minutos o ya se usó esta selección. Conecta de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 400);
   }
   // Un solo uso: se borra apenas se lee, se haya podido conectar algo o no.
   await env.RATE_LIMIT_KV.delete(kvKey);
@@ -499,12 +570,12 @@ export async function onRequestPostConnectFacebookConfirm(context) {
   try {
     pages = JSON.parse(storedRaw);
   } catch {
-    return htmlResponse('<h1>Error</h1><p>La selección guardada quedó corrupta. Conecta de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 500);
+    return pageFor(who, '<h1>Error</h1><p>La selección guardada quedó corrupta. Conecta de nuevo desde el dashboard.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p>', 500);
   }
 
   const toConnect = pages.filter((p) => selectedIds.has(String(p.id)));
   if (toConnect.length === 0) {
-    return htmlResponse('<h1>No se seleccionó ninguna Página</h1><p>No se conectó nada. Si quieres conectar alguna, empieza de nuevo.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p><p><a href="/admin">Volver al dashboard</a></p>');
+    return pageFor(who, '<h1>No se seleccionó ninguna Página</h1><p>No se conectó nada. Si quieres conectar alguna, empieza de nuevo.</p><p><a href="/admin/meta/connect-facebook">Volver a intentar</a></p><p><a href="/admin">Volver al dashboard</a></p>');
   }
 
   const connected = [];
@@ -515,7 +586,8 @@ export async function onRequestPostConnectFacebookConfirm(context) {
         page_name: `Facebook: ${page.name}`,
         page_access_token: page.access_token,
         ig_business_account_id: page.ig_business_account_id || null,
-        ig_username: page.ig_username || null
+        ig_username: page.ig_username || null,
+        ...clienteFields(who)
       }, env);
 
       const subRes = await fetch(
@@ -529,11 +601,9 @@ export async function onRequestPostConnectFacebookConfirm(context) {
       connected.push(page.name);
     }
 
-    return htmlResponse(
-      `<h1>✅ Conectado</h1><p>Se conectaron y suscribieron correctamente:</p><ul>${connected.map((n) => `<li>Facebook: ${escapeHtml(n)}</li>`).join('')}</ul><p><a href="/admin">Volver al dashboard</a></p>`
-    );
+    return connectedPage(who, connected.map((n) => `Facebook: ${n}`));
   } catch (err) {
     console.error('Meta OAuth confirm (Facebook) error:', err.message);
-    return htmlResponse(`<h1>Error al conectar</h1><p>${escapeHtml(err.message)}</p><p><a href="/admin">Volver al dashboard</a></p>`, 500);
+    return pageFor(who, `<h1>Error al conectar</h1><p>${escapeHtml(err.message)}</p><p><a href="/admin">Volver al dashboard</a></p>`, 500);
   }
 }

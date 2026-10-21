@@ -72,11 +72,14 @@
 **Priority:** P2 (hecho)
 **Depends on:** None
 
-### Cómo configurar un cliente nuevo (agenda automática lista desde 2026-10-21)
+### Cómo configurar un cliente nuevo (desde el panel, 2026-10-21)
 
-1. Supabase → tabla `clientes` → nueva fila: `nombre`, `bot_prompt` (servicios, precios, horarios, tono), `slot_minutes` y `horario`, por ejemplo `{"lun": [["09:00","13:00"],["15:00","19:00"]], "mar": ["09:00","19:00"], "sab": ["10:00","14:00"]}`.
-2. El cliente comparte su Google Calendar con **gcorref@gmail.com** (Panel → Sistema lo muestra) con "Hacer cambios en los eventos". En `calendar_id` va el ID del calendario (su Gmail si es el principal).
-3. Conectar sus cuentas desde el panel (Instagram / Página de Facebook; WhatsApp cuando Meta apruebe Tech Provider) y poner el `id` del cliente en `cliente_id` de esas filas.
+1. Panel → Sistema → Clientes → "+ Nuevo cliente": nombre, información para el bot (servicios, precios, dirección,
+   políticas…), y para la agenda automática su Gmail en "Calendario" y el horario por día (`09:00-13:00, 15:00-19:00`).
+2. Si tiene agenda: el cliente comparte su Google Calendar con **gcorref@gmail.com** con "Hacer cambios en los eventos".
+3. Abrir el cliente en el panel, copiar su **link** (`atiendemelapyme.cl/conectar/…`) y mandárselo: el cliente entra,
+   toca "Conectar Instagram" o "Conectar Página de Facebook" e inicia sesión él mismo. La cuenta queda asignada sola.
+   (WhatsApp: cuando Meta apruebe Tech Provider; hoy se asigna `cliente_id` a mano en `whatsapp_connections`.)
 4. Probar: escribirle al bot pidiendo hora y revisar que el evento aparece en su calendario.
 
 **Probado** en producción por Instagram el 2026-10-21 con un cliente de prueba y el calendario de gcorref@gmail.com: consulta horas libres, botones, junta mensajes seguidos, "escribiendo…" y reserva. Cliente de prueba borrado después.

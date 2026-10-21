@@ -2,9 +2,9 @@ import { onRequestPost as chatPost, onRequestGet as chatGet } from './api/chat.j
 import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './api/schedule.js';
 import { onRequestPost as whatsappPost, onRequestGet as whatsappGet } from './api/whatsapp.js';
 import { onRequestPost as metaWebhookPost, onRequestGet as metaWebhookGet } from './api/meta-webhook.js';
-import { onRequestGetConnect as metaConnectGet, onRequestGetCallback as metaCallbackGet, onRequestGetConnectFacebook as metaConnectFacebookGet, onRequestGetCallbackFacebook as metaCallbackFacebookGet, onRequestPostConnectFacebookConfirm as metaConnectFacebookConfirmPost, onRequestGetDeleteConnection as metaDeleteConnectionGet } from './api/meta-connect.js';
+import { onRequestGetConnect as metaConnectGet, onRequestGetCallback as metaCallbackGet, onRequestGetConnectFacebook as metaConnectFacebookGet, onRequestGetCallbackFacebook as metaCallbackFacebookGet, onRequestPostConnectFacebookConfirm as metaConnectFacebookConfirmPost, onRequestGetDeleteConnection as metaDeleteConnectionGet, onRequestGetInvite as metaInviteGet } from './api/meta-connect.js';
 import { onRequestGetConnect as whatsappConnectGet, onRequestPostExchange as whatsappConnectExchangePost, onRequestGetDeleteConnection as whatsappDeleteConnectionGet } from './api/whatsapp-connect.js';
-import { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout } from './api/admin.js';
+import { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout, onRequestPostClienteSave } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 import { refreshInstagramTokens } from './lib/metaConnections.js';
@@ -1466,6 +1466,12 @@ export default {
             }
             if (pathname === '/webhook/meta' && request.method === 'GET') {
                 return await metaWebhookGet({ request, env });
+            }
+            if (pathname === '/admin/clientes/save' && request.method === 'POST') {
+                return await onRequestPostClienteSave({ request, env });
+            }
+            if (pathname.startsWith('/conectar/') && request.method === 'GET') {
+                return await metaInviteGet({ request, env });
             }
             if (pathname === '/admin/meta/connect' && request.method === 'GET') {
                 return await metaConnectGet({ request, env });

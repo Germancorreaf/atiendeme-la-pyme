@@ -58,6 +58,10 @@ Datos en Supabase; modelo: API de Anthropic. Idioma del proyecto: español de Ch
   `agendar_hora` y reserva en el Google Calendar del cliente. El cliente comparte su calendario con la cuenta del
   sistema (la del `GOOGLE_REFRESH_TOKEN`; hoy gcorref@gmail.com, se ve en Panel → Sistema) con permiso "Hacer cambios
   en los eventos". Solo se reservan horas que el calendario confirma libres; tope 3 reservas por persona al día.
+- Alta desde el panel (Sistema → Clientes, `clienteFormHtml` en `admin.js`). Cada cliente tiene un link
+  `/conectar/<token>` (`lib/clientInvite.js`, id firmado con `ADMIN_SESSION_SECRET`) para que conecte él mismo su
+  Instagram/Página: usa el mismo OAuth del panel (`whoConnects` en `meta-connect.js`) y guarda `cliente_id`.
+- Los tokens de "Conectar Instagram" vencen a los 60 días: el cron diario los renueva (`refreshInstagramTokens`).
 - Los avisos de escalamiento llegan a Germán con el nombre del cliente en el asunto.
 
 ## App Review de Meta

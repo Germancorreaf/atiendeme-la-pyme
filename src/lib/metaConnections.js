@@ -56,7 +56,7 @@ export async function listConnections(env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return [];
   try {
     const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/meta_connections?select=page_id,page_name,ig_business_account_id,ig_username,connected_at&order=connected_at.desc`,
+      `${env.SUPABASE_URL}/rest/v1/meta_connections?select=page_id,page_name,ig_business_account_id,ig_username,cliente_id,connected_at&order=connected_at.desc`,
       { headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` } }
     );
     const data = await response.json();

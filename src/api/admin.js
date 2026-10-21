@@ -6,10 +6,12 @@
 
 import { limitRequest } from '../lib/rateLimit.js';
 import { timingSafeEqual } from '../lib/timingSafe.js';
-import { checkSessionAuth, createSessionCookie, clearSessionCookie } from '../lib/adminSession.js';
+import { checkSessionAuth, createSessionCookie, clearSessionCookie, isCrossSiteRequest } from '../lib/adminSession.js';
 import { listConnections } from '../lib/metaConnections.js';
 import { listWhatsappConnections } from '../lib/whatsappConnections.js';
 import { googleAccountEmail } from '../lib/google-calendar.js';
+import { listClientes, saveCliente, parseHorario, formatHorario, DAYS } from '../lib/clients.js';
+import { inviteToken } from '../lib/clientInvite.js';
 
 function escHtml(x) {
     return String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -34,6 +36,66 @@ function connectionsCardHtml(connections) {
               <a class="connect-btn" href="/admin/meta/connect-facebook">→ Conectar Página de Facebook</a>
             </div>
           </div>`;
+}
+
+// Clientes (tabla clientes): su bot, su agenda y el link para que conecten
+// sus cuentas. Las conexiones que llegan por ese link quedan asignadas solas.
+function clienteFormHtml(c = {}, connections = [], link = '') {
+    const accounts = connections.filter(x => x.cliente_id && x.cliente_id === c.id)
+        .map(x => x.ig_username ? '@' + escHtml(x.ig_username) : escHtml(x.page_name || x.page_id));
+    const days = DAYS.map(([key, label]) => `<label>${label}<input name="h_${key}" value="${escHtml(formatHorario(c.horario, key))}" placeholder="Cerrado"></label>`).join('');
+    return `<form class="cli-form" method="post" action="/admin/clientes/save">
+          ${c.id ? `<input type="hidden" name="id" value="${escHtml(c.id)}">` : ''}
+          <label>Nombre del negocio<input name="nombre" required maxlength="80" value="${escHtml(c.nombre)}" placeholder="Clínica Sonrisa"></label>
+          <label>Información para el bot<textarea name="bot_prompt" rows="8" placeholder="Servicios y precios, dirección, horario, medios de pago, políticas (cancelación, atrasos), preguntas frecuentes, tono…">${escHtml(c.bot_prompt)}</textarea></label>
+          <div class="cli-row">
+            <label>Calendario (correo de Google)<input name="calendar_id" value="${escHtml(c.calendar_id)}" placeholder="Vacío = sin agenda automática"></label>
+            <label>Minutos por hora<input name="slot_minutes" type="number" min="10" max="240" value="${escHtml(c.slot_minutes || 60)}"></label>
+          </div>
+          <p class="cli-hint">Horario de atención por día, por ejemplo <b>09:00-13:00, 15:00-19:00</b>. Vacío = cerrado.</p>
+          <div class="cli-days">${days}</div>
+          ${c.id ? `<p class="cli-hint">Cuentas conectadas: ${accounts.length ? accounts.join(', ') : 'ninguna todavía'}.</p>
+          <label>Link para que el cliente conecte su Instagram o Facebook<input readonly value="${escHtml(link)}" onclick="this.select();navigator.clipboard&&navigator.clipboard.writeText(this.value);this.nextElementSibling.textContent='Copiado';"><span class="cli-hint"></span></label>` : ''}
+          <button class="btn btn-primary" type="submit">${c.id ? 'Guardar cambios' : 'Crear cliente'}</button>
+        </form>`;
+}
+
+function clientesSectionHtml(clientes, connections, links, origin) {
+    const items = clientes.map(c => `<details class="cli-item"><summary>${escHtml(c.nombre)}${c.calendar_id && c.horario ? ' <span class="conn-sub">· agenda automática</span>' : ''}</summary>${clienteFormHtml(c, connections, origin + '/conectar/' + links[c.id])}</details>`).join('');
+    return `<div class="section">
+        <div class="section-head"><h2>Clientes</h2></div>
+        <p class="empty" style="margin:0 0 12px;">Crea el cliente, mándale su link para que conecte su Instagram o Facebook y listo: el bot responde con su información. Para la agenda automática, el cliente comparte su Google Calendar con <b id="google-account">…</b> con el permiso <b>Hacer cambios en los eventos</b>.</p>
+        ${items || '<p class="empty">Todavía no hay clientes.</p>'}
+        <details class="cli-item"${clientes.length ? '' : ' open'}><summary>+ Nuevo cliente</summary>${clienteFormHtml()}</details>
+      </div>`;
+}
+
+async function onRequestPostClienteSave(context) {
+    const { request, env } = context;
+    if (!(await checkSessionAuth(request, env))) return new Response('Unauthorized', { status: 401 });
+    if (isCrossSiteRequest(request)) return new Response('Forbidden', { status: 403 });
+    const form = await request.formData();
+    const text = (k, max) => String(form.get(k) || '').trim().slice(0, max);
+    const back = '<p><a href="/admin#sistema">Volver</a></p>';
+    const page = (body, status) => new Response(`<!DOCTYPE html><meta charset="utf-8"><body style="font-family:system-ui;background:#0A0A0A;color:#EDEDE8;padding:32px;">${body}</body>`, { status, headers: { 'Content-Type': 'text/html; charset=utf-8', ...ADMIN_SECURITY_HEADERS } });
+    try {
+        const nombre = text('nombre', 80);
+        if (!nombre) throw new Error('Falta el nombre del negocio.');
+        const horario = parseHorario(Object.fromEntries(DAYS.map(([key]) => [key, form.get('h_' + key)])));
+        const slot = Number(form.get('slot_minutes')) || 60;
+        if (slot < 10 || slot > 240) throw new Error('Los minutos por hora van de 10 a 240.');
+        await saveCliente(env, {
+            id: text('id', 36) || undefined,
+            nombre,
+            bot_prompt: text('bot_prompt', 20000) || null,
+            calendar_id: text('calendar_id', 200) || null,
+            slot_minutes: slot,
+            horario: Object.keys(horario).length ? horario : null
+        });
+        return new Response(null, { status: 303, headers: { Location: '/admin#sistema' } });
+    } catch (err) {
+        return page(`<h1>No se guardó</h1><p>${escHtml(err.message)}</p>${back}`, 400);
+    }
 }
 
 function whatsappConnectionsCardHtml(connections) {
@@ -408,6 +470,16 @@ h2{font-family:var(--display);font-size:19px;letter-spacing:-.01em;font-weight:7
 .conn-row .link-btn:hover{color:var(--alert);text-decoration:underline;}
 .conn-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:8px;}
 .conn-sub{color:var(--muted);font-size:11.5px;}
+.cli-item{border:1px solid var(--line);background:var(--surface);margin-bottom:10px;}
+.cli-item summary{cursor:pointer;padding:12px 16px;font-weight:600;}
+.cli-form{display:flex;flex-direction:column;gap:12px;padding:4px 16px 16px;}
+.cli-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);}
+.cli-form input,.cli-form textarea{background:var(--bg);border:1px solid var(--line);color:var(--text);font:inherit;font-size:14px;padding:9px 10px;width:100%;}
+.cli-form textarea{resize:vertical;}
+.cli-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;}
+.cli-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.cli-hint{font-size:12px;color:var(--muted);margin:0;}
+.cli-form .btn{align-self:flex-start;}
 
 /* ---- conversaciones ---- */
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
@@ -998,12 +1070,14 @@ async function onRequestGetAdmin(context) {
         return loginPageResponse();
     }
 
-    const [sessionsResult, appointmentsResult, connections, whatsappConnections] = await Promise.all([
+    const [sessionsResult, appointmentsResult, connections, whatsappConnections, clientes] = await Promise.all([
         fetchChatSessions(env),
         fetchAppointments(env),
         listConnections(env),
-        listWhatsappConnections(env)
+        listWhatsappConnections(env),
+        listClientes(env)
     ]);
+    const inviteLinks = Object.fromEntries(await Promise.all(clientes.map(async c => [c.id, await inviteToken(env, c.id)])));
 
     const brand = `<div class="brand"><span class="brand-mark">a<i></i></span>Atiéndeme la Pyme</div>`;
 
@@ -1147,10 +1221,7 @@ async function onRequestGetAdmin(context) {
         <div id="psi-results"><p class="empty" style="margin-top:12px;">Corre Lighthouse (Google PageSpeed) sobre el sitio en celular y computador. Tarda entre 15 y 30 segundos.</p></div>
       </div>
 
-      <div class="section">
-        <div class="section-head"><h2>Agenda de clientes</h2></div>
-        <p class="empty" style="margin:0;">Para que el bot de un cliente agende solo, el cliente comparte su Google Calendar con <b id="google-account">…</b> con el permiso <b>Hacer cambios en los eventos</b>. Después, en Supabase (tabla <code>clientes</code>), pones ese calendario en <code>calendar_id</code> junto a su horario y la duración de cada hora.</p>
-      </div>
+      ${clientesSectionHtml(clientes, connections, inviteLinks, new URL(request.url).origin)}
 
       <div class="section">
         <div class="section-head"><h2>Accesos</h2></div>
@@ -1287,4 +1358,4 @@ async function onRequestGetGoogleAccount(context) {
     }
 }
 
-export { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout };
+export { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout, onRequestPostClienteSave };

@@ -66,6 +66,17 @@
 **Priority:** P2 (hecho)
 **Depends on:** None
 
+### Cómo configurar un cliente nuevo (agenda automática lista desde 2026-10-21)
+
+1. Supabase → tabla `clientes` → nueva fila: `nombre`, `bot_prompt` (servicios, precios, horarios, tono), `slot_minutes` y `horario`, por ejemplo `{"lun": [["09:00","13:00"],["15:00","19:00"]], "mar": ["09:00","19:00"], "sab": ["10:00","14:00"]}`.
+2. El cliente comparte su Google Calendar con **gcorref@gmail.com** (Panel → Sistema lo muestra) con "Hacer cambios en los eventos". En `calendar_id` va el ID del calendario (su Gmail si es el principal).
+3. Conectar sus cuentas desde el panel (Instagram / Página de Facebook; WhatsApp cuando Meta apruebe Tech Provider) y poner el `id` del cliente en `cliente_id` de esas filas.
+4. Probar: escribirle al bot pidiendo hora y revisar que el evento aparece en su calendario.
+
+**Pendiente:** prueba de punta a punta en producción con un calendario real.
+
+**Priority:** P1
+
 ## Marketing
 
 ### Perfil de Google Business: falta verificar (creado 2026-10-20)

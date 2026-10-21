@@ -46,11 +46,17 @@ Datos en Supabase; modelo: API de Anthropic. Idioma del proyecto: español de Ch
   (`usesInstagramToken`, `pickInstagramConnection`). Mezclarlos da "Cannot parse access token".
 
 ## Bot de cada cliente
-- Columna `bot_prompt` (texto) en `meta_connections` y `whatsapp_connections`: información del negocio que Germán
-  escribe en la implementación. Con texto, Claude responde como "la asistente de IA de {negocio}" con esos datos
-  (`botFor` / `buildClientPrompt` en `dominga-prompt.js`); vacía = Dominga de Atiéndeme la Pyme (cuentas propias).
-- El nombre del negocio sale de `business_name` (WhatsApp) o `page_name` / `ig_username` (Meta).
-- Un mismo Instagram puede tener dos filas en `meta_connections` (ver arriba): el `bot_prompt` va en ambas.
+- Tabla `clientes` (`supabase/2026-10-20-clientes.sql`): `nombre`, `bot_prompt` (información del negocio que escribe
+  Germán), `calendar_id`, `horario` (jsonb `{"lun": ["09:00","18:00"], "sab": [["10:00","13:00"]]}`; claves
+  dom..sab, sin clave = cerrado, colación = varios rangos) y `slot_minutes`. Las conexiones apuntan con `cliente_id`
+  (en `meta_connections` y `whatsapp_connections`). Un mismo Instagram puede tener dos filas (ver arriba): ambas con
+  el mismo `cliente_id`.
+- Con `bot_prompt`, Claude responde como "la asistente de IA de {nombre}" (`botFor` / `buildClientPrompt`); sin
+  cliente ni `bot_prompt` = Dominga de Atiéndeme la Pyme. `bot_prompt` en la conexión sigue funcionando (legado).
+- Agenda automática (`lib/booking.js`): con `calendar_id` + `horario`, Claude usa `consultar_disponibilidad` y
+  `agendar_hora` y reserva en el Google Calendar del cliente. El cliente comparte su calendario con la cuenta del
+  sistema (la del `GOOGLE_REFRESH_TOKEN`; hoy gcorref@gmail.com, se ve en Panel → Sistema) con permiso "Hacer cambios
+  en los eventos". Solo se reservan horas que el calendario confirma libres; tope 3 reservas por persona al día.
 - Los avisos de escalamiento llegan a Germán con el nombre del cliente en el asunto.
 
 ## App Review de Meta

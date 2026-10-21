@@ -70,6 +70,25 @@ describe('agenda automática del bot de un cliente', () => {
     expect(inserted).toHaveLength(0);
   });
 
+  it('reconoce las horas que esta conversación ya reservó (no las da por perdidas)', async () => {
+    const w = who();
+    const mine = [{ start: { dateTime: '2027-03-01T11:00:00-03:00' }, end: { dateTime: '2027-03-01T12:00:00-03:00' }, description: `Contacto: x\nConversación: ${w.sessionId}` }];
+    const inserted = stubGoogle({ busyItems: [...busy10, ...mine] });
+    const run = bookingRunner(cliente, env, w);
+    expect(await run('consultar_disponibilidad', { fecha: '2027-03-01' })).toEqual({ fecha: '2027-03-01', horas_libres: ['09:00', '12:00'], reservas_de_esta_persona: ['11:00'] });
+    expect(await run('agendar_hora', { fecha: '2027-03-01', hora: '11:00', nombre: 'Ana' })).toMatchObject({ ok: true, ya_estaba_reservada: true });
+    expect(inserted).toHaveLength(0);
+    // La reserva de otra persona no cuenta como suya.
+    expect(await bookingRunner(cliente, env, who())('consultar_disponibilidad', { fecha: '2027-03-01' })).not.toHaveProperty('reservas_de_esta_persona');
+  });
+
+  it('el evento lleva la marca de la conversación', async () => {
+    const w = who();
+    const inserted = stubGoogle();
+    await bookingRunner(cliente, env, w)('agendar_hora', { fecha: '2027-03-01', hora: '09:00', nombre: 'Ana' });
+    expect(inserted[0].body.description).toContain(`Conversación: ${w.sessionId}`);
+  });
+
   it('máximo 3 reservas por persona al día', async () => {
     stubGoogle();
     const run = bookingRunner(cliente, env, who());

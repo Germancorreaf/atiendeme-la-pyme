@@ -201,7 +201,7 @@ export function chileNow(now = new Date()) {
  * Tramos ocupados de un día en un calendario, en minutos desde medianoche
  * (hora de Chile). Un evento de día completo ocupa todo el día.
  */
-export async function busyRanges(env, calendarId, date) {
+export async function busyRanges(env, calendarId, date, { mineMarker = null } = {}) {
   const accessToken = await getAccessToken(env);
   const offset = chileOffset(date);
   const params = new URLSearchParams({
@@ -219,12 +219,14 @@ export async function busyRanges(env, calendarId, date) {
   return (data.items || [])
     .filter((e) => e.status !== 'cancelled' && e.transparency !== 'transparent')
     .map((e) => {
-      if (e.start?.date) return [0, 24 * 60];
+      // Tercer valor: el evento lleva `mineMarker` en la descripción (lo agendó esta conversación).
+      const mine = Boolean(mineMarker && e.description?.includes(mineMarker));
+      if (e.start?.date) return [0, 24 * 60, mine];
       const startDay = new Intl.DateTimeFormat('en-CA', { timeZone: CALENDAR_TIMEZONE }).format(new Date(e.start.dateTime));
       const endDay = new Intl.DateTimeFormat('en-CA', { timeZone: CALENDAR_TIMEZONE }).format(new Date(e.end.dateTime));
       const start = startDay < date ? 0 : chileMinutes(e.start.dateTime);
       const end = endDay > date ? 24 * 60 : chileMinutes(e.end.dateTime);
-      return [start, end];
+      return [start, end, mine];
     });
 }
 

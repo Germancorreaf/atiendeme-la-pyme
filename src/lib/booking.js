@@ -16,7 +16,7 @@ const MAX_BOOKINGS_PER_DAY = 3;
 export const BOOKING_TOOLS = [
   {
     name: 'consultar_disponibilidad',
-    description: 'Devuelve las horas libres de un día en la agenda del negocio. Úsala antes de ofrecer horarios, y otra vez si la persona pide otro día.',
+    description: 'Devuelve las horas libres de un día en la agenda del negocio y las horas que esta misma persona ya reservó ese día (reservas_de_esta_persona: están confirmadas). Úsala antes de ofrecer horarios, y otra vez si la persona pide otro día.',
     input_schema: {
       type: 'object',
       properties: { fecha: { type: 'string', description: 'Día a consultar, en formato AAAA-MM-DD.' } },
@@ -63,19 +63,30 @@ export function hasBooking(cliente) {
 export function bookingRunner(cliente, env, { sessionId, contact, channel }) {
   const slotMinutes = Number(cliente.slot_minutes) || 60;
 
+  // Marca en la descripción del evento: así se reconocen las reservas de esta
+  // conversación (el historial que ve Claude no guarda las llamadas a herramientas).
+  const marker = `Conversación: ${sessionId}`;
+  const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
   async function slotsFor(fecha) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fecha || ''))) throw new Error('Fecha inválida: usa el formato AAAA-MM-DD.');
     const now = chileNow();
-    const busy = await busyRanges(env, cliente.calendar_id, fecha);
-    return freeSlots({ horario: cliente.horario, slotMinutes, busy, date: fecha, nowDate: now.date, nowMinutes: now.minutes });
+    const busy = await busyRanges(env, cliente.calendar_id, fecha, { mineMarker: marker });
+    return {
+      libres: freeSlots({ horario: cliente.horario, slotMinutes, busy, date: fecha, nowDate: now.date, nowMinutes: now.minutes }),
+      mias: busy.filter(([, , mine]) => mine).map(([start]) => hhmm(start))
+    };
   }
 
   return async (name, input = {}) => {
     if (name === 'consultar_disponibilidad') {
-      const horas = await slotsFor(input.fecha);
-      return horas.length
-        ? { fecha: input.fecha, horas_libres: horas }
-        : { fecha: input.fecha, horas_libres: [], nota: 'Ese día no hay horas libres (cerrado o con la agenda llena).' };
+      const { libres, mias } = await slotsFor(input.fecha);
+      return {
+        fecha: input.fecha,
+        horas_libres: libres,
+        ...(mias.length && { reservas_de_esta_persona: mias }),
+        ...(!libres.length && { nota: 'Ese día no hay horas libres (cerrado o con la agenda llena).' })
+      };
     }
 
     if (name === 'agendar_hora') {
@@ -84,7 +95,8 @@ export function bookingRunner(cliente, env, { sessionId, contact, channel }) {
       if (!/^\d{2}:\d{2}$/.test(String(hora || ''))) throw new Error('Hora inválida: usa el formato HH:MM.');
       if (!nombre) throw new Error('Falta el nombre de la persona.');
 
-      const libres = await slotsFor(fecha);
+      const { libres, mias } = await slotsFor(fecha);
+      if (mias.includes(hora)) return { ok: true, fecha, hora, nombre, ya_estaba_reservada: true };
       if (!libres.includes(hora)) {
         throw new Error(`La hora ${hora} del ${fecha} no está disponible. Horas libres ese día: ${libres.join(', ') || 'ninguna'}.`);
       }
@@ -99,7 +111,7 @@ export function bookingRunner(cliente, env, { sessionId, contact, channel }) {
         durationMinutes: slotMinutes,
         withMeet: false,
         calendarId: cliente.calendar_id,
-        description: `Agendado por la asistente de IA por ${channel}.\nContacto: ${contact || 'no informado'}`
+        description: `Agendado por la asistente de IA por ${channel}.\nContacto: ${contact || 'no informado'}\n${marker}`
       }, { env });
       return { ok: true, fecha, hora, nombre };
     }

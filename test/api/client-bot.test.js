@@ -176,6 +176,8 @@ describe('cliente con agenda conectada (tabla clientes)', () => {
     await deliverWhatsapp('¿Tienen hora el lunes 1 de marzo?');
 
     expect(anthropicBodies[0].tools.map((t) => t.name)).toEqual(['consultar_disponibilidad', 'agendar_hora']);
+    // Agendar pide más cuidado que una respuesta simple: esfuerzo medio.
+    expect(anthropicBodies[0].output_config.effort).toBe('medium');
     expect(anthropicBodies[0].system).toContain('Clínica Sonrisa');
     expect(anthropicBodies[0].system).toContain('consultar_disponibilidad');
     expect(anthropicBodies[0].system).not.toContain('Te lo confirmamos por correo');

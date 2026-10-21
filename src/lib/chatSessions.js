@@ -65,7 +65,7 @@ async function getClaudeReply(userMessage, history, context, systemPrompt, chann
   ];
   try {
     if (runTool) {
-      return await callClaudeWithTools(messages, systemPrompt, context, { tools: BOOKING_TOOLS, runTool, mustCheck: BOOKING_CHECK });
+      return await callClaudeWithTools(messages, systemPrompt, context, { tools: BOOKING_TOOLS, runTool, mustCheck: BOOKING_CHECK, effort: 'medium' });
     }
     return await callClaude(messages, systemPrompt, context);
   } catch (err) {

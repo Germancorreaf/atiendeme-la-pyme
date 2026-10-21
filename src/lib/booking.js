@@ -12,6 +12,8 @@ import { busyRanges, freeSlots, chileNow, createCalendarEvent } from './google-c
 import { checkRateLimit } from './rateLimit.js';
 
 const MAX_BOOKINGS_PER_DAY = 3;
+// Hoy no se ofrecen horas que empiezan dentro de la próxima hora: nadie alcanza a llegar.
+const MIN_LEAD_MINUTES = 60;
 
 export const BOOKING_TOOLS = [
   {
@@ -74,7 +76,7 @@ export function bookingRunner(cliente, env, { sessionId, contact, channel }) {
     const now = chileNow();
     const busy = await busyRanges(env, cliente.calendar_id, fecha, { mineMarker: marker });
     return {
-      libres: freeSlots({ horario: cliente.horario, slotMinutes, busy, date: fecha, nowDate: now.date, nowMinutes: now.minutes }),
+      libres: freeSlots({ horario: cliente.horario, slotMinutes, busy, date: fecha, nowDate: now.date, nowMinutes: now.minutes + MIN_LEAD_MINUTES }),
       mias: busy.filter(([, , mine]) => mine).map(([start]) => hhmm(start))
     };
   }

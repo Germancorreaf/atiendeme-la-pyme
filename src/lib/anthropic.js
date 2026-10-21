@@ -76,8 +76,9 @@ async function requestClaude(messages, systemPrompt, context, options = {}, tool
 }
 
 function textOf(data) {
-  const textBlock = data.content?.find((block) => block.type === 'text');
-  if (!textBlock || !textBlock.text) {
+  // Claude puede responder en más de un bloque de texto: van todos.
+  const text = (data.content || []).filter((block) => block.type === 'text').map((block) => block.text).join('\n\n').trim();
+  if (!text) {
     // stop_reason "refusal" (filtros de seguridad del modelo, con
     // stop_details.category) o "max_tokens" (el pensamiento usó el tope).
     throw new ApiError(`No text content in Anthropic response (stop_reason: ${data.stop_reason})`, 500, {
@@ -85,7 +86,7 @@ function textOf(data) {
       stopDetails: data.stop_details
     });
   }
-  return textBlock.text;
+  return text;
 }
 
 export async function callClaude(messages, systemPrompt, context, options = {}) {

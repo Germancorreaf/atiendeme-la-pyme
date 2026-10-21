@@ -30,6 +30,11 @@ describe('callClaude', () => {
     expect(await callClaude(msgs, 'sistema', ctx)).toBe('Hola 👋');
   });
 
+  it('con varios bloques de texto, no se pierde ninguno', async () => {
+    stub({ content: [{ type: 'text', text: 'Tengo 10:00 o 11:00.' }, { type: 'thinking', thinking: '', signature: 's' }, { type: 'text', text: '¿Cuál prefieres?' }], stop_reason: 'end_turn' });
+    expect(await callClaude(msgs, 'sistema', ctx)).toBe('Tengo 10:00 o 11:00.\n\n¿Cuál prefieres?');
+  });
+
   it('si el modelo declina (refusal) falla con el motivo, para el registro', async () => {
     stub({ content: [], stop_reason: 'refusal', stop_details: { type: 'refusal', category: 'general_harms' } });
     await expect(callClaude(msgs, 'sistema', ctx)).rejects.toThrow(/refusal/);

@@ -89,6 +89,18 @@ describe('agenda automática del bot de un cliente', () => {
     expect(inserted[0].body.description).toContain(`Conversación: ${w.sessionId}`);
   });
 
+  it('hoy no ofrece horas que empiezan dentro de la próxima hora', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2027-03-01T10:30:00-03:00')); // lunes 10:30 en Chile
+    try {
+      stubGoogle();
+      const res = await bookingRunner(cliente, env, who())('consultar_disponibilidad', { fecha: '2027-03-01' });
+      expect(res.horas_libres).toEqual(['12:00']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('máximo 3 reservas por persona al día', async () => {
     stubGoogle();
     const run = bookingRunner(cliente, env, who());

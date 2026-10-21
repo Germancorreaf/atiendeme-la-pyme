@@ -241,3 +241,19 @@ export async function googleAccountEmail(env) {
   if (!res.ok) throw new ApiError(`Google Calendar: ${data.error?.message || 'error'}`, res.status);
   return data.id;
 }
+
+/**
+ * Permiso de la cuenta del sistema sobre un calendario que un cliente le
+ * compartió: 'owner' | 'writer' | 'reader' | 'freeBusyReader' | null (no
+ * compartido). Si no está en su lista de calendarios, lo agrega (así queda
+ * visible en Google Calendar de la cuenta del sistema).
+ */
+export async function calendarAccess(env, calendarId) {
+  const accessToken = await getAccessToken(env);
+  const headers = { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+  const listUrl = `${CALENDAR_API}/users/me/calendarList`;
+  let res = await fetch(`${listUrl}/${encodeURIComponent(calendarId)}`, { headers });
+  if (res.status === 404) res = await fetch(listUrl, { method: 'POST', headers, body: JSON.stringify({ id: calendarId }) });
+  if (!res.ok) return null;
+  return (await res.json()).accessRole || null;
+}

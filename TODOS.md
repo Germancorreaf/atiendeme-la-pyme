@@ -74,11 +74,12 @@
 
 ### Cómo configurar un cliente nuevo (desde el panel, 2026-10-21)
 
-1. Panel → Sistema → Clientes → "+ Nuevo cliente": nombre, información para el bot (servicios, precios, dirección,
-   políticas…), y para la agenda automática su Gmail en "Calendario" y el horario por día (`09:00-13:00, 15:00-19:00`).
-2. Si tiene agenda: el cliente comparte su Google Calendar con **gcorref@gmail.com** con "Hacer cambios en los eventos".
-3. Abrir el cliente en el panel, copiar su **link** (`atiendemelapyme.cl/conectar/…`) y mandárselo: el cliente entra,
-   toca "Conectar Instagram" o "Conectar Página de Facebook" e inicia sesión él mismo. La cuenta queda asignada sola.
+1. Panel → Sistema → Clientes → "+ Nuevo cliente" con su nombre (lo demás puede esperar).
+2. Abrir el cliente, copiar su **link de onboarding** (`atiendemelapyme.cl/onboarding/…`) y mandárselo. Ahí el cliente:
+   responde el manual (marca, asistente, redes), conecta él mismo su Instagram o Página de Facebook, escribe su Gmail y
+   comparte su Google Calendar con **gcorref@gmail.com** ("Hacer cambios en los eventos"), con ✅ cuando queda bien, y
+   toca "Enviar". Llega un correo y sus respuestas quedan en el panel (y su Gmail en "Calendario" si estaba vacío).
+3. Con sus respuestas, completar en el panel la información para el bot y el horario por día (`09:00-13:00, 15:00-19:00`).
    (WhatsApp: cuando Meta apruebe Tech Provider; hoy se asigna `cliente_id` a mano en `whatsapp_connections`.)
 4. Probar: escribirle al bot pidiendo hora y revisar que el evento aparece en su calendario.
 

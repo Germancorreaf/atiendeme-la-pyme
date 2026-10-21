@@ -8,6 +8,7 @@ import { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, on
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 import { refreshInstagramTokens } from './lib/metaConnections.js';
+import { onRequestGetOnboardingPersonal, onRequestGetOnboardingStatus, onRequestPostOnboardingSend } from './api/onboarding.js';
 import { getVerticalPage, VERTICAL_SLUGS } from './lib/vertical-pages.js';
 import { checkSessionAuth } from './lib/adminSession.js';
 
@@ -1049,7 +1050,34 @@ table.matrix select:focus{outline:none;border-color:var(--accent);}
   <section class="block" id="s4" data-step data-section="Redes Sociales" hidden>
     <span class="num">Paso 4 de 5</span>
     <h2>Tus redes</h2>
-    <p class="intro">Para que el asistente conteste los mensajes que te llegan por Instagram, Facebook y WhatsApp, conectamos tus cuentas de forma oficial. Este paso lo hacemos juntos en una llamada; acá solo queremos saber cómo estás parado.</p>
+    <p class="intro" id="s4intro">Para que el asistente conteste los mensajes que te llegan por Instagram, Facebook y WhatsApp, conectamos tus cuentas de forma oficial. Este paso lo hacemos juntos en una llamada; acá solo queremos saber cómo estás parado.</p>
+
+    <div data-personal hidden>
+      <h3 class="sub"><b>//</b> conecta tu instagram o facebook</h3>
+      <p class="hint">Tocas el botón, inicias sesión en Instagram o Facebook y aceptas. Se abre en otra pestaña; cuando termines, vuelve acá.</p>
+      <div class="ob-actions">
+        <a class="btn-primary" data-connect="connect" target="_blank" rel="noopener">Conectar Instagram</a>
+        <a class="btn-ghost" data-connect="connect-facebook" target="_blank" rel="noopener">Conectar Página de Facebook</a>
+      </div>
+      <p class="note" id="obCuentas" aria-live="polite"></p>
+
+      <h3 class="sub"><b>//</b> tu agenda</h3>
+      <div class="field-group">
+        <div class="q"><span class="filled-dot" data-dot="s4-calendar"></span>¿Qué Gmail usas para tu Google Calendar?</div>
+        <p class="hint">Solo si quieres que el asistente agende horas por ti. Si no usas Google Calendar, déjalo en blanco.</p>
+        <input type="text" data-id="s4-calendar" placeholder="tunegocio@gmail.com" aria-label="Gmail de tu Google Calendar" autocomplete="email">
+      </div>
+      <details class="what" open><summary>Cómo compartir tu calendario (2 minutos)</summary>
+        <ol>
+          <li>Entra a calendar.google.com desde un computador, con ese Gmail.</li>
+          <li>A la izquierda, en "Mis calendarios", pasa el mouse sobre tu calendario, toca los tres puntos y elige "Configuración y uso compartido".</li>
+          <li>En "Compartir con personas o grupos específicos", toca "Agregar personas", escribe <b data-google>nuestra cuenta</b> y elige el permiso <b>Hacer cambios en los eventos</b>.</li>
+          <li>Toca "Enviar". Vuelve acá y revisa que diga ✅.</li>
+        </ol>
+      </details>
+      <div class="ob-actions"><button type="button" class="btn-ghost" id="obCheck">Revisar mi calendario</button></div>
+      <p class="note" id="obCalendario" aria-live="polite"></p>
+    </div>
 
     <h3 class="sub"><b>//</b> instagram y facebook</h3>
     <ul class="checklist">
@@ -1080,8 +1108,15 @@ table.matrix select:focus{outline:none;border-color:var(--accent);}
     <p class="intro">Esto es lo que llevas. Con lo esencial listo ya podemos empezar: el resto lo completamos en el camino.</p>
     <div class="summary-grid" id="summaryGrid"></div>
 
-    <h3 class="sub"><b>//</b> cómo nos lo envías</h3>
-    <p class="note" style="margin-top:0;">Tus respuestas están guardadas solo en este navegador, así que hay que enviárnoslas: presiona copiar y pégalas en un correo o WhatsApp.</p>
+    <div data-personal hidden>
+      <h3 class="sub"><b>//</b> envíanos tus respuestas</h3>
+      <p class="note" style="margin-top:0;">Nos llegan directo, no tienes que copiar nada. Puedes volver a enviarlas si después completas algo más.</p>
+      <div class="ob-actions"><button type="button" class="btn-primary" id="obSend">Enviar a Atiéndeme la Pyme</button></div>
+      <p class="note" id="obSent" aria-live="polite"></p>
+    </div>
+
+    <h3 class="sub" data-generic><b>//</b> cómo nos lo envías</h3>
+    <p class="note" style="margin-top:0;" data-generic>Tus respuestas están guardadas solo en este navegador, así que hay que enviárnoslas: presiona copiar y pégalas en un correo o WhatsApp.</p>
     <div class="ob-actions">
       <button class="btn-primary" id="exportBtn">Copiar mis respuestas</button>
       <a class="btn-ghost" href="https://wa.me/56922053594?text=Hola%2C%20te%20env%C3%ADo%20mis%20respuestas%20del%20manual%20de%20onboarding%3A" target="_blank" rel="noopener">Abrir WhatsApp</a>
@@ -1133,8 +1168,10 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body
 </script>
 <script>
 (function(){
-  var STORAGE_KEY = 'atp-onboarding-answers-v2';
-  var STEP_KEY = 'atp-onboarding-step';
+  // Link personal (/onboarding/<token>, ver src/api/onboarding.js): respuestas por cliente.
+  var P = window.__CLIENTE__ || null;
+  var STORAGE_KEY = 'atp-onboarding-answers-v2' + (P ? '-' + P.id : '');
+  var STEP_KEY = 'atp-onboarding-step' + (P ? '-' + P.id : '');
 
   var checkboxes = Array.prototype.slice.call(document.querySelectorAll('input[type=checkbox][data-id]'));
   var textFields = Array.prototype.slice.call(document.querySelectorAll('.field-group input[type=text], .field-group textarea'));
@@ -1351,6 +1388,54 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && document.body
       try { done(document.execCommand('copy')); } catch(e){ done(false); }
     }
   });
+
+  // ---- link personal: conectar cuentas, revisar calendario y enviar ----
+  if (!P) return;
+  var base = '/onboarding/' + encodeURIComponent(P.token);
+  Array.prototype.slice.call(document.querySelectorAll('[data-personal]')).forEach(function(el){ el.hidden = false; });
+  Array.prototype.slice.call(document.querySelectorAll('[data-generic]')).forEach(function(el){ el.hidden = true; });
+  document.getElementById('s4intro').textContent = 'Para que el asistente de ' + P.nombre + ' conteste los mensajes de Instagram y Facebook, conecta tus cuentas acá mismo, de forma oficial: nadie más ve tu contraseña y puedes desconectarlas cuando quieras.';
+  Array.prototype.slice.call(document.querySelectorAll('[data-connect]')).forEach(function(a){
+    a.href = '/admin/meta/' + a.getAttribute('data-connect') + '?invite=' + encodeURIComponent(P.token);
+  });
+  if (P.google) Array.prototype.slice.call(document.querySelectorAll('[data-google]')).forEach(function(b){ b.textContent = P.google; });
+
+  var CAL = {
+    ok: '✅ Listo: tu calendario está compartido con el permiso correcto.',
+    lectura: '⚠️ Está compartido, pero solo para ver. Cambia el permiso a "Hacer cambios en los eventos".',
+    pendiente: 'Todavía no vemos tu calendario. Sigue los pasos de arriba y vuelve a revisar (a veces tarda un minuto).'
+  };
+  function refresh(){
+    var cal = (state['s4-calendar'] || '').trim();
+    fetch(base + '/estado' + (cal ? '?cal=' + encodeURIComponent(cal) : '')).then(function(r){ return r.json(); }).then(function(d){
+      document.getElementById('obCuentas').textContent = d.cuentas && d.cuentas.length
+        ? '✅ Conectado: ' + d.cuentas.join(', ')
+        : 'Todavía no hay cuentas conectadas.';
+      document.getElementById('obCalendario').textContent = d.calendario ? CAL[d.calendario] : (cal ? 'Revisa que el Gmail esté bien escrito.' : '');
+      if (d.enviado) document.getElementById('obSent').textContent = '✅ Recibimos tus respuestas el ' + new Date(d.enviado).toLocaleString('es-CL') + '.';
+    }).catch(function(){});
+  }
+  refresh();
+  window.addEventListener('focus', refresh);
+  document.getElementById('obCheck').addEventListener('click', refresh);
+
+  document.getElementById('obSend').addEventListener('click', function(){
+    var btn = this;
+    var msg = document.getElementById('obSent');
+    btn.disabled = true;
+    msg.textContent = 'Enviando…';
+    fetch(base + '/enviar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: buildExportText(), answers: state })
+    }).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); }).then(function(x){
+      msg.textContent = x.ok
+        ? '✅ ¡Listo! Recibimos tus respuestas. Te escribimos si falta algo.'
+        : (x.d.error || 'No se pudo enviar. Intenta de nuevo o escríbenos por WhatsApp.');
+    }).catch(function(){
+      msg.textContent = 'No se pudo enviar. Revisa tu conexión e intenta de nuevo.';
+    }).then(function(){ btn.disabled = false; });
+  });
 })();
 </script>
 
@@ -1505,6 +1590,15 @@ export default {
                     status: 200,
                     headers: htmlHeaders('public, max-age=86400')
                 });
+            }
+            if (pathname.startsWith('/onboarding/') && pathname.endsWith('/estado') && request.method === 'GET') {
+                return await onRequestGetOnboardingStatus({ request, env });
+            }
+            if (pathname.startsWith('/onboarding/') && pathname.endsWith('/enviar') && request.method === 'POST') {
+                return await onRequestPostOnboardingSend({ request, env });
+            }
+            if (/^\/onboarding\/[^/]+$/.test(pathname) && request.method === 'GET') {
+                return await onRequestGetOnboardingPersonal({ request, env }, ONBOARDING_HTML);
             }
             if (pathname === '/onboarding' || pathname === '/onboarding/') {
                 return new Response(ONBOARDING_HTML, {

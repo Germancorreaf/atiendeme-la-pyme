@@ -55,16 +55,17 @@ function clienteFormHtml(c = {}, connections = [], link = '') {
           <p class="cli-hint">Horario de atención por día, por ejemplo <b>09:00-13:00, 15:00-19:00</b>. Vacío = cerrado.</p>
           <div class="cli-days">${days}</div>
           ${c.id ? `<p class="cli-hint">Cuentas conectadas: ${accounts.length ? accounts.join(', ') : 'ninguna todavía'}.</p>
-          <label>Link para que el cliente conecte su Instagram o Facebook<input readonly value="${escHtml(link)}" onclick="this.select();navigator.clipboard&&navigator.clipboard.writeText(this.value);this.nextElementSibling.textContent='Copiado';"><span class="cli-hint"></span></label>` : ''}
+          <label>Link de onboarding para el cliente (sus respuestas, su calendario y conectar Instagram o Facebook)<input readonly value="${escHtml(link)}" onclick="this.select();navigator.clipboard&&navigator.clipboard.writeText(this.value);this.nextElementSibling.textContent='Copiado';"><span class="cli-hint"></span></label>
+          ${c.onboarding?.text ? `<details><summary class="cli-hint" style="cursor:pointer;">Respuestas del onboarding (enviadas el ${escHtml(new Date(c.onboarding.sent_at).toLocaleString('es-CL', { timeZone: 'America/Santiago' }))})</summary><pre class="cli-answers">${escHtml(c.onboarding.text)}</pre></details>` : '<p class="cli-hint">Todavía no envía sus respuestas del onboarding.</p>'}` : ''}
           <button class="btn btn-primary" type="submit">${c.id ? 'Guardar cambios' : 'Crear cliente'}</button>
         </form>`;
 }
 
 function clientesSectionHtml(clientes, connections, links, origin) {
-    const items = clientes.map(c => `<details class="cli-item"><summary>${escHtml(c.nombre)}${c.calendar_id && c.horario ? ' <span class="conn-sub">· agenda automática</span>' : ''}</summary>${clienteFormHtml(c, connections, origin + '/conectar/' + links[c.id])}</details>`).join('');
+    const items = clientes.map(c => `<details class="cli-item"><summary>${escHtml(c.nombre)}${c.calendar_id && c.horario ? ' <span class="conn-sub">· agenda automática</span>' : ''}${c.onboarding ? ' <span class="conn-sub">· onboarding recibido</span>' : ''}</summary>${clienteFormHtml(c, connections, origin + '/onboarding/' + links[c.id])}</details>`).join('');
     return `<div class="section">
         <div class="section-head"><h2>Clientes</h2></div>
-        <p class="empty" style="margin:0 0 12px;">Crea el cliente, mándale su link para que conecte su Instagram o Facebook y listo: el bot responde con su información. Para la agenda automática, el cliente comparte su Google Calendar con <b id="google-account">…</b> con el permiso <b>Hacer cambios en los eventos</b>.</p>
+        <p class="empty" style="margin:0 0 12px;">Crea el cliente y mándale su link de onboarding: ahí responde sobre su negocio, comparte su calendario y conecta su Instagram o Facebook. Con sus respuestas completas la información del bot. Para la agenda automática, el cliente comparte su Google Calendar con <b id="google-account">…</b> con el permiso <b>Hacer cambios en los eventos</b>.</p>
         ${items || '<p class="empty">Todavía no hay clientes.</p>'}
         <details class="cli-item"${clientes.length ? '' : ' open'}><summary>+ Nuevo cliente</summary>${clienteFormHtml()}</details>
       </div>`;
@@ -479,6 +480,7 @@ h2{font-family:var(--display);font-size:19px;letter-spacing:-.01em;font-weight:7
 .cli-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;}
 .cli-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
 .cli-hint{font-size:12px;color:var(--muted);margin:0;}
+.cli-answers{white-space:pre-wrap;font-size:12.5px;line-height:1.5;background:var(--bg);border:1px solid var(--line);padding:12px;margin-top:8px;max-height:420px;overflow:auto;}
 .cli-form .btn{align-self:flex-start;}
 
 /* ---- conversaciones ---- */

@@ -87,6 +87,56 @@ describe('static/public routes', () => {
   });
 });
 
+describe('SEO y conversión de la landing', () => {
+  const home = () => SELF.fetch('https://example.com/').then((r) => r.text());
+
+  it('los botones de agendar abren el chat antes de que los capture la regla genérica', async () => {
+    const html = await home();
+    const openChat = html.indexOf("el.id === 'cta-final-agendar' || el.id === 'cta-card-demo'");
+    const generic = html.indexOf("el.classList.contains('btn-primary') && href === '#contacto'");
+    expect(openChat).toBeGreaterThan(-1);
+    expect(openChat).toBeLessThan(generic);
+  });
+
+  it('las tarjetas de contacto son enlaces', async () => {
+    const html = await home();
+    expect(html).toContain('<a href="#contacto" id="cta-card-demo" class="cta-card">');
+    expect(html).toContain('<a href="mailto:hola@atiendemelapyme.cl" class="cta-card">');
+    expect(html).not.toContain('<div class="cta-card">');
+  });
+
+  it('la analítica solo se carga desde el banner de consentimiento', async () => {
+    for (const path of ['/', '/chatbot-ia-para-veterinarias']) {
+      const html = await (await SELF.fetch('https://example.com' + path)).text();
+      expect(html.split('googletagmanager.com/gtag/js').length).toBe(2);
+      expect(html.indexOf('id="cookie-banner"')).toBeLessThan(html.indexOf('googletagmanager.com/gtag/js'));
+      expect(html).toContain('class="cookie-settings"');
+    }
+  });
+
+  it('la landing y los rubros declaran los mismos precios en JSON-LD', async () => {
+    const offers = async (path) => {
+      const html = await (await SELF.fetch('https://example.com' + path)).text();
+      const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap((m) => JSON.parse(m[1]));
+      return blocks.find((b) => b['@type'] === 'Service').offers.map((o) => [o.price, o.priceSpecification.map((s) => s.price)]);
+    };
+    const expected = [['149990', ['149990', '49990']], ['249990', ['249990', '99990']], ['449990', ['449990', '179990']]];
+    expect(await offers('/')).toEqual(expected);
+    expect(await offers('/chatbot-ia-para-veterinarias')).toEqual(expected);
+  });
+
+  it.each([
+    ['/chatbot-ia-para-veterinarias/?a=1', 'https://example.com/chatbot-ia-para-veterinarias?a=1'],
+    ['/privacidad/', 'https://example.com/privacidad'],
+    ['/terminos/', 'https://example.com/terminos'],
+    ['/index.html', 'https://example.com/']
+  ])('%s redirige con 301 a su URL canónica', async (path, location) => {
+    const res = await SELF.fetch('https://example.com' + path, { redirect: 'manual' });
+    expect(res.status).toBe(301);
+    expect(res.headers.get('Location')).toBe(location);
+  });
+});
+
 describe('limpieza', () => {
   it('el webhook legado /webhook/instagram ya no existe (los mensajes llegan por /webhook/meta)', async () => {
     expect((await SELF.fetch('https://example.com/webhook/instagram')).status).toBe(404);

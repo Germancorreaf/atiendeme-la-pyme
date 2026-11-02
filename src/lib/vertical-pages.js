@@ -10,6 +10,8 @@
 // demo interactiva de la home). Si se rediseña la landing, este archivo
 // puede quedar desalineado — no hay una única fuente compartida todavía.
 
+import { CONSENT_SNIPPET } from './consent.js';
+
 const SHARED_HEAD_STYLE = `@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
 @font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
 @font-face{font-family:'Space Grotesk';font-style:normal;font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj4PVnskPMA.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
@@ -160,6 +162,7 @@ const SHARED_FOOTER = `<footer>
     <div class="links">
       <a href="/terminos">Términos</a>
       <a href="/privacidad">Privacidad</a>
+      <a href="#" class="cookie-settings">Cookies</a>
       <a href="mailto:hola@atiendemelapyme.cl">Contacto</a>
     </div>
   </footer>`;
@@ -168,30 +171,16 @@ const SHARED_SCRIPT = `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', 'G-V709QK49JE');
-// gtag.js pesa ~170 KB y bloquea el hilo principal ~300 ms en mobile: se carga
-// recién con la primera interacción (scroll, toque, tecla) o a los 6 s de la
-// carga. Los eventos anteriores quedan en dataLayer y se envían al cargar.
-(function(){
-  var loaded = false;
-  var triggers = ['scroll', 'pointerdown', 'keydown', 'touchstart'];
-  function loadGA(){
-    if (loaded) return;
-    loaded = true;
-    triggers.forEach(function(t){ window.removeEventListener(t, loadGA); });
-    var s = document.createElement('script');
-    s.async = true;
-    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-V709QK49JE';
-    document.head.appendChild(s);
-    // Microsoft Clarity (mapas de calor y grabaciones), con la misma carga diferida.
-    window.clarity = window.clarity || function(){ (window.clarity.q = window.clarity.q || []).push(arguments); };
-    var c = document.createElement('script');
-    c.async = true;
-    c.src = 'https://www.clarity.ms/tag/yu5gw10tb4';
-    document.head.appendChild(c);
-  }
-  triggers.forEach(function(t){ window.addEventListener(t, loadGA, { passive: true }); });
-  window.addEventListener('load', function(){ setTimeout(loadGA, 6000); });
-})();
+// gtag.js y Clarity se cargan solo con consentimiento: ver CONSENT_SNIPPET.
+// Si no hay consentimiento, estos eventos se quedan en dataLayer y no se envían.
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a');
+  if (!a) return;
+  const href = a.getAttribute('href') || '';
+  if (href === '/#contacto' && a.classList.contains('btn-primary')) gtag('event', 'cta_click', { cta_id: 'vertical_agendar_demo' });
+  else if (href.indexOf('https://wa.me/') === 0) gtag('event', 'whatsapp_click', {});
+  else if (href.indexOf('mailto:') === 0) gtag('event', 'email_click', {});
+});
 const menuOverlay = document.getElementById('menuOverlay');
 document.addEventListener('click', (e) => {
   if (e.target.closest('#menuToggle')) { document.body.classList.toggle('menu-open'); syncMenu(); return; }
@@ -208,9 +197,9 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));`;
 // (PRICING_SUMMARY en dominga-prompt.js). test/vertical-pages.test.js revisa
 // que coincidan.
 const PLANS = [
-  { name: 'Básico', once: '$149.990', monthly: '$49.990', price: 149990, what: 'Chatbot de IA en tu sitio web, con derivación a una persona y panel de control. Listo en 1 semana.' },
-  { name: 'Recomendado', once: '$249.990', monthly: '$99.990', price: 249990, what: 'Todo lo del Básico, más WhatsApp, Instagram y agenda automática con Google Calendar. Listo en 2 semanas.' },
-  { name: 'Experto', once: '$449.990', monthly: '$179.990', price: 449990, what: 'Todo lo del Recomendado, más llamadas con voicebot (se activa al contratarlo). Listo en 3 semanas.' }
+  { name: 'Básico', once: '$149.990', monthly: '$49.990', price: 149990, priceMonthly: 49990, what: 'Chatbot de IA en tu sitio web, con derivación a una persona y panel de control. Listo en 1 semana.' },
+  { name: 'Recomendado', once: '$249.990', monthly: '$99.990', price: 249990, priceMonthly: 99990, what: 'Todo lo del Básico, más WhatsApp, Instagram y agenda automática con Google Calendar. Listo en 2 semanas.' },
+  { name: 'Experto', once: '$449.990', monthly: '$179.990', price: 449990, priceMonthly: 179990, what: 'Todo lo del Recomendado, más llamadas con voicebot (se activa al contratarlo). Listo en 3 semanas.' }
 ];
 
 // Preguntas frecuentes que aplican a todos los rubros (van después de las propias).
@@ -219,6 +208,66 @@ const SHARED_FAQS = [
   { q: '¿Cuánto demora tenerlo funcionando?', a: 'Entre 1 y 3 semanas según el plan. Tú nos entregas la información de tu negocio y nosotros hacemos toda la configuración: no necesitas conocimientos técnicos.' },
   { q: '¿Mis clientes saben que hablan con una inteligencia artificial?', a: 'Sí. El asistente siempre se presenta como asistente de IA. Tú ves cada conversación en el panel, y en el chat de tu sitio web puedes tomarla en vivo cuando quieras.' }
 ];
+
+// Lo que se pide a cada rubro al configurar el asistente: es propio de cada página.
+const VERTICAL_CHECKLISTS = {
+  "chatbot-ia-para-centros-esteticos": [
+    "Tratamientos faciales y corporales, con precio, duración y número de sesiones sugerido",
+    "Packs, promociones vigentes y sus fechas de término",
+    "Cuidados previos y posteriores que quieres que informe",
+    "Qué casos deben pasar a una evaluación con una especialista",
+    "Política de abonos, reagendamiento y atrasos"
+  ],
+  "chatbot-ia-para-clinicas-dentales": [
+    "Prestaciones con sus valores o rangos: limpieza, urgencias, ortodoncia, implantes",
+    "Convenios, Fonasa, isapres y formas de pago",
+    "Si la evaluación inicial tiene costo y cuánto dura",
+    "Profesionales, especialidades y box o sucursal de cada uno",
+    "Teléfono y horario de urgencias dentales"
+  ],
+  "chatbot-ia-para-veterinarias": [
+    "Servicios y valores: consulta, vacunas, desparasitación, cirugías y peluquería",
+    "Especies que atiendes, como perros, gatos o exóticos",
+    "Calendario de vacunas que quieres informar a cada tutor",
+    "Si haces visitas a domicilio y en qué comunas",
+    "Clínica de urgencia a la que derivas fuera de horario"
+  ],
+  "chatbot-ia-para-centros-medicos": [
+    "Especialidades y profesionales, con sus días de atención",
+    "Valores particulares, bonos y convenios vigentes",
+    "Preparación de cada examen, como ayuno u orden médica",
+    "Sucursales, estacionamiento y cómo llegar",
+    "Mensaje de derivación a un servicio de urgencia"
+  ],
+  "chatbot-ia-para-peluquerias-y-barberias": [
+    "Servicios y precios: corte, barba, color, peinados y alisados",
+    "Duración de cada servicio, para no topar las horas",
+    "Quién atiende cada servicio y qué días",
+    "Si recibes sin hora y en qué horarios",
+    "Cuánto antes se puede cancelar o cambiar una hora"
+  ],
+  "chatbot-ia-para-kinesiologos": [
+    "Valor de la sesión y de los packs de sesiones",
+    "Bonos, reembolsos e isapres con las que trabajas",
+    "Comunas y recargo de la atención a domicilio",
+    "Áreas de atención, como traumatología, respiratoria o deportiva",
+    "Si se necesita orden médica y qué traer a la primera sesión"
+  ],
+  "chatbot-ia-para-psicologos": [
+    "Valor de la sesión, duración y frecuencia habitual",
+    "Modalidad online o presencial, y dirección de la consulta",
+    "Boletas, reembolsos y convenios",
+    "Edades y motivos de consulta que atiendes",
+    "Líneas de ayuda que debe entregar si alguien está en crisis"
+  ],
+  "chatbot-ia-para-spa-y-masajes": [
+    "Tipos de masaje y tratamientos, con duración y precio",
+    "Cómo comprar una gift card, su vigencia y cómo se canjea",
+    "Si atiendes parejas o grupos, y con cuánta anticipación",
+    "Qué debe traer la persona y a qué hora llegar",
+    "Política de cancelación y reagendamiento"
+  ]
+};
 
 const VERTICALS = {
   'chatbot-ia-para-centros-esteticos': {
@@ -503,6 +552,10 @@ function structuredData(v, faqs) {
         name: `Plan ${p.name}`,
         price: String(p.price),
         priceCurrency: 'CLP',
+        priceSpecification: [
+          { '@type': 'UnitPriceSpecification', name: 'Pago único de implementación', price: String(p.price), priceCurrency: 'CLP' },
+          { '@type': 'UnitPriceSpecification', name: 'Mensualidad', price: String(p.priceMonthly), priceCurrency: 'CLP', unitCode: 'MON' }
+        ],
         description: `${p.once} de pago único más ${p.monthly} al mes. ${p.what}`
       }))
     },
@@ -534,6 +587,7 @@ function renderVerticalPage(v) {
   const related = VERTICAL_SLUGS.filter((slug) => slug !== v.slug)
     .map((slug) => `<li><a href="/${slug}">${shortName(VERTICALS[slug])}</a></li>`)
     .join('');
+  const checklist = VERTICAL_CHECKLISTS[v.slug].map((item) => `<li>${item}</li>`).join('');
   const url = `${SITE}/${v.slug}`;
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${v.metaTitle}</title><meta name="description" content="${v.metaDesc}"><meta name="robots" content="index, follow"><meta name="theme-color" content="#0A0A0A"><link rel="canonical" href="${url}"><meta property="og:type" content="website"><meta property="og:site_name" content="Atiéndeme la Pyme"><meta property="og:title" content="${v.metaTitle}"><meta property="og:description" content="${v.metaDesc}"><meta property="og:url" content="${url}"><meta property="og:locale" content="es_CL"><meta property="og:image" content="${SITE}/og-image.png"><meta name="twitter:card" content="summary_large_image"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230A0A0A%22%2F%3E%3Ctext%20x%3D%2210%22%20y%3D%2248%22%20font-family%3D%22'Space%20Grotesk'%2C'Arial%20Black'%2Csans-serif%22%20font-weight%3D%22700%22%20font-size%3D%2242%22%20fill%3D%22%23EDEDE8%22%3Ea%3C%2Ftext%3E%3Crect%20x%3D%2240%22%20y%3D%2216%22%20width%3D%2213%22%20height%3D%2234%22%20fill%3D%22%23E8A33D%22%2F%3E%3C%2Fsvg%3E"><script type="application/ld+json">${jsonLd(structuredData(v, faqs))}</script><style>${SHARED_HEAD_STYLE}</style></head><body>
 <div class="grid-bg"></div>
@@ -580,6 +634,17 @@ ${SHARED_HEADER_NAV}
   <section class="reveal">
     <span class="sec-num">05</span>
     <div class="sec-head">
+      <span class="label"><b>./</b>qué necesita saber</span>
+      <h2>La información que cargamos para ${v.singular}</h2>
+    </div>
+    <div class="content-body">
+      <p>El asistente responde solo con lo que le entregas. Esto es lo que suele hacer falta en ${v.rubro}:</p>
+      <ul>${checklist}</ul>
+    </div>
+  </section>
+  <section class="reveal">
+    <span class="sec-num">06</span>
+    <div class="sec-head">
       <span class="label"><b>./</b>cómo funciona</span>
       <h2>Listo en 1 a 3 semanas, sin conocimientos técnicos</h2>
     </div>
@@ -592,7 +657,7 @@ ${SHARED_HEADER_NAV}
     </div>
   </section>
   <section class="reveal" id="precios">
-    <span class="sec-num">06</span>
+    <span class="sec-num">07</span>
     <div class="sec-head">
       <span class="label"><b>./</b>planes</span>
       <h2>Planes y precios</h2>
@@ -603,7 +668,7 @@ ${SHARED_HEADER_NAV}
     </div>
   </section>
   <section class="reveal faq">
-    <span class="sec-num">07</span>
+    <span class="sec-num">08</span>
     <div class="sec-head">
       <span class="label"><b>./</b>preguntas frecuentes</span>
       <h2>Preguntas frecuentes de ${v.rubro}</h2>
@@ -628,6 +693,7 @@ ${SHARED_HEADER_NAV}
   ${SHARED_FOOTER}
 </main>
 <script>${SHARED_SCRIPT}</script>
+${CONSENT_SNIPPET}
 </body></html>`;
 }
 

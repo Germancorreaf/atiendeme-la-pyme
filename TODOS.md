@@ -158,7 +158,7 @@ Firma `X-Hub-Signature-256` en el webhook de WhatsApp, PIN con `crypto.getRandom
 - **Chat web sin pérdida de historial:** `/api/chat` agrega el mensaje nuevo y la respuesta al historial guardado en vez de reemplazarlo. Antes, un visitante que recargaba la página borraba su conversación anterior y los mensajes del chat en vivo. `escalated` ya no se desmarca con el siguiente mensaje. El widget también guarda en su historial lo que el visitante escribe durante el chat en vivo.
 - **Admin:** máximo 500 filas incrustadas por tabla, con los totales reales en las estadísticas.
 - **Logs:** el cron de recordatorios ya no loguea nombre ni correo, y omite reservas provisionales (`pending:`).
-- **Google Analytics:** se carga con la primera interacción o a los 6 s (antes bloqueaba ~300 ms el hilo principal en mobile).
+- **Google Analytics:** se carga con la primera interacción o a los 6 s (antes bloqueaba ~300 ms el hilo principal en mobile). Desde 2026-11-02 solo se carga con consentimiento (`src/lib/consent.js`).
 - **wrangler.toml:** se quitó el `[env.production]` vacío que generaba la advertencia en cada deploy.
 
 **Why:** Pedido explícito de Germán: hacer todo lo que no implique cambios en Meta mientras la app está en revisión de Tech Provider.

@@ -8,6 +8,7 @@ import { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, on
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
 import { refreshInstagramTokens } from './lib/metaConnections.js';
+import { refreshWhatsappTokens } from './lib/whatsappConnections.js';
 import { onRequestGetOnboardingPersonal, onRequestGetOnboardingStatus, onRequestPostOnboardingSend } from './api/onboarding.js';
 import { getVerticalPage, VERTICAL_SLUGS } from './lib/vertical-pages.js';
 import { CONSENT_SNIPPET } from './lib/consent.js';
@@ -1732,6 +1733,7 @@ export default {
     async scheduled(event, env, ctx) {
         ctx.waitUntil(processReminders(env));
         ctx.waitUntil(refreshInstagramTokens(env));
+        ctx.waitUntil(refreshWhatsappTokens(env));
     },
     async email(message, env, ctx) {
         ctx.waitUntil(handleInboundEmail(message, env, ctx));

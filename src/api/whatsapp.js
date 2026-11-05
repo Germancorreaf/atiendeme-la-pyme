@@ -123,7 +123,12 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
   const { env } = context;
   // Solo procesamos mensajes de texto reales; ignoramos otros tipos
   // (imagen, audio, ubicación, etc.) y notificaciones de estado.
-  if (message.type !== 'text' || !message.text?.body) return;
+  // Un botón de respuesta rápida llega como interactive.button_reply: se trata
+  // como si la persona hubiera escrito el texto del botón.
+  const userText = message.type === 'text'
+    ? message.text?.body
+    : message.type === 'interactive' ? message.interactive?.button_reply?.title : null;
+  if (!userText) return;
 
   const from = message.from;
   if (!isSafeWhatsappId(from) || !phoneNumberId) return;
@@ -141,7 +146,7 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
   if (await isOwnerActive(env.RATE_LIMIT_KV, phoneNumberId, from)) {
     // El mensaje igual queda guardado para que el dueño lo vea en el panel.
     await appendChatMessages(env, `whatsapp_${phoneNumberId}_${from}`, [
-      { role: 'user', content: message.text.body, timestamp: new Date().toISOString() }
+      { role: 'user', content: userText, timestamp: new Date().toISOString() }
     ], { lead_contact: from, ...(contactName ? { sender_name: contactName } : {}) });
     return;
   }
@@ -158,22 +163,60 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
     // escribirle a más de un negocio conectado, y no deben mezclarse
     // el historial ni el contexto entre bots distintos.
     sessionId: `whatsapp_${phoneNumberId}_${from}`,
-    userMessage: message.text.body,
+    userMessage: userText,
     connection,
     channel: 'WhatsApp',
     leadContact: from,
     notifyContact: `+${from}`,
     senderName: contactName,
-    // ponytail: WhatsApp sigue en un solo mensaje y sin botones mientras dure su App Review (TODOS.md).
-    send: (parts) => sendMessage(from, joinReply(parts), phoneNumberId, accessToken, env.RATE_LIMIT_KV),
+    // Por defecto un solo mensaje con "Opciones: …" como texto (lo que ve el App Review).
+    // Con WHATSAPP_RICH_REPLIES=1: un mensaje por globo y botones de respuesta rápida.
+    send: (parts) => env.WHATSAPP_RICH_REPLIES === '1'
+      ? sendRich(from, parts, phoneNumberId, accessToken, env.RATE_LIMIT_KV)
+      : sendMessage(from, joinReply(parts), phoneNumberId, accessToken, env.RATE_LIMIT_KV),
     context
   });
 }
 
+// Botones de respuesta rápida de WhatsApp: máx. 3, título de hasta 20 caracteres
+// (splitReply ya respeta ambos límites), cuerpo de hasta 1024.
+export function buildInteractivePayload(to, bodyText, options) {
+  return {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: bodyText.slice(0, 1024) },
+      action: {
+        buttons: options.map((title, i) => ({ type: 'reply', reply: { id: `opt_${i + 1}`, title } }))
+      }
+    }
+  };
+}
+
+// Un mensaje por globo; las opciones van como botones en el último.
+async function sendRich(to, { bubbles, options }, phoneNumberId, accessToken, kv) {
+  for (let i = 0; i < bubbles.length; i++) {
+    const last = i === bubbles.length - 1;
+    const payload = last && options.length
+      ? buildInteractivePayload(to, bubbles[i], options)
+      : { messaging_product: 'whatsapp', to, type: 'text', text: { body: bubbles[i] } };
+    if (!(await postToWhatsapp(payload, phoneNumberId, accessToken, kv))) return;
+  }
+}
+
 async function sendMessage(to, messageText, phoneNumberId, accessToken, kv) {
+  await postToWhatsapp(
+    { messaging_product: 'whatsapp', to, type: 'text', text: { body: messageText } },
+    phoneNumberId, accessToken, kv
+  );
+}
+
+async function postToWhatsapp(payload, phoneNumberId, accessToken, kv) {
   if (!phoneNumberId || !accessToken) {
     console.error('WhatsApp send skipped: falta phoneNumberId o accessToken');
-    return;
+    return false;
   }
 
   try {
@@ -183,22 +226,19 @@ async function sendMessage(to, messageText, phoneNumberId, accessToken, kv) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`
       },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'text',
-        text: { body: messageText }
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
       const err = await response.text();
       console.error('WhatsApp API error:', err);
-    } else {
-      const data = await response.json().catch(() => null);
-      await rememberBotMessage(kv, data?.messages?.[0]?.id);
+      return false;
     }
+    const data = await response.json().catch(() => null);
+    await rememberBotMessage(kv, data?.messages?.[0]?.id);
+    return true;
   } catch (error) {
     console.error('Error sending WhatsApp message:', error.message);
+    return false;
   }
 }

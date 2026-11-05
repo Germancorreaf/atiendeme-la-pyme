@@ -17,7 +17,8 @@ import { limitRequest } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { alreadyProcessed } from '../lib/dedup.js';
-import { joinReply, replyToMessage } from '../lib/chatSessions.js';
+import { appendChatMessages, joinReply, replyToMessage } from '../lib/chatSessions.js';
+import { isOwnerActive, markOwnerActive, rememberBotMessage, wasSentByBot } from '../lib/ownerActive.js';
 
 import { GRAPH_API_VERSION } from '../lib/graphApi.js';
 
@@ -82,6 +83,18 @@ async function processEntries(rawBody, context) {
       // queda siempre null para este canal.
       const contactName = value.contacts?.[0]?.profile?.name || null;
 
+      // Coexistencia: el dueño escribió desde la app WhatsApp Business.
+      if (change.field === 'smb_message_echoes') {
+        for (const echo of value.message_echoes || []) {
+          try {
+            await handleOwnerEcho(echo, phoneNumberId, context);
+          } catch (err) {
+            console.error('WhatsApp echo error:', err.message);
+          }
+        }
+        continue;
+      }
+
       for (const message of value.messages || []) {
         try {
           await handleMessage(message, phoneNumberId, contactName, context);
@@ -93,11 +106,29 @@ async function processEntries(rawBody, context) {
   }
 }
 
+async function handleOwnerEcho(echo, phoneNumberId, { env }) {
+  const customer = echo.to;
+  if (!isSafeWhatsappId(customer) || !phoneNumberId) return;
+  if (await wasSentByBot(env.RATE_LIMIT_KV, echo.id)) return;
+  await markOwnerActive(env.RATE_LIMIT_KV, phoneNumberId, customer);
+  // Queda en la conversación para que se vea en el panel.
+  if (echo.type === 'text' && echo.text?.body) {
+    await appendChatMessages(env, `whatsapp_${phoneNumberId}_${customer}`, [
+      { role: 'assistant', content: echo.text.body, timestamp: new Date().toISOString(), sent_by: 'owner' }
+    ]);
+  }
+}
+
 async function handleMessage(message, phoneNumberId, contactName, context) {
   const { env } = context;
   // Solo procesamos mensajes de texto reales; ignoramos otros tipos
   // (imagen, audio, ubicación, etc.) y notificaciones de estado.
-  if (message.type !== 'text' || !message.text?.body) return;
+  // Un botón de respuesta rápida llega como interactive.button_reply: se trata
+  // como si la persona hubiera escrito el texto del botón.
+  const userText = message.type === 'text'
+    ? message.text?.body
+    : message.type === 'interactive' ? message.interactive?.button_reply?.title : null;
+  if (!userText) return;
 
   const from = message.from;
   if (!isSafeWhatsappId(from) || !phoneNumberId) return;
@@ -111,6 +142,15 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
   // Busca la conexión de este número (cliente conectado vía Embedded
   // Signup, ver whatsapp-connect.js); si no hay ninguna, usa el token del
   // número propio (WHATSAPP_ACCESS_TOKEN, usuario del sistema).
+  // Si el dueño está respondiendo desde su celular, el bot no se mete.
+  if (await isOwnerActive(env.RATE_LIMIT_KV, phoneNumberId, from)) {
+    // El mensaje igual queda guardado para que el dueño lo vea en el panel.
+    await appendChatMessages(env, `whatsapp_${phoneNumberId}_${from}`, [
+      { role: 'user', content: userText, timestamp: new Date().toISOString() }
+    ], { lead_contact: from, ...(contactName ? { sender_name: contactName } : {}) });
+    return;
+  }
+
   const connection = await getConnectionByPhoneNumberId(phoneNumberId, env);
   const accessToken = connection?.access_token || env.WHATSAPP_ACCESS_TOKEN;
   if (!accessToken) {
@@ -123,22 +163,60 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
     // escribirle a más de un negocio conectado, y no deben mezclarse
     // el historial ni el contexto entre bots distintos.
     sessionId: `whatsapp_${phoneNumberId}_${from}`,
-    userMessage: message.text.body,
+    userMessage: userText,
     connection,
     channel: 'WhatsApp',
     leadContact: from,
     notifyContact: `+${from}`,
     senderName: contactName,
-    // ponytail: WhatsApp sigue en un solo mensaje y sin botones mientras dure su App Review (TODOS.md).
-    send: (parts) => sendMessage(from, joinReply(parts), phoneNumberId, accessToken),
+    // Por defecto un solo mensaje con "Opciones: …" como texto (lo que ve el App Review).
+    // Con WHATSAPP_RICH_REPLIES=1: un mensaje por globo y botones de respuesta rápida.
+    send: (parts) => env.WHATSAPP_RICH_REPLIES === '1'
+      ? sendRich(from, parts, phoneNumberId, accessToken, env.RATE_LIMIT_KV)
+      : sendMessage(from, joinReply(parts), phoneNumberId, accessToken, env.RATE_LIMIT_KV),
     context
   });
 }
 
-async function sendMessage(to, messageText, phoneNumberId, accessToken) {
+// Botones de respuesta rápida de WhatsApp: máx. 3, título de hasta 20 caracteres
+// (splitReply ya respeta ambos límites), cuerpo de hasta 1024.
+export function buildInteractivePayload(to, bodyText, options) {
+  return {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: bodyText.slice(0, 1024) },
+      action: {
+        buttons: options.map((title, i) => ({ type: 'reply', reply: { id: `opt_${i + 1}`, title } }))
+      }
+    }
+  };
+}
+
+// Un mensaje por globo; las opciones van como botones en el último.
+async function sendRich(to, { bubbles, options }, phoneNumberId, accessToken, kv) {
+  for (let i = 0; i < bubbles.length; i++) {
+    const last = i === bubbles.length - 1;
+    const payload = last && options.length
+      ? buildInteractivePayload(to, bubbles[i], options)
+      : { messaging_product: 'whatsapp', to, type: 'text', text: { body: bubbles[i] } };
+    if (!(await postToWhatsapp(payload, phoneNumberId, accessToken, kv))) return;
+  }
+}
+
+async function sendMessage(to, messageText, phoneNumberId, accessToken, kv) {
+  await postToWhatsapp(
+    { messaging_product: 'whatsapp', to, type: 'text', text: { body: messageText } },
+    phoneNumberId, accessToken, kv
+  );
+}
+
+async function postToWhatsapp(payload, phoneNumberId, accessToken, kv) {
   if (!phoneNumberId || !accessToken) {
     console.error('WhatsApp send skipped: falta phoneNumberId o accessToken');
-    return;
+    return false;
   }
 
   try {
@@ -148,19 +226,19 @@ async function sendMessage(to, messageText, phoneNumberId, accessToken) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`
       },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'text',
-        text: { body: messageText }
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
       const err = await response.text();
       console.error('WhatsApp API error:', err);
+      return false;
     }
+    const data = await response.json().catch(() => null);
+    await rememberBotMessage(kv, data?.messages?.[0]?.id);
+    return true;
   } catch (error) {
     console.error('Error sending WhatsApp message:', error.message);
+    return false;
   }
 }

@@ -2,11 +2,12 @@
 
 ## Producto
 
-- **WhatsApp: globos separados y botones** (cuando se apruebe su App Review). Instagram y Messenger ya mandan
-  la respuesta en varios globos y las opciones como botones de respuesta rápida (`splitReply` en `chatSessions.js`).
-  En WhatsApp falta: un mensaje por globo y botones con `type: 'interactive'` (máx. 3, 20 caracteres). Hoy se une
-  todo en un mensaje con "Opciones: …" como texto (`joinReply`). También falta juntar mensajes seguidos
-  (`MessageBuffer`, hoy solo Meta) y el indicador de "escribiendo…" de WhatsApp.
+- **WhatsApp: globos separados y botones** — código listo (2026-11-05), apagado por defecto. Con la variable
+  `WHATSAPP_RICH_REPLIES=1` (en `wrangler.toml` `[vars]`) WhatsApp manda un mensaje por globo y las opciones como
+  botones `interactive` (máx. 3, 20 caracteres); lo que la persona toca llega como `button_reply` y se responde como
+  si lo hubiera escrito. **Encenderla solo después del App Review de WhatsApp** y de grabar el video de Dominga
+  respondiendo por WhatsApp (el video debe mostrar lo mismo que se envió a revisar). Falta aún: juntar mensajes
+  seguidos (`MessageBuffer`, hoy solo Meta) y el indicador de "escribiendo…" de WhatsApp.
 
 ### Meta: pasar a producción (Instagram + Messenger aprobados) y WhatsApp como Tech Provider
 
@@ -14,15 +15,13 @@
 
 **Pendiente (lo hace Germán en el panel de Meta):**
 1. Probar con una cuenta que NO tenga rol en la app (cliente piloto): conectar y recibir un mensaje real.
-2. WhatsApp / Tech Provider: "Verificación de acceso" ENVIADA el 2026-10-20 12:00 (plazo de Meta: 19-dic-2026) → al aprobarse: probar "Conectar WhatsApp" con número piloto real → grabar video para App Review de `whatsapp_business_messaging` y `whatsapp_business_management` → webhook en `https://atiendemelapyme.cl/webhook/whatsapp` suscrito a `messages`. (Config de Embedded Signup ya lista: ver detalle abajo.)
-   - **Coexistencia (número +56 9 2205 3594 sin sacarlo de la app del celular):** el código ya está (botón "Ya uso la app WhatsApp Business", no llama a `/register` si `is_on_biz_app`). Meta exige ser Tech Provider aprobado para usarla: probar cuando se apruebe la verificación de acceso. Antes, suscribir en el panel de Meta los campos de webhook `account_update`, `history`, `smb_app_state_sync` y `smb_message_echoes`. Pendiente (opcional): sincronizar contactos/historial con `smb_app_data` dentro de 24 h, y que Dominga no responda cuando el dueño ya está contestando desde el celular (`smb_message_echoes`).
+2. WhatsApp para clientes (verificado 2026-11-05 en la documentación de Meta):
+   - **Meta retiró la "Verificación de acceso" el 2026-10-09** ([aviso oficial](https://developers.facebook.com/blog/post/2026/10/09/retiring-access-verification-for-tech-provider-apps/)): ya no hay que esperarla (el plazo del 19-dic ya no aplica). El "En revisión" que aún se ve en Business Suite es un residuo: no responderlo ni reenviarlo.
+   - **Lo que sí falta:** App Review con acceso avanzado para `whatsapp_business_messaging` y `whatsapp_business_management`. Según la doc de Embedded Signup, sin eso no se pueden incorporar clientes. Videos que pide: un mensaje enviado desde la app que llega a WhatsApp, y una plantilla creada desde la app. Para grabarlos: con la app en modo desarrollo el flujo solo aparece a cuentas con rol (admin/developer/tester), o usar la cuenta sandbox (WhatsApp → Quickstart → Testing Integrations, 30 días). Sin aprobación, tope de 10 clientes nuevos por semana; cada cliente debe agregar un medio de pago en su cuenta de WhatsApp Business Platform.
+   - **Pendiente (Germán):** (a) correr `supabase/2026-11-05-whatsapp-connections-cliente-id.sql` en Supabase (sin eso, asignar un número a un cliente falla); (b) revisar la clasificación de la app (Direct Integrator por defecto; pasa a Tech Provider al pedir permisos avanzados); (c) probar "Conectar WhatsApp" con un número de prueba y grabar los videos.
+   - **Ya hecho:** config de Embedded Signup `1123645077314005` en `WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID` (flujo v4), renovación diaria de tokens (`refreshWhatsappTokens`), selector de cliente en el panel, `WHATSAPP_VERIFY_TOKEN` cargado, webhook `/webhook/whatsapp` recibiendo mensajes. Todo desplegado el 2026-11-05.
    - **Número propio +56 9 2205 3594 funcionando (2026-10-20):** WABA "Atiéndeme la pyme" (2499189710563916) suscrita a la app con un token del usuario del sistema "Employee" (sin caducidad) guardado en `WHATSAPP_ACCESS_TOKEN`; `whatsapp.js` lo usa como respaldo porque el número no está en `whatsapp_connections`. Dominga ya responde.
-   - **"Conectar WhatsApp" para clientes:** bloqueado hasta que Meta apruebe la verificación de acceso (plazo: 19-dic-2026). Cuando se apruebe: probar con número piloto real y grabar video para App Review.
-   - **Config de Embedded Signup lista (2026-11-05):** creada desde la plantilla "token que caduca en 60 días". ID `1123645077314005`, guardado en `WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID` en `wrangler.toml`. Rama `feat/whatsapp-embedded-signup-config` pendiente de mergear y desplegar.
-   - **Renovación automática de tokens de WhatsApp (2026-11-05):** `refreshWhatsappTokens()` integrado al cron diario (mismo patrón que Instagram). Renueva tokens de 60 días cada día.
-   - **`cliente_id` en `whatsapp_connections` (2026-11-05):** columna nueva con FK a `clientes`. SQL en `supabase/2026-11-05-whatsapp-connections-cliente-id.sql` — correr en Supabase SQL Editor antes de mergear.
-   - **Pendiente (Germán):** (a) correr el SQL de migración en Supabase; (b) mergear `feat/whatsapp-embedded-signup-config` a `main` y desplegar (`npm run deploy`); (c) `npx wrangler secret put WHATSAPP_VERIFY_TOKEN`; (d) configurar webhook en Meta (WhatsApp → Configuración → URL `https://atiendemelapyme.cl/webhook/whatsapp`, campo `messages`).
-3. Borrar de Cloudflare el token viejo de Página (`FACEBOOK_PAGE_TOKEN`; lo usaba el webhook legado de Instagram hasta `dedf948`, hoy nada lo lee): `npx wrangler secret delete FACEBOOK_PAGE_TOKEN`. **No** quitarle a la app el acceso a la Página en Meta: es la misma app de la conexión actual de Facebook/Instagram y la desconectaría.
+   - **Coexistencia (número sin sacarlo de la app del celular):** el código ya está (botón "Ya uso la app WhatsApp Business", no llama a `/register` si `is_on_biz_app`; Dominga se calla 12 h tras un mensaje del dueño desde el celular, `lib/ownerActive.js`, y el mensaje del cliente igual se guarda). Para usarla: suscribir en Meta los campos de webhook `account_update`, `history`, `smb_app_state_sync` y `smb_message_echoes`, y confirmar que `smb_message_echoes` llega con el formato esperado. Opcional: sincronizar contactos/historial con `smb_app_data` dentro de 24 h.
 
 **Landing:** decir "Tech Provider de Meta para WhatsApp Business" solo cuando Meta lo apruebe; nunca "oficial", "partner" ni el logo de Meta.
 
@@ -139,6 +138,8 @@
 ### Otros menores
 
 - **Modelo de borradores de correo:** `src/lib/email-inbound.js` usa el modelo por defecto de `src/lib/anthropic.js` (`claude-sonnet-4-5-20250929`). Cambiarlo es decisión de costo/calidad.
+- **Graph API de Meta en v27.0** (2026-11-05), definida solo en `src/lib/graphApi.js`. v21.0 se apagaba el
+  21-ene-2027. Subirla de nuevo cuando Meta anuncie el retiro de v27 (revisar su changelog antes).
 - **robots.txt administrado por Cloudflare:** bloquea bots de entrenamiento de IA (no los de búsqueda). Decidir si mantenerlo (se cambia en Cloudflare, no en el código).
 
 ## Completed

@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { onRequestPostExchange, onRequestGetConnect, onRequestPostAssignCliente } from '../../src/api/whatsapp-connect.js';
 import { createSessionCookie } from '../../src/lib/adminSession.js';
+import { inviteToken } from '../../src/lib/clientInvite.js';
 
 const env = {
   ADMIN_SESSION_SECRET: 's', META_APP_ID: 'app', META_APP_SECRET: 'sec', META_LOGIN_CONFIG_ID: 'cfg',
@@ -115,5 +116,76 @@ describe('assign-cliente (endpoint)', () => {
     });
     const res = await onRequestPostAssignCliente({ request: req, env });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('invite de cliente en /admin/whatsapp/connect', () => {
+  const clienteId = '11111111-1111-1111-1111-111111111111';
+  const cliente = { id: clienteId, nombre: 'Mi Negocio Test' };
+
+  function stubFetchForInvite({ upserts = [] } = {}) {
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      const u = String(url);
+      const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { 'Content-Type': 'application/json' } });
+      if (u.includes('/rest/v1/whatsapp_connections')) { upserts.push(JSON.parse(init.body)); return new Response('[]', { status: 201 }); }
+      // getCliente via Supabase
+      if (u.includes('/rest/v1/clientes')) return json([cliente]);
+      if (u.includes('oauth/access_token')) return json({ access_token: 'tok' });
+      if (u.includes('subscribed_apps')) return json({ success: true });
+      if (u.includes('/register')) return json({ success: true });
+      if (u.includes('fields=')) return json({ display_phone_number: '+56 9 8888 7777', is_on_biz_app: false });
+      return json([]);
+    }));
+  }
+
+  it('GET /connect?invite=<token> devuelve 200 y pone cookie de invite', async () => {
+    stubFetchForInvite();
+    const token = await inviteToken(env, clienteId);
+    const req = new Request(`https://example.com/admin/whatsapp/connect?invite=${encodeURIComponent(token)}`, { method: 'GET' });
+    const res = await onRequestGetConnect({ request: req, env });
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('Mi Negocio Test');
+    expect(res.headers.get('Set-Cookie')).toContain('_wa=');
+  });
+
+  it('GET /connect sin sesión ni invite devuelve 401', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url) => {
+      if (String(url).includes('/rest/v1/clientes')) return new Response('[]', { status: 200 });
+      return new Response('[]', { status: 200 });
+    }));
+    const req = new Request('https://example.com/admin/whatsapp/connect', { method: 'GET' });
+    const res = await onRequestGetConnect({ request: req, env });
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /exchange con invite guarda cliente_id en la conexión', async () => {
+    const upserts = [];
+    stubFetchForInvite({ upserts });
+    const token = await inviteToken(env, clienteId);
+    // Simula llegar vía cookie (ya que el exchange no tiene el query param)
+    const cookieName = 'atp_invite_wa';
+    const req = new Request('https://example.com/admin/whatsapp/connect/exchange', {
+      method: 'POST',
+      headers: { Cookie: `${cookieName}=${encodeURIComponent(token)}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'c', waba_id: 'W', phone_number_id: 'P' }),
+    });
+    const res = await onRequestPostExchange({ request: req, env });
+    expect(res.status).toBe(200);
+    expect(upserts.at(-1).cliente_id).toBe(clienteId);
+  });
+
+  it('POST /exchange con invite en body (cookie bloqueada) guarda cliente_id', async () => {
+    const upserts = [];
+    stubFetchForInvite({ upserts });
+    const token = await inviteToken(env, clienteId);
+    const req = new Request('https://example.com/admin/whatsapp/connect/exchange', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'c', waba_id: 'W', phone_number_id: 'P', invite: encodeURIComponent(token) }),
+    });
+    const res = await onRequestPostExchange({ request: req, env });
+    expect(res.status).toBe(200);
+    expect(upserts.at(-1).cliente_id).toBe(clienteId);
   });
 });

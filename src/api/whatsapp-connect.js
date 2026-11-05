@@ -24,12 +24,35 @@
 // dashboard puede iniciar o completar esta conexión.
 
 import { checkSessionAuth, isCrossSiteRequest } from '../lib/adminSession.js';
+import { INVITE_COOKIE_NAME, verifyInvite } from '../lib/clientInvite.js';
 import {
   upsertWhatsappConnection,
   deleteWhatsappConnection,
   getConnectionByPhoneNumberId,
   assignClienteToWhatsapp
 } from '../lib/whatsappConnections.js';
+
+const WA_INVITE_COOKIE = INVITE_COOKIE_NAME + '_wa';
+
+function parseCookieValue(cookieHeader, name) {
+  if (!cookieHeader) return null;
+  const m = cookieHeader.match(new RegExp('(?:^|;)\\s*' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+/** Resuelve quién inicia la conexión: admin o cliente vía token. */
+async function whoConnectsWa(request, env, { starting = false } = {}) {
+  const fromQuery = starting ? new URL(request.url).searchParams.get('invite') : null;
+  if (fromQuery) {
+    const invite = await verifyInvite(env, fromQuery);
+    if (!invite) return null;
+    return { invite, setCookie: `${WA_INVITE_COOKIE}=${encodeURIComponent(fromQuery)}; HttpOnly; Secure; SameSite=Lax; Path=/admin/whatsapp; Max-Age=1800` };
+  }
+  if (await checkSessionAuth(request, env)) return { admin: true };
+  const cookie = parseCookieValue(request.headers.get('Cookie'), WA_INVITE_COOKIE);
+  const invite = cookie ? await verifyInvite(env, cookie) : null;
+  return invite ? { invite } : null;
+}
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -54,7 +77,8 @@ button:disabled{opacity:.6;cursor:default;}
 
 export async function onRequestGetConnect(context) {
   const { request, env } = context;
-  if (!(await checkSessionAuth(request, env))) {
+  const who = await whoConnectsWa(request, env, { starting: true });
+  if (!who) {
     return new Response('Unauthorized', { status: 401 });
   }
   const configId = env.WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID || env.META_LOGIN_CONFIG_ID;
@@ -62,19 +86,32 @@ export async function onRequestGetConnect(context) {
     return htmlResponse('<h1>Falta configuración</h1><p>Definir <code>META_APP_ID</code> y <code>WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID</code> (o <code>META_LOGIN_CONFIG_ID</code>) en el Worker.</p><p><a href="/admin">Volver al dashboard</a></p>', 500);
   }
 
-  return htmlResponse(`
+  const backLink = who.invite
+    ? `<p style="margin-top:24px;"><a href="/conectar/${encodeURIComponent(new URL(request.url).searchParams.get('invite'))}">Volver a opciones de conexión</a></p>`
+    : `<p style="margin-top:24px;"><a href="/admin">Cancelar y volver al dashboard</a></p>`;
+
+  const clienteNombre = who.invite ? escapeHtml(who.invite.cliente.nombre) : null;
+  const intro = clienteNombre
+    ? `<p>Se abrirá una ventana de Meta para elegir o crear la WhatsApp Business Account de <b>${clienteNombre}</b>.</p>`
+    : `<p>Se abrirá una ventana de Meta para elegir o crear la WhatsApp Business Account que quieres conectar.</p>`;
+
+  const extraHeaders = who.setCookie ? { 'Set-Cookie': who.setCookie } : {};
+
+  const htmlBody = `
 <h1>Conectar WhatsApp</h1>
-<p>Se abrirá una ventana de Meta para elegir o crear la WhatsApp Business Account que quieres conectar.</p>
+${intro}
 <button id="waBtn" onclick="launchSignup(false)">Continuar con WhatsApp Business</button>
 <p style="margin-top:20px;font-size:13px;">¿Ya atiendes con la app WhatsApp Business en tu celular? Conéctala sin dejar de usarla:</p>
 <button id="waAppBtn" onclick="launchSignup(true)">Ya uso la app WhatsApp Business</button>
 <div class="status" id="waStatus"></div>
-<p style="margin-top:24px;"><a href="/admin">Cancelar y volver al dashboard</a></p>
+${backLink}
 <script src="https://connect.facebook.net/es_LA/sdk.js"></script>
 <script>
 window.fbAsyncInit = function() {
   FB.init({ appId: '${env.META_APP_ID}', autoLogAppEvents: true, xfbml: false, version: '${GRAPH_API_VERSION}' });
 };
+// Guardamos si venimos de un invite de cliente, para que el exchange lo sepa
+var _inviteParam = ${who.invite ? `'${encodeURIComponent(new URL(request.url).searchParams.get('invite') || '')}'` : 'null'};
 let waSessionData = null;
 window.addEventListener('message', (event) => {
   if (!event.origin.endsWith('facebook.com')) return;
@@ -131,7 +168,8 @@ async function finishConnection(code) {
       body: JSON.stringify({
         code,
         waba_id: waSessionData && waSessionData.waba_id,
-        phone_number_id: waSessionData && waSessionData.phone_number_id
+        phone_number_id: waSessionData && waSessionData.phone_number_id,
+        invite: _inviteParam || undefined
       })
     });
     const data = await res.json();
@@ -144,15 +182,39 @@ async function finishConnection(code) {
     document.getElementById('waAppBtn').disabled = false;
   }
 }
-</script>`);
+</script>`;
+
+  const pageHtml = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Conectar WhatsApp — Atiéndeme la Pyme</title>
+<style>body{font-family:system-ui,sans-serif;background:#0A0A0A;color:#EDEDED;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;}
+.card{max-width:480px;background:#161616;border:1px solid #2A2A2A;border-radius:12px;padding:32px;line-height:1.5;}
+a{color:#43D17C;}h1{margin-top:0;font-size:20px;}
+button{background:#25D366;color:#08341c;font-weight:700;border:none;border-radius:8px;padding:12px 20px;font-size:14px;cursor:pointer;}
+button:hover{background:#1ebe5b;}
+button:disabled{opacity:.6;cursor:default;}
+.status{margin-top:16px;font-size:13px;color:#8A8A82;}</style></head>
+<body><div class="card">${htmlBody}</div></body></html>`;
+
+  return new Response(pageHtml, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'X-Robots-Tag': 'noindex, nofollow',
+      'Cache-Control': 'no-store',
+      'X-Frame-Options': 'DENY',
+      'X-Content-Type-Options': 'nosniff',
+      ...extraHeaders
+    }
+  });
 }
 
 
 export async function onRequestPostExchange(context) {
   const { request, env } = context;
-  if (!(await checkSessionAuth(request, env))) {
-    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-  }
+
+  // Permite tanto admins logueados como clientes vía cookie de invite.
+  // También acepta el token de invite en el body como respaldo (si la cookie fue bloqueada).
+  let who = await whoConnectsWa(request, env);
+
   const configId = env.WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID || env.META_LOGIN_CONFIG_ID;
   if (!env.META_APP_ID || !env.META_APP_SECRET || !configId) {
     return new Response(JSON.stringify({ success: false, error: 'Falta configuración del Worker' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
@@ -164,6 +226,19 @@ export async function onRequestPostExchange(context) {
   } catch {
     return new Response(JSON.stringify({ success: false, error: 'Body inválido' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+
+  // Si la cookie no llegó (browser la bloqueó), verificamos el invite del body como respaldo.
+  if (!who && body.invite) {
+    const invite = await verifyInvite(env, decodeURIComponent(body.invite));
+    if (invite) who = { invite };
+  }
+
+  if (!who) {
+    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // Si ya es admin o invite de cookie, `who` está completo; si llegó del body, ya está en `who`.
+  const resolvedWho = who;
 
   const { code } = body;
   let { waba_id: wabaId, phone_number_id: phoneNumberId } = body;
@@ -257,13 +332,16 @@ export async function onRequestPostExchange(context) {
       }
     }
 
+    const clienteId = resolvedWho.invite ? resolvedWho.invite.cliente.id : null;
+
     await upsertWhatsappConnection({
       phone_number_id: phoneNumberId,
       waba_id: wabaId,
       display_phone_number: displayPhoneNumber,
       business_name: businessName,
       access_token: longLivedToken,
-      ...(pin ? { two_step_pin: pin } : {})
+      ...(pin ? { two_step_pin: pin } : {}),
+      ...(clienteId ? { cliente_id: clienteId } : {})
     }, env);
 
     return new Response(

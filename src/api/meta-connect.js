@@ -167,12 +167,16 @@ export async function onRequestGetInvite(context) {
     return htmlResponse('<h1>Link no válido</h1><p>Este link de conexión no existe o ya no está activo. Pídele uno nuevo a Atiéndeme la Pyme (hola@atiendemelapyme.cl).</p>', 404);
   }
   const t = encodeURIComponent(token);
+  const whatsappBtn = env.WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID
+    ? `<p><a class="btn" href="/admin/whatsapp/connect?invite=${t}">Conectar WhatsApp Business</a></p>`
+    : '';
   return htmlResponse(
     `<h1>Conecta tu cuenta</h1>
-    <p>Con esto, la asistente de IA de <b>${escapeHtml(invite.cliente.nombre)}</b> va a responder los mensajes que te llegan por Instagram o Facebook.</p>
-    <p style="color:#8A8A8A;font-size:13px;">Inicias sesión directamente en Instagram o Facebook: nadie más ve tu contraseña. Puedes desconectarla cuando quieras.</p>
+    <p>Con esto, la asistente de IA de <b>${escapeHtml(invite.cliente.nombre)}</b> va a responder los mensajes que te llegan por Instagram, Facebook${env.WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID ? ' o WhatsApp' : ''}.</p>
+    <p style="color:#8A8A8A;font-size:13px;">Inicias sesión directamente en Instagram, Facebook${env.WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID ? ' o Meta' : ''}: nadie más ve tu contraseña. Puedes desconectarla cuando quieras.</p>
     <p><a class="btn" href="/admin/meta/connect?invite=${t}">Conectar Instagram</a></p>
     <p><a class="btn" href="/admin/meta/connect-facebook?invite=${t}">Conectar Página de Facebook</a></p>
+    ${whatsappBtn}
     <p style="color:#8A8A8A;font-size:13px;">Si tu Instagram está vinculado a una Página de Facebook, puedes usar cualquiera de los dos. ¿Dudas? Escríbenos a hola@atiendemelapyme.cl.</p>`
   );
 }

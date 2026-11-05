@@ -123,11 +123,14 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
   const { env } = context;
   // Solo procesamos mensajes de texto reales; ignoramos otros tipos
   // (imagen, audio, ubicación, etc.) y notificaciones de estado.
-  // Un botón de respuesta rápida llega como interactive.button_reply: se trata
-  // como si la persona hubiera escrito el texto del botón.
+  // Un botón de respuesta rápida llega como interactive.button_reply y una fila
+  // de lista como interactive.list_reply (su id es el texto completo de la
+  // opción): se tratan como si la persona hubiera escrito ese texto.
   const userText = message.type === 'text'
     ? message.text?.body
-    : message.type === 'interactive' ? message.interactive?.button_reply?.title : null;
+    : message.type === 'interactive'
+      ? message.interactive?.button_reply?.title || message.interactive?.list_reply?.id
+      : null;
   if (!userText) return;
 
   const from = message.from;
@@ -248,15 +251,55 @@ export function buildInteractivePayload(to, bodyText, options) {
   };
 }
 
-// Un mensaje por globo; las opciones van como botones en el último. Entre
-// globos, un momento de "escribiendo…" para que se lea como una conversación
-// (igual que Instagram/Messenger).
-async function sendRich(to, { bubbles, options }, phoneNumberId, accessToken, kv, messageId = null) {
+// Lista de WhatsApp: para opciones que no caben en un botón (20 caracteres).
+// Se abre con "Ver opciones"; cada fila muestra hasta 24 caracteres de título
+// y el texto completo como descripción (72). El id lleva el texto completo,
+// que es lo que vuelve como list_reply al tocarla.
+const LIST_TITLE_CHARS = 24;
+function shortTitle(text) {
+  if (text.length <= LIST_TITLE_CHARS) return text;
+  const cut = text.slice(0, LIST_TITLE_CHARS - 1);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > 8 ? cut.slice(0, space) : cut).trimEnd()}…`;
+}
+
+export function buildListPayload(to, bodyText, options) {
+  return {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: bodyText.slice(0, 1024) },
+      action: {
+        button: 'Ver opciones',
+        sections: [{
+          title: 'Opciones',
+          rows: options.map((text) => ({
+            id: text.slice(0, 200),
+            title: shortTitle(text),
+            ...(text.length > LIST_TITLE_CHARS ? { description: text.slice(0, 72) } : {})
+          }))
+        }]
+      }
+    }
+  };
+}
+
+// Un mensaje por globo; las opciones van como botones en el último (o como
+// lista si alguna es muy larga para un botón). Entre globos, un momento de
+// "escribiendo…" para que se lea como una conversación (igual que Instagram/Messenger).
+async function sendRich(to, { bubbles, options, longOptions }, phoneNumberId, accessToken, kv, messageId = null) {
+  // splitReply dejó las opciones largas como texto en el último globo: se
+  // cambia por la lista.
+  if (longOptions?.length) bubbles = bubbles.length > 1 ? bubbles.slice(0, -1) : ['¿Cuál prefieres?'];
   for (let i = 0; i < bubbles.length; i++) {
     const last = i === bubbles.length - 1;
     const payload = last && options.length
       ? buildInteractivePayload(to, bubbles[i], options)
-      : { messaging_product: 'whatsapp', to, type: 'text', text: { body: bubbles[i] } };
+      : last && longOptions
+        ? buildListPayload(to, bubbles[i], longOptions)
+        : { messaging_product: 'whatsapp', to, type: 'text', text: { body: bubbles[i] } };
     if (!(await postToWhatsapp(payload, phoneNumberId, accessToken, kv))) return;
     if (!last && messageId) {
       await sendTypingIndicator(messageId, phoneNumberId, accessToken);

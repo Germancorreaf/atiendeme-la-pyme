@@ -11,7 +11,7 @@ describe('splitReply', () => {
     expect(r.options).toEqual(['1', '2', '3']);
   });
   it('una opción de más de 20 caracteres no va como botón', () => {
-    expect(splitReply('¿Cuál?\nOPCIONES: Limpieza dental completa | Control')).toEqual({ bubbles: ['¿Cuál?', 'Opciones: Limpieza dental completa · Control'], options: [] });
+    expect(splitReply('¿Cuál?\nOPCIONES: Limpieza dental completa | Control')).toEqual({ bubbles: ['¿Cuál?', 'Opciones: Limpieza dental completa · Control'], options: [], longOptions: ['Limpieza dental completa', 'Control'] });
   });
   it('solo opciones: igual hay un texto', () => {
     expect(splitReply('OPCIONES: Sí | No')).toEqual({ bubbles: ['¿Cuál prefieres?'], options: ['Sí', 'No'] });

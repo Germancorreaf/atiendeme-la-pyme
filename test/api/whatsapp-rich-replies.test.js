@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { env as workerEnv } from 'cloudflare:test';
-import { onRequestPost, buildInteractivePayload } from '../../src/api/whatsapp.js';
+import { onRequestPost, buildInteractivePayload, buildListPayload } from '../../src/api/whatsapp.js';
 import { computeHmacSha256Hex } from '../../src/lib/metaSignature.js';
 
 // WHATSAPP_RICH_REPLIES=1: un mensaje por globo y botones de respuesta rápida.
@@ -82,11 +82,39 @@ describe('WhatsApp: globos y botones (WHATSAPP_RICH_REPLIES)', () => {
     expect(out.payloads).toHaveLength(1);
   });
 
+  it('encendido y una opción de más de 20 caracteres: lista "Ver opciones" en vez de texto', async () => {
+    const out = stubNetwork('Cuéntame qué negocio tienes.\nOPCIONES: Tengo una peluquería | Tengo una clínica | Tengo otro tipo de negocio');
+    await deliver(text('wamid.r.6', '56944440006'), { WHATSAPP_RICH_REPLIES: '1' });
+    expect(out.payloads).toHaveLength(1);
+    const list = out.payloads[0].interactive;
+    expect(list.type).toBe('list');
+    expect(list.body.text).toBe('Cuéntame qué negocio tienes.');
+    expect(list.action.button).toBe('Ver opciones');
+    expect(list.action.sections[0].rows).toEqual([
+      { id: 'Tengo una peluquería', title: 'Tengo una peluquería' },
+      { id: 'Tengo una clínica', title: 'Tengo una clínica' },
+      { id: 'Tengo otro tipo de negocio', title: 'Tengo otro tipo de…', description: 'Tengo otro tipo de negocio' },
+    ]);
+  });
+
+  it('lo que toca en la lista (list_reply) se responde con el texto completo de la opción', async () => {
+    const out = stubNetwork('Anotado');
+    await deliver({ id: 'wamid.r.7', type: 'interactive', from: '56944440007', interactive: { type: 'list_reply', list_reply: { id: 'Tengo otro tipo de negocio', title: 'Tengo otro tipo de…' } } });
+    expect(out.claudeInput).toEqual(['Tengo otro tipo de negocio']);
+  });
+
   it('otros tipos (imagen, audio) se siguen ignorando', async () => {
     const out = stubNetwork();
     await deliver({ id: 'wamid.r.5', type: 'image', from: '56944440005', image: { id: 'x' } });
     expect(out.payloads).toEqual([]);
     expect(out.claudeInput).toEqual([]);
+  });
+});
+
+describe('buildListPayload', () => {
+  it('títulos de hasta 24 caracteres', () => {
+    const p = buildListPayload('5691', 'Elige', ['Una opción bastante más larga que veinticuatro']);
+    expect(p.interactive.action.sections[0].rows[0].title.length).toBeLessThanOrEqual(24);
   });
 });
 

@@ -124,13 +124,16 @@ export function splitReply(reply) {
   if (bubbles.length > MAX_BUBBLES) {
     bubbles = [...bubbles.slice(0, MAX_BUBBLES - 1), bubbles.slice(MAX_BUBBLES - 1).join('\n\n')];
   }
-  // Una opción demasiado larga para un botón va como texto.
+  // Una opción demasiado larga para un botón va como texto (último globo).
+  // longOptions las guarda para WhatsApp, que puede mostrarlas como lista.
+  let longOptions = null;
   if (options.some((o) => o.length > MAX_OPTION_CHARS)) {
+    longOptions = options;
     bubbles.push(`Opciones: ${options.join(' · ')}`);
     options = [];
   }
   if (!bubbles.length) bubbles = [options.length ? '¿Cuál prefieres?' : String(reply).trim()];
-  return { bubbles, options };
+  return longOptions ? { bubbles, options, longOptions } : { bubbles, options };
 }
 
 /** Une globos y opciones en un solo mensaje (canales sin botones). */

@@ -21,6 +21,10 @@ INSTAGRAM_APP_ID = "2244834902982613"
 # checkboxes, causando "Invalid Scopes: instagram_manage_comments" en el
 # connect de Facebook Page. La config vieja se dejo sin usar, no se borro.
 META_LOGIN_CONFIG_ID = "1482045480428287"
+# Configuración de WhatsApp Embedded Signup (plantilla "Configuración de registro insertado de
+# WhatsApp con un token que caduca en 60 días", 2026-11-05). Token de usuario del sistema; el
+# token caduca a los 60 días. No es secreto. Si no se define, whatsapp-connect usa META_LOGIN_CONFIG_ID.
+WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID = "1123645077314005"
 # Rate Limiting nativo de Cloudflare (ver limitRequest en src/lib/rateLimit.js).
 # Período solo 10 o 60 segundos. namespace_id es un identificador propio.
 [[ratelimits]]

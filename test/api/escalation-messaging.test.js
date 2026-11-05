@@ -97,7 +97,7 @@ describe('webhook de WhatsApp: entregas repetidas y respuesta rápida', () => {
       const json = (d) => new Response(JSON.stringify(d), { headers: { 'Content-Type': 'application/json' } });
       if (u.includes('/rest/v1/chat_sessions') && (!init.method || init.method === 'GET')) return json([]);
       if (u.includes('api.anthropic.com')) return json({ content: [{ type: 'text', text: 'Hola 👋' }] });
-      if (u.includes('graph.facebook.com') && u.endsWith('/messages')) { sent.push(1); return json({}); }
+      if (u.includes('graph.facebook.com') && u.endsWith('/messages') && !String(init.body).includes('typing_indicator')) { sent.push(1); return json({}); }
       return json([]);
     }));
     const body = JSON.stringify({ entry: [{ changes: [{ value: {

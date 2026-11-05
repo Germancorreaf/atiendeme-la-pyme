@@ -20,7 +20,7 @@ describe('primer mensaje por WhatsApp', () => {
         modelInputs.push(JSON.parse(init.body).messages);
         return json({ content: [{ type: 'text', text: 'Sí, mañana a las 10:00 hay hora.' }] });
       }
-      if (u.includes('/messages') && init.method === 'POST') { sent.push(JSON.parse(init.body).text.body); return json({ messages: [{ id: 'w' }] }); }
+      if (u.includes('/messages') && init.method === 'POST' && !init.body.includes('typing_indicator')) { sent.push(JSON.parse(init.body).text.body); return json({ messages: [{ id: 'w' }] }); }
       return json({});
     }));
     const body = JSON.stringify({ entry: [{ changes: [{ value: {

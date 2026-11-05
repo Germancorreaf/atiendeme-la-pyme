@@ -24,7 +24,7 @@ function stubNetwork({ connection, modelReply = 'La limpieza cuesta $30.000 😊
     if (u.includes('/rest/v1/chat_sessions') && (!init.method || init.method === 'GET')) return json([]);
     if (u.includes('api.anthropic.com')) { systemPrompts.push(JSON.parse(init.body).system); return json({ content: [{ type: 'text', text: modelReply }] }); }
     if (u.includes('api.resend.com')) { emails.push(JSON.parse(init.body)); return json({ id: 'e' }); }
-    if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST' && !init.body.includes('sender_action')) {
+    if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST' && !init.body.includes('sender_action') && !init.body.includes('typing_indicator')) {
       const b = JSON.parse(init.body);
       sent.push(b.text?.body ?? b.message?.text);
       return json({});
@@ -106,7 +106,7 @@ describe('globos y botones de respuesta rápida', () => {
       if (u.includes('/rest/v1/meta_connections')) return json([connection]);
       if (u.includes('/rest/v1/chat_sessions')) return json([]);
       if (u.includes('api.anthropic.com')) return json({ content: [{ type: 'text', text: reply }] });
-      if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST' && !init.body.includes('sender_action')) { bodies.push(JSON.parse(init.body).message); return json({}); }
+      if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST' && !init.body.includes('sender_action') && !init.body.includes('typing_indicator')) { bodies.push(JSON.parse(init.body).message); return json({}); }
       return json({});
     }));
     return bodies;
@@ -162,7 +162,7 @@ describe('cliente con agenda conectada (tabla clientes)', () => {
       if (u.includes('api.anthropic.com')) { anthropicBodies.push(JSON.parse(init.body)); return json(modelResponses.shift()); }
       if (u.includes('oauth2.googleapis.com')) return json({ access_token: 'g' });
       if (u.includes('googleapis.com/calendar')) { googleCalls.push(u); return json({ items: [] }); }
-      if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST') { sent.push(JSON.parse(init.body).text.body); return json({}); }
+      if (new URL(u).pathname.endsWith('/messages') && init.method === 'POST' && !init.body.includes('typing_indicator')) { sent.push(JSON.parse(init.body).text.body); return json({}); }
       return json({});
     }));
     return { anthropicBodies, googleCalls, sent };

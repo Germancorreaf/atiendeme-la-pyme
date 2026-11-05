@@ -6,8 +6,8 @@
   `WHATSAPP_RICH_REPLIES=1` (en `wrangler.toml` `[vars]`) WhatsApp manda un mensaje por globo y las opciones como
   botones `interactive` (máx. 3, 20 caracteres); lo que la persona toca llega como `button_reply` y se responde como
   si lo hubiera escrito. **Encenderla solo después del App Review de WhatsApp** y de grabar el video de Dominga
-  respondiendo por WhatsApp (el video debe mostrar lo mismo que se envió a revisar). Falta aún: juntar mensajes
-  seguidos (`MessageBuffer`, hoy solo Meta) y el indicador de "escribiendo…" de WhatsApp.
+  respondiendo por WhatsApp (el video debe mostrar lo mismo que se envió a revisar). Desde 2026-11-05 WhatsApp
+  ya junta los mensajes seguidos (`MessageBuffer`, igual que Instagram/Messenger) y muestra "visto" + "escribiendo…".
 
 ### Meta: pasar a producción (Instagram + Messenger aprobados) y WhatsApp como Tech Provider
 

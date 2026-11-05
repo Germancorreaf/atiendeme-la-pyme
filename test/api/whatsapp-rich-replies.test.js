@@ -22,7 +22,7 @@ function stubNetwork(modelReply = MODEL_REPLY) {
       out.claudeInput.push(JSON.parse(init.body).messages.at(-1).content);
       return json({ content: [{ type: 'text', text: modelReply }] });
     }
-    if (u.includes('/messages') && init.method === 'POST') {
+    if (u.includes('/messages') && init.method === 'POST' && !init.body.includes('typing_indicator')) {
       out.payloads.push(JSON.parse(init.body));
       return json({ messages: [{ id: 'wamid.b' + out.payloads.length }] });
     }

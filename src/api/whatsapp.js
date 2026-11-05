@@ -158,12 +158,49 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
     return;
   }
 
+  // "Visto" y "escribiendo…" de inmediato, mientras se espera a que termine de escribir.
+  await sendTypingIndicator(message.id, phoneNumberId, accessToken);
+
+  const job = { channel: 'whatsapp', phoneNumberId, from, contactName, messageId: message.id, text: userText };
+  if (env.MESSAGE_BUFFER) {
+    // Junta los mensajes seguidos antes de responder (durable-objects/MessageBuffer.js),
+    // igual que en Instagram/Messenger.
+    const buffer = env.MESSAGE_BUFFER.get(env.MESSAGE_BUFFER.idFromName(`whatsapp_${phoneNumberId}_${from}`));
+    await buffer.fetch('https://buffer/', { method: 'POST', body: JSON.stringify(job) });
+  } else {
+    await respondToWhatsapp(env, job, userText, context);
+  }
+}
+
+/**
+ * Responde a una persona por WhatsApp. `text` puede juntar varios mensajes
+ * seguidos (MessageBuffer). Lo llama el buffer o, sin él, handleMessage.
+ */
+export async function respondToWhatsapp(env, { phoneNumberId, from, contactName, messageId }, text, context = { env }) {
+  const sessionId = `whatsapp_${phoneNumberId}_${from}`;
+  // El dueño pudo responder desde el celular mientras se esperaba.
+  if (await isOwnerActive(env.RATE_LIMIT_KV, phoneNumberId, from)) {
+    await appendChatMessages(env, sessionId, [
+      { role: 'user', content: text, timestamp: new Date().toISOString() }
+    ], { lead_contact: from, ...(contactName ? { sender_name: contactName } : {}) });
+    return;
+  }
+
+  const connection = await getConnectionByPhoneNumberId(phoneNumberId, env);
+  const accessToken = connection?.access_token || env.WHATSAPP_ACCESS_TOKEN;
+  if (!accessToken) {
+    console.error(`WhatsApp: sin token para phone_number_id ${phoneNumberId}, se ignora el mensaje`);
+    return;
+  }
+  // "Escribiendo…" dura hasta 25 s: se renueva mientras Claude piensa.
+  if (messageId) await sendTypingIndicator(messageId, phoneNumberId, accessToken);
+
   await replyToMessage({
     // Namespace por número de negocio: un mismo cliente final puede
     // escribirle a más de un negocio conectado, y no deben mezclarse
     // el historial ni el contexto entre bots distintos.
-    sessionId: `whatsapp_${phoneNumberId}_${from}`,
-    userMessage: userText,
+    sessionId,
+    userMessage: text,
     connection,
     channel: 'WhatsApp',
     leadContact: from,
@@ -176,6 +213,22 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
       : sendMessage(from, joinReply(parts), phoneNumberId, accessToken, env.RATE_LIMIT_KV),
     context
   });
+}
+
+// Marca el mensaje como leído y muestra "escribiendo…" (se apaga solo al
+// responder o a los 25 s). Si falla no importa: la respuesta se envía igual.
+export async function sendTypingIndicator(messageId, phoneNumberId, accessToken) {
+  if (!messageId) return;
+  try {
+    const res = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: messageId, typing_indicator: { type: 'text' } })
+    });
+    if (!res.ok) console.error('WhatsApp typing indicator:', (await res.text()).slice(0, 200));
+  } catch (err) {
+    console.error('WhatsApp typing indicator:', err.message);
+  }
 }
 
 // Botones de respuesta rápida de WhatsApp: máx. 3, título de hasta 20 caracteres

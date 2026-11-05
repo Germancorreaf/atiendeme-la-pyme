@@ -16,7 +16,7 @@ function stubNetwork({ storedMessages, modelReply }) {
     if (u.includes('/rest/v1/chat_sessions') && (!init.method || init.method === 'GET')) return json([{ session_id: 's', messages: storedMessages }]);
     if (u.includes('/rest/v1/chat_sessions')) return json({});
     if (u.includes('api.anthropic.com')) return json({ content: [{ type: 'text', text: modelReply }] });
-    if (u.includes('/messages') && init.method === 'POST') {
+    if (u.includes('/messages') && init.method === 'POST' && !init.body.includes('typing_indicator')) {
       sent.push(JSON.parse(init.body).text.body);
       return json({ messages: [{ id: 'w' }] });
     }

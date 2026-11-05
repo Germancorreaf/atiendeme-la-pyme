@@ -15,7 +15,7 @@ function stubNetwork() {
     if (u.includes('/rpc/append_chat_messages')) { calls.rpc.push(JSON.parse(init.body)); return json({}); }
     if (u.includes('/rest/v1/chat_sessions')) return json([]);
     if (u.includes('api.anthropic.com')) { calls.claude++; return json({ content: [{ type: 'text', text: 'Respuesta del bot' }] }); }
-    if (u.includes('/messages') && init.method === 'POST') {
+    if (u.includes('/messages') && init.method === 'POST' && !init.body.includes('typing_indicator')) {
       calls.sent.push(JSON.parse(init.body).text.body);
       return json({ messages: [{ id: 'wamid.bot.' + calls.sent.length }] });
     }

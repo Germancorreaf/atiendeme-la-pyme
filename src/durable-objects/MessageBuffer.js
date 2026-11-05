@@ -1,6 +1,6 @@
 // src/durable-objects/MessageBuffer.js
-// Junta los mensajes seguidos de una persona antes de responder. En Instagram
-// y Messenger la gente escribe "Hola" y al rato "¿tienes hora mañana?": sin
+// Junta los mensajes seguidos de una persona antes de responder. En Instagram,
+// Messenger y WhatsApp la gente escribe "Hola" y al rato "¿tienes hora mañana?": sin
 // esto el bot contestaba cada mensaje por separado. Cada mensaje nuevo
 // reinicia la espera; cuando la persona deja de escribir por DEBOUNCE_MS, se
 // responde una vez a todo junto. Hay un objeto por conversación (sessionId),
@@ -9,6 +9,7 @@
 // para pensar y usar la agenda.
 
 import { respondToMeta } from '../api/meta-webhook.js';
+import { respondToWhatsapp } from '../api/whatsapp.js';
 
 export const DEBOUNCE_MS = 5000;
 // Un saludo solo ("Hola", "buenas tardes") casi siempre viene seguido de la
@@ -22,7 +23,8 @@ export class MessageBuffer {
     this.env = env;
   }
 
-  // POST con { job } (ver handleEvent en meta-webhook.js).
+  // POST con { job } (ver handleEvent en meta-webhook.js y handleMessage en
+  // whatsapp.js; los de WhatsApp traen channel: 'whatsapp').
   async fetch(request) {
     const job = await request.json();
     const pending = (await this.state.storage.get('pending')) || [];
@@ -37,7 +39,10 @@ export class MessageBuffer {
     await this.state.storage.delete('pending');
     if (!pending.length) return;
     try {
-      await respondToMeta(this.env, pending.at(-1), pending.map((job) => job.text).join('\n'));
+      const last = pending.at(-1);
+      const text = pending.map((job) => job.text).join('\n');
+      if (last.channel === 'whatsapp') await respondToWhatsapp(this.env, last, text);
+      else await respondToMeta(this.env, last, text);
     } catch (err) {
       // Sin relanzar: un reintento de la alarma respondería dos veces.
       console.error('MessageBuffer: error al responder:', err.message);

@@ -17,7 +17,8 @@ import { limitRequest } from '../lib/rateLimit.js';
 import { getConnectionByPhoneNumberId } from '../lib/whatsappConnections.js';
 import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { alreadyProcessed } from '../lib/dedup.js';
-import { joinReply, replyToMessage } from '../lib/chatSessions.js';
+import { appendChatMessages, joinReply, replyToMessage } from '../lib/chatSessions.js';
+import { isOwnerActive, markOwnerActive, rememberBotMessage, wasSentByBot } from '../lib/ownerActive.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -82,6 +83,18 @@ async function processEntries(rawBody, context) {
       // queda siempre null para este canal.
       const contactName = value.contacts?.[0]?.profile?.name || null;
 
+      // Coexistencia: el dueño escribió desde la app WhatsApp Business.
+      if (change.field === 'smb_message_echoes') {
+        for (const echo of value.message_echoes || []) {
+          try {
+            await handleOwnerEcho(echo, phoneNumberId, context);
+          } catch (err) {
+            console.error('WhatsApp echo error:', err.message);
+          }
+        }
+        continue;
+      }
+
       for (const message of value.messages || []) {
         try {
           await handleMessage(message, phoneNumberId, contactName, context);
@@ -90,6 +103,19 @@ async function processEntries(rawBody, context) {
         }
       }
     }
+  }
+}
+
+async function handleOwnerEcho(echo, phoneNumberId, { env }) {
+  const customer = echo.to;
+  if (!isSafeWhatsappId(customer) || !phoneNumberId) return;
+  if (await wasSentByBot(env.RATE_LIMIT_KV, echo.id)) return;
+  await markOwnerActive(env.RATE_LIMIT_KV, phoneNumberId, customer);
+  // Queda en la conversación para que se vea en el panel.
+  if (echo.type === 'text' && echo.text?.body) {
+    await appendChatMessages(env, `whatsapp_${phoneNumberId}_${customer}`, [
+      { role: 'assistant', content: echo.text.body, timestamp: new Date().toISOString(), sent_by: 'owner' }
+    ]);
   }
 }
 
@@ -111,6 +137,15 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
   // Busca la conexión de este número (cliente conectado vía Embedded
   // Signup, ver whatsapp-connect.js); si no hay ninguna, usa el token del
   // número propio (WHATSAPP_ACCESS_TOKEN, usuario del sistema).
+  // Si el dueño está respondiendo desde su celular, el bot no se mete.
+  if (await isOwnerActive(env.RATE_LIMIT_KV, phoneNumberId, from)) {
+    // El mensaje igual queda guardado para que el dueño lo vea en el panel.
+    await appendChatMessages(env, `whatsapp_${phoneNumberId}_${from}`, [
+      { role: 'user', content: message.text.body, timestamp: new Date().toISOString() }
+    ], { lead_contact: from, ...(contactName ? { sender_name: contactName } : {}) });
+    return;
+  }
+
   const connection = await getConnectionByPhoneNumberId(phoneNumberId, env);
   const accessToken = connection?.access_token || env.WHATSAPP_ACCESS_TOKEN;
   if (!accessToken) {
@@ -130,12 +165,12 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
     notifyContact: `+${from}`,
     senderName: contactName,
     // ponytail: WhatsApp sigue en un solo mensaje y sin botones mientras dure su App Review (TODOS.md).
-    send: (parts) => sendMessage(from, joinReply(parts), phoneNumberId, accessToken),
+    send: (parts) => sendMessage(from, joinReply(parts), phoneNumberId, accessToken, env.RATE_LIMIT_KV),
     context
   });
 }
 
-async function sendMessage(to, messageText, phoneNumberId, accessToken) {
+async function sendMessage(to, messageText, phoneNumberId, accessToken, kv) {
   if (!phoneNumberId || !accessToken) {
     console.error('WhatsApp send skipped: falta phoneNumberId o accessToken');
     return;
@@ -159,6 +194,9 @@ async function sendMessage(to, messageText, phoneNumberId, accessToken) {
     if (!response.ok) {
       const err = await response.text();
       console.error('WhatsApp API error:', err);
+    } else {
+      const data = await response.json().catch(() => null);
+      await rememberBotMessage(kv, data?.messages?.[0]?.id);
     }
   } catch (error) {
     console.error('Error sending WhatsApp message:', error.message);

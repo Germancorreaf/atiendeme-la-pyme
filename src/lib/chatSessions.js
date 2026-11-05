@@ -14,6 +14,20 @@ import { BOOKING_CHECK, BOOKING_TOOLS, bookingRunner, hasBooking } from './booki
 
 // Mensajes de historial que se le pasan al modelo.
 const HISTORY_FOR_MODEL = 10;
+// Si la persona vuelve a escribir después de este silencio, se le avisa al
+// modelo: sin eso, un "Hola" de hoy junto a los "Hola" de días anteriores se
+// leía como alguien que saluda una y otra vez sin decir qué necesita.
+const NEW_CONVERSATION_GAP_MS = 3 * 60 * 60 * 1000;
+
+/** Nota para el modelo cuando la persona vuelve tras un silencio largo (o null). */
+export function returningNote(history, now = Date.now()) {
+  const last = history.at(-1)?.timestamp;
+  const gap = last ? now - Date.parse(last) : NaN;
+  if (!(gap >= NEW_CONVERSATION_GAP_MS)) return null;
+  const hours = Math.round(gap / 3600000);
+  const ago = hours >= 48 ? `${Math.round(hours / 24)} días` : `${hours} horas`;
+  return `La persona vuelve a escribir después de ${ago} sin mensajes. Trátalo como una conversación nueva: si solo saluda, salúdala y pregúntale en qué la puedes ayudar, sin comentar saludos ni mensajes anteriores. Usa el historial solo si lo que escribe lo retoma.`;
+}
 
 function supabaseHeaders(env, extra = {}) {
   return { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`, ...extra };
@@ -155,8 +169,12 @@ export async function replyToMessage({ sessionId, userMessage, connection, chann
   const booking = hasBooking(cliente);
   const bot = botFor(connection, cliente, { booking });
   const runTool = booking ? bookingRunner(cliente, env, { sessionId, contact: notifyContact || leadContact, channel }) : null;
+  const note = returningNote(fullHistory);
+  const systemPrompt = note ? `${bot.systemPrompt}
+
+${note}` : bot.systemPrompt;
   const reply = withAiDisclosure(
-    await getClaudeReply(userMessage, history, context, bot.systemPrompt, channel, runTool),
+    await getClaudeReply(userMessage, history, context, systemPrompt, channel, runTool),
     fullHistory, Date.now(), bot.disclosureLine
   );
 

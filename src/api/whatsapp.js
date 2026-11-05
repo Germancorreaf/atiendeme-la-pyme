@@ -206,10 +206,10 @@ export async function respondToWhatsapp(env, { phoneNumberId, from, contactName,
     leadContact: from,
     notifyContact: `+${from}`,
     senderName: contactName,
-    // Por defecto un solo mensaje con "Opciones: …" como texto (lo que ve el App Review).
-    // Con WHATSAPP_RICH_REPLIES=1: un mensaje por globo y botones de respuesta rápida.
+    // Con WHATSAPP_RICH_REPLIES=1 (wrangler.toml): un mensaje por globo y botones de
+    // respuesta rápida. Sin ella, un solo mensaje con "Opciones: …" como texto.
     send: (parts) => env.WHATSAPP_RICH_REPLIES === '1'
-      ? sendRich(from, parts, phoneNumberId, accessToken, env.RATE_LIMIT_KV)
+      ? sendRich(from, parts, phoneNumberId, accessToken, env.RATE_LIMIT_KV, messageId)
       : sendMessage(from, joinReply(parts), phoneNumberId, accessToken, env.RATE_LIMIT_KV),
     context
   });
@@ -248,16 +248,24 @@ export function buildInteractivePayload(to, bodyText, options) {
   };
 }
 
-// Un mensaje por globo; las opciones van como botones en el último.
-async function sendRich(to, { bubbles, options }, phoneNumberId, accessToken, kv) {
+// Un mensaje por globo; las opciones van como botones en el último. Entre
+// globos, un momento de "escribiendo…" para que se lea como una conversación
+// (igual que Instagram/Messenger).
+async function sendRich(to, { bubbles, options }, phoneNumberId, accessToken, kv, messageId = null) {
   for (let i = 0; i < bubbles.length; i++) {
     const last = i === bubbles.length - 1;
     const payload = last && options.length
       ? buildInteractivePayload(to, bubbles[i], options)
       : { messaging_product: 'whatsapp', to, type: 'text', text: { body: bubbles[i] } };
     if (!(await postToWhatsapp(payload, phoneNumberId, accessToken, kv))) return;
+    if (!last && messageId) {
+      await sendTypingIndicator(messageId, phoneNumberId, accessToken);
+      await sleep(Math.min(2500, 600 + bubbles[i + 1].length * 15));
+    }
   }
 }
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function sendMessage(to, messageText, phoneNumberId, accessToken, kv) {
   await postToWhatsapp(

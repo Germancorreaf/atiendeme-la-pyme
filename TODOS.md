@@ -2,12 +2,13 @@
 
 ## Producto
 
-- **WhatsApp: globos separados y botones** — código listo (2026-11-05), apagado por defecto. Con la variable
-  `WHATSAPP_RICH_REPLIES=1` (en `wrangler.toml` `[vars]`) WhatsApp manda un mensaje por globo y las opciones como
-  botones `interactive` (máx. 3, 20 caracteres); lo que la persona toca llega como `button_reply` y se responde como
-  si lo hubiera escrito. **Encenderla solo después del App Review de WhatsApp** y de grabar el video de Dominga
-  respondiendo por WhatsApp (el video debe mostrar lo mismo que se envió a revisar). Desde 2026-11-05 WhatsApp
-  ya junta los mensajes seguidos (`MessageBuffer`, igual que Instagram/Messenger) y muestra "visto" + "escribiendo…".
+- **WhatsApp: globos separados y botones** — encendido en producción el 2026-11-05 (`WHATSAPP_RICH_REPLIES = "1"`
+  en `wrangler.toml` `[vars]`), a pedido de Germán. Un mensaje por globo con "escribiendo…" entre ellos, y las
+  opciones como botones `interactive` (máx. 3, 20 caracteres); lo que la persona toca llega como `button_reply` y se
+  responde como si lo hubiera escrito. El video B del App Review debe grabarse con esto encendido (muestra lo que hay en
+  producción). También junta los mensajes seguidos (`MessageBuffer`; espera 3 s, o 6 s si es solo un saludo) y muestra
+  "visto" + "escribiendo…". Si la persona vuelve tras 3 h o más de silencio, Claude recibe una nota para tratarlo
+  como conversación nueva (`returningNote` en `chatSessions.js`; aplica a todos los canales de mensajería).
 
 ### Meta: pasar a producción (Instagram + Messenger aprobados) y WhatsApp como Tech Provider
 

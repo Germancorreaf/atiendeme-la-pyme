@@ -15,6 +15,9 @@ export const DEBOUNCE_MS = 5000;
 // Un saludo solo ("Hola", "buenas tardes") casi siempre viene seguido de la
 // consulta: se espera más para responder a los dos juntos.
 export const GREETING_DEBOUNCE_MS = 15000;
+// En WhatsApp la gente espera respuesta más rápido: esperas más cortas.
+export const WHATSAPP_DEBOUNCE_MS = 3000;
+export const WHATSAPP_GREETING_DEBOUNCE_MS = 6000;
 const GREETING_ONLY = /^\s*(hola+|holi|buen[oa]s?( d[ií]as| tardes| noches)?|alo|al[oó]|hey|qu[eé] tal)[\s!.,¿?👋😊🙂]*$/i;
 
 export class MessageBuffer {
@@ -30,7 +33,11 @@ export class MessageBuffer {
     const pending = (await this.state.storage.get('pending')) || [];
     pending.push(job);
     await this.state.storage.put('pending', pending);
-    await this.state.storage.setAlarm(Date.now() + (GREETING_ONLY.test(job.text) ? GREETING_DEBOUNCE_MS : DEBOUNCE_MS));
+    const greeting = GREETING_ONLY.test(job.text);
+    const wait = job.channel === 'whatsapp'
+      ? (greeting ? WHATSAPP_GREETING_DEBOUNCE_MS : WHATSAPP_DEBOUNCE_MS)
+      : (greeting ? GREETING_DEBOUNCE_MS : DEBOUNCE_MS);
+    await this.state.storage.setAlarm(Date.now() + wait);
     return new Response('ok');
   }
 

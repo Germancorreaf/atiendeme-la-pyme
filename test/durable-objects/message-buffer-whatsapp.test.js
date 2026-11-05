@@ -105,3 +105,19 @@ describe('MessageBuffer con WhatsApp', () => {
     expect(JSON.stringify(out.saved)).toContain('¿tienen hora mañana?');
   });
 });
+
+describe('esperas de WhatsApp', () => {
+  it('más cortas que en Instagram: 3 s normal y 6 s si es solo un saludo', async () => {
+    const { WHATSAPP_DEBOUNCE_MS, WHATSAPP_GREETING_DEBOUNCE_MS } = await import('../../src/durable-objects/MessageBuffer.js');
+    for (const [text, wait] of [['¿tienen hora?', WHATSAPP_DEBOUNCE_MS], ['Hola', WHATSAPP_GREETING_DEBOUNCE_MS]]) {
+      let alarm = null;
+      const state = fakeState();
+      state.storage.setAlarm = async (t) => { alarm = t; };
+      const before = Date.now();
+      await new MessageBuffer(state, env()).fetch(waJob('56955550009', 'wamid.w', text));
+      expect(alarm - before).toBeGreaterThanOrEqual(wait);
+      expect(alarm - before).toBeLessThan(wait + 1000);
+    }
+    expect(WHATSAPP_GREETING_DEBOUNCE_MS).toBeLessThanOrEqual(6000);
+  });
+});

@@ -19,7 +19,7 @@ import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { alreadyProcessed } from '../lib/dedup.js';
 import { joinReply, replyToMessage } from '../lib/chatSessions.js';
 
-const GRAPH_API_VERSION = 'v21.0';
+import { GRAPH_API_VERSION } from '../lib/graphApi.js';
 
 // Los IDs de WhatsApp (wa_id) son números de teléfono en formato E.164 sin "+".
 function isSafeWhatsappId(id) {

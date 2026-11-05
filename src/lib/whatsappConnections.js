@@ -8,6 +8,8 @@
 // Requiere la tabla `whatsapp_connections` en Supabase (ver el SQL en el
 // comentario al final de este archivo para crearla).
 
+import { GRAPH_API_VERSION } from './graphApi.js';
+
 export async function getConnectionByPhoneNumberId(phoneNumberId, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return null;
   try {
@@ -149,7 +151,7 @@ export async function refreshWhatsappTokens(env) {
   for (const row of rows) {
     if (!row.access_token) continue;
     try {
-      const url = new URL('https://graph.facebook.com/v21.0/oauth/access_token');
+      const url = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/oauth/access_token`);
       url.searchParams.set('grant_type', 'fb_exchange_token');
       url.searchParams.set('client_id', env.META_APP_ID);
       url.searchParams.set('client_secret', env.META_APP_SECRET);

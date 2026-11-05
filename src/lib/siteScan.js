@@ -11,7 +11,7 @@ const MAX_CHARS_HOME = 15000;
 const MAX_HTML_BYTES = 1_500_000;
 const TIMEOUT_MS = 8000;
 const USEFUL_LINK = /contact|servicio|precio|tarifa|valor|nosotros|quienes|about|faq|pregunta|horario|carta|menu|tratamiento|producto|agenda|reserva|ubicacion|local/i;
-const GRAPH_API_VERSION = 'v21.0';
+import { GRAPH_API_VERSION } from './graphApi.js';
 
 import { usesInstagramToken } from './metaConnections.js';
 

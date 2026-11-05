@@ -54,7 +54,7 @@ async function whoConnectsWa(request, env, { starting = false } = {}) {
   return invite ? { invite } : null;
 }
 
-const GRAPH_API_VERSION = 'v21.0';
+import { GRAPH_API_VERSION } from '../lib/graphApi.js';
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

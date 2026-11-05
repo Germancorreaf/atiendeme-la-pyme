@@ -42,7 +42,7 @@ import { timingSafeEqual } from '../lib/timingSafe.js';
 import { upsertConnection, deleteConnectionByPageId, getConnectionByPageId } from '../lib/metaConnections.js';
 import { INVITE_COOKIE_NAME, verifyInvite } from '../lib/clientInvite.js';
 
-const GRAPH_API_VERSION = 'v21.0';
+import { GRAPH_API_VERSION } from '../lib/graphApi.js';
 const OAUTH_SCOPES = [
   'instagram_business_basic',
   'instagram_business_manage_messages'

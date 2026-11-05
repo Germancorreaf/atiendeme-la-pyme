@@ -16,7 +16,7 @@ import { getConnectionByPageId, getConnectionByIgId, usesInstagramToken } from '
 import { alreadyProcessed } from '../lib/dedup.js';
 import { replyToMessage } from '../lib/chatSessions.js';
 
-const GRAPH_API_VERSION = 'v21.0';
+import { GRAPH_API_VERSION } from '../lib/graphApi.js';
 
 // Los PSID/IGSID de Meta son numéricos. Validamos formato antes de usarlos en
 // cualquier query de Supabase o en el sessionId.

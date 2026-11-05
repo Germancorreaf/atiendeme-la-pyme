@@ -74,7 +74,7 @@ describe('Instagram: la respuesta usa el host que corresponde al token', () => {
     const sends = stubNetwork([facebookRow, igLoginRow]);
     await deliverInstagram('mid.ig.a');
     expect(sends).toHaveLength(1);
-    expect(sends[0]).toContain(`graph.instagram.com/`);
+    expect(sends[0]).toContain(`graph.instagram.com/v27.0/`);
     expect(sends[0]).toContain(`/${IG_ID}/messages`);
     expect(sends[0]).toContain('access_token=IG_TOKEN');
   });
@@ -83,7 +83,7 @@ describe('Instagram: la respuesta usa el host que corresponde al token', () => {
     const sends = stubNetwork([facebookRow]);
     await deliverInstagram('mid.ig.b');
     expect(sends).toHaveLength(1);
-    expect(sends[0]).toContain('graph.facebook.com/');
+    expect(sends[0]).toContain('graph.facebook.com/v27.0/');
     expect(sends[0]).toContain(`/${PAGE_ID}/messages`);
     expect(sends[0]).toContain('access_token=FB_PAGE_TOKEN');
   });

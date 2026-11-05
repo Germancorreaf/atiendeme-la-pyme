@@ -525,6 +525,7 @@ h2{font-family:var(--display);font-size:19px;letter-spacing:-.01em;font-weight:7
 .conn-row .link-btn:hover{color:var(--alert);text-decoration:underline;}
 .conn-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:8px;}
 .conn-sub{color:var(--muted);font-size:11.5px;}
+.wa-cliente-select{background:var(--surface);border:1px solid var(--line);color:var(--text);font:inherit;font-size:12px;padding:3px 6px;border-radius:6px;cursor:pointer;max-width:140px;}
 .cli-item{border:1px solid var(--line);background:var(--surface);margin-bottom:10px;}
 .cli-item summary{cursor:pointer;padding:12px 16px;font-weight:600;}
 .cli-form{display:flex;flex-direction:column;gap:12px;padding:4px 16px 16px;}

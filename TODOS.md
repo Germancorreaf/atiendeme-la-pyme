@@ -88,7 +88,7 @@
    cada hora (`lib/onboardingDraft.js`), solo en los campos que estaban vacíos. Las respuestas mandan sobre las fuentes.
 3. Revisar ese borrador en el panel y corregir lo que haga falta. "Rellenar con las respuestas del onboarding" lo vuelve
    a generar en el formulario (no guarda hasta "Guardar cambios").
-   (WhatsApp: cuando Meta apruebe Tech Provider; hoy se asigna `cliente_id` a mano en `whatsapp_connections`.)
+   (WhatsApp: cuando Meta apruebe Tech Provider. La tarjeta de WhatsApp en el panel ya tiene un selector para asignar el cliente a cada número sin ir a Supabase.)
 4. Probar: escribirle al bot pidiendo hora y revisar que el evento aparece en su calendario.
 
 **Probado** en producción por Instagram el 2026-10-21 con un cliente de prueba y el calendario de gcorref@gmail.com: consulta horas libres, botones, junta mensajes seguidos, "escribiendo…" y reserva. Cliente de prueba borrado después.

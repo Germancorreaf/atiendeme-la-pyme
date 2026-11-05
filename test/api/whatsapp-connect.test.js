@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { onRequestPostExchange, onRequestGetConnect } from '../../src/api/whatsapp-connect.js';
+import { onRequestPostExchange, onRequestGetConnect, onRequestPostAssignCliente } from '../../src/api/whatsapp-connect.js';
 import { createSessionCookie } from '../../src/lib/adminSession.js';
 
 const env = {
@@ -62,5 +62,58 @@ describe('conectar WhatsApp', () => {
     const html = await res.text();
     expect(html).toContain("featureType: 'whatsapp_business_app_onboarding'");
     expect(html).not.toContain("sessionInfoVersion: '3'");
+  });
+});
+
+describe('assign-cliente (endpoint)', () => {
+  it('asigna un cliente y devuelve ok:true', async () => {
+    const patches = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      patches.push({ url: String(url), body: JSON.parse(init.body) });
+      return new Response(null, { status: 204 });
+    }));
+    const cookie = (await createSessionCookie(env.ADMIN_SESSION_SECRET)).split(';')[0];
+    const req = new Request('https://example.com/admin/whatsapp/connections/assign-cliente', {
+      method: 'POST',
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', Origin: 'https://example.com' },
+      body: JSON.stringify({ phone_number_id: 'PH1', cliente_id: 'uuid-1' })
+    });
+    const res = await onRequestPostAssignCliente({ request: req, env });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(patches[0].url).toContain('phone_number_id=eq.PH1');
+    expect(patches[0].body.cliente_id).toBe('uuid-1');
+  });
+
+  it('rechaza sin sesión válida (401)', async () => {
+    const req = new Request('https://example.com/admin/whatsapp/connections/assign-cliente', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'https://example.com' },
+      body: JSON.stringify({ phone_number_id: 'PH1', cliente_id: 'uuid-1' })
+    });
+    const res = await onRequestPostAssignCliente({ request: req, env });
+    expect(res.status).toBe(401);
+  });
+
+  it('rechaza petición cross-site (403)', async () => {
+    const cookie = (await createSessionCookie(env.ADMIN_SESSION_SECRET)).split(';')[0];
+    const req = new Request('https://example.com/admin/whatsapp/connections/assign-cliente', {
+      method: 'POST',
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site' },
+      body: JSON.stringify({ phone_number_id: 'PH1', cliente_id: 'uuid-1' })
+    });
+    const res = await onRequestPostAssignCliente({ request: req, env });
+    expect(res.status).toBe(403);
+  });
+
+  it('falla con 400 si no viene phone_number_id', async () => {
+    const cookie = (await createSessionCookie(env.ADMIN_SESSION_SECRET)).split(';')[0];
+    const req = new Request('https://example.com/admin/whatsapp/connections/assign-cliente', {
+      method: 'POST',
+      headers: { Cookie: cookie, 'Content-Type': 'application/json', Origin: 'https://example.com' },
+      body: JSON.stringify({ cliente_id: 'uuid-1' })
+    });
+    const res = await onRequestPostAssignCliente({ request: req, env });
+    expect(res.status).toBe(400);
   });
 });

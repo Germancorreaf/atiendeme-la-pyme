@@ -127,9 +127,6 @@ async function onRequestPostClienteSave(context) {
 }
 
 function whatsappConnectionsCardHtml(connections, clientes = []) {
-    const clienteOptions = clientes.map(cl =>
-        `<option value="${escHtml(cl.id)}">${escHtml(cl.nombre)}</option>`
-    ).join('');
     const rows = (connections || []).map(c => {
         const label = c.business_name ? escHtml(c.business_name) : 'Cuenta de WhatsApp';
         const sub = c.display_phone_number ? escHtml(c.display_phone_number) : '';

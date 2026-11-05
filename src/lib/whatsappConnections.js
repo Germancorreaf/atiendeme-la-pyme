@@ -60,6 +60,30 @@ export async function deleteWhatsappConnection(phoneNumberId, env) {
   }
 }
 
+/** Asigna (o limpia) el cliente_id de una conexión existente. */
+export async function assignClienteToWhatsapp(phoneNumberId, clienteId, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
+    throw new Error('Supabase no configurado (falta SUPABASE_URL o SUPABASE_SERVICE_KEY)');
+  }
+  const body = { cliente_id: clienteId || null, updated_at: new Date().toISOString() };
+  const response = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/whatsapp_connections?phone_number_id=eq.${encodeURIComponent(phoneNumberId)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        apikey: env.SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    }
+  );
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`No se pudo asignar el cliente: ${err}`);
+  }
+}
+
 export async function upsertWhatsappConnection(connection, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
     throw new Error('Supabase no configurado (falta SUPABASE_URL o SUPABASE_SERVICE_KEY)');

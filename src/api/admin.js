@@ -126,13 +126,24 @@ async function onRequestPostClienteSave(context) {
     }
 }
 
-function whatsappConnectionsCardHtml(connections) {
+function whatsappConnectionsCardHtml(connections, clientes = []) {
+    const clienteOptions = clientes.map(cl =>
+        `<option value="${escHtml(cl.id)}">${escHtml(cl.nombre)}</option>`
+    ).join('');
     const rows = (connections || []).map(c => {
         const label = c.business_name ? escHtml(c.business_name) : 'Cuenta de WhatsApp';
         const sub = c.display_phone_number ? escHtml(c.display_phone_number) : '';
-        return `<div class="conn-row">
-          <div><span class="conn-dot"></span>${label}${sub ? ' <span class="conn-sub">(' + sub + ')</span>' : ''}</div>
-          <form method="post" action="/admin/whatsapp/connections/delete?phone_number_id=${encodeURIComponent(c.phone_number_id)}" onsubmit="return confirm('¿Desconectar este número?');"><button type="submit" class="link-btn">Desconectar</button></form>
+        const selectedClienteId = c.cliente_id ? escHtml(c.cliente_id) : '';
+        const clienteSelect = clientes.length ? `<select class="wa-cliente-select" data-phone="${escHtml(c.phone_number_id)}" title="Cliente asignado">
+              <option value="">Sin cliente</option>
+              ${clientes.map(cl => `<option value="${escHtml(cl.id)}"${cl.id === c.cliente_id ? ' selected' : ''}>${escHtml(cl.nombre)}</option>`).join('')}
+            </select>` : (selectedClienteId ? `<span class="conn-sub">${selectedClienteId}</span>` : '');
+        return `<div class="conn-row" style="flex-wrap:wrap;gap:6px;">
+          <div style="flex:1;min-width:0;"><span class="conn-dot"></span>${label}${sub ? ' <span class="conn-sub">(' + sub + ')</span>' : ''}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            ${clienteSelect}
+            <form method="post" action="/admin/whatsapp/connections/delete?phone_number_id=${encodeURIComponent(c.phone_number_id)}" onsubmit="return confirm('¿Desconectar este número?');"><button type="submit" class="link-btn">Desconectar</button></form>
+          </div>
         </div>`;
     }).join('');
     return `<div class="card">
@@ -141,7 +152,26 @@ function whatsappConnectionsCardHtml(connections) {
             <div class="stack" style="gap:8px;margin-top:${rows ? '14px' : '10px'};">
               <a class="connect-btn" href="/admin/whatsapp/connect">→ Conectar WhatsApp</a>
             </div>
-          </div>`;
+          </div>
+          <script>
+          document.querySelectorAll('.wa-cliente-select').forEach(sel => {
+            sel.addEventListener('change', async () => {
+              const phoneNumberId = sel.dataset.phone;
+              const clienteId = sel.value || null;
+              try {
+                const r = await fetch('/admin/whatsapp/connections/assign-cliente', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ phone_number_id: phoneNumberId, cliente_id: clienteId })
+                });
+                if (!r.ok) throw new Error(await r.text());
+              } catch (e) {
+                alert('No se pudo asignar el cliente: ' + e.message);
+                location.reload();
+              }
+            });
+          });
+          </script>`;
 }
 
 
@@ -1216,7 +1246,7 @@ async function onRequestGetAdmin(context) {
         </div>
         <div class="channels">
           ${connectionsCardHtml(connections)}
-          ${whatsappConnectionsCardHtml(whatsappConnections)}
+          ${whatsappConnectionsCardHtml(whatsappConnections, clientes)}
         </div>
       </div>
     </section>

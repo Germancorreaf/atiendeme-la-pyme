@@ -27,7 +27,8 @@ import { checkSessionAuth, isCrossSiteRequest } from '../lib/adminSession.js';
 import {
   upsertWhatsappConnection,
   deleteWhatsappConnection,
-  getConnectionByPhoneNumberId
+  getConnectionByPhoneNumberId,
+  assignClienteToWhatsapp
 } from '../lib/whatsappConnections.js';
 
 const GRAPH_API_VERSION = 'v21.0';
@@ -272,6 +273,37 @@ export async function onRequestPostExchange(context) {
   } catch (err) {
     console.error('WhatsApp connect exchange error:', err.message);
     return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+}
+
+/** POST /admin/whatsapp/connections/assign-cliente
+ * Asigna un cliente a una conexión de WhatsApp existente, o lo limpia
+ * si cliente_id viene vacío. Usado desde el panel para evitar ir a Supabase
+ * a mano. Body JSON: { phone_number_id, cliente_id } */
+export async function onRequestPostAssignCliente(context) {
+  const { request, env } = context;
+  if (!(await checkSessionAuth(request, env))) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  if (isCrossSiteRequest(request)) {
+    return new Response('Forbidden', { status: 403 });
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'JSON inválido' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { phone_number_id, cliente_id } = body || {};
+  if (!phone_number_id) {
+    return new Response(JSON.stringify({ error: 'Falta phone_number_id' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  try {
+    await assignClienteToWhatsapp(phone_number_id, cliente_id || null, env);
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  } catch (err) {
+    console.error('WhatsApp assign-cliente error:', err.message);
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }
 

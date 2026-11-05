@@ -3,7 +3,7 @@ import { onRequestPost as schedulePost, onRequestGet as scheduleGet } from './ap
 import { onRequestPost as whatsappPost, onRequestGet as whatsappGet } from './api/whatsapp.js';
 import { onRequestPost as metaWebhookPost, onRequestGet as metaWebhookGet } from './api/meta-webhook.js';
 import { onRequestGetConnect as metaConnectGet, onRequestGetCallback as metaCallbackGet, onRequestGetConnectFacebook as metaConnectFacebookGet, onRequestGetCallbackFacebook as metaCallbackFacebookGet, onRequestPostConnectFacebookConfirm as metaConnectFacebookConfirmPost, onRequestGetDeleteConnection as metaDeleteConnectionGet, onRequestGetInvite as metaInviteGet } from './api/meta-connect.js';
-import { onRequestGetConnect as whatsappConnectGet, onRequestPostExchange as whatsappConnectExchangePost, onRequestGetDeleteConnection as whatsappDeleteConnectionGet } from './api/whatsapp-connect.js';
+import { onRequestGetConnect as whatsappConnectGet, onRequestPostExchange as whatsappConnectExchangePost, onRequestGetDeleteConnection as whatsappDeleteConnectionGet, onRequestPostAssignCliente as whatsappAssignClientePost } from './api/whatsapp-connect.js';
 import { onRequestGetAdmin, onRequestGetPagespeed, onRequestGetGoogleAccount, onRequestPostAdminLogin, onRequestPostAdminLogout, onRequestPostClienteSave, onRequestPostClienteDraft } from './api/admin.js';
 import { handleInboundEmail } from './lib/email-inbound.js';
 import { processReminders } from './lib/reminder-cron.js';
@@ -1601,6 +1601,9 @@ export default {
             }
             if (pathname === '/admin/whatsapp/connections/delete' && request.method === 'POST') {
                 return await whatsappDeleteConnectionGet({ request, env });
+            }
+            if (pathname === '/admin/whatsapp/connections/assign-cliente' && request.method === 'POST') {
+                return await whatsappAssignClientePost({ request, env });
             }
             if (pathname === '/privacidad' || pathname === '/privacidad/') {
                 return new Response(PRIVACY_POLICY, {

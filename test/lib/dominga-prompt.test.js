@@ -73,3 +73,15 @@ describe('fechas para el modelo', () => {
     expect(nextDaysLabel('2026-12-31', 1)).toBe('viernes 2027-01-01');
   });
 });
+
+describe('emojis en los chats', () => {
+  it('uno que otro emoji, con tope por globo y ninguno si el tema es serio', async () => {
+    const { buildClientPrompt } = await import('../../src/lib/dominga-prompt.js');
+    const client = buildClientPrompt({ businessName: 'Clínica Sonrisa', info: 'Limpieza: $30.000.' });
+    for (const p of [messaging, client]) {
+      expect(p).toMatch(/emoji/);
+      expect(p).toMatch(/como mucho 1 por globo/);
+      expect(p).toMatch(/serio/);
+    }
+  });
+});

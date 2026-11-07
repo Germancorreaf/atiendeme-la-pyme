@@ -65,10 +65,13 @@ Datos en Supabase; modelo: API de Anthropic. Idioma del proyecto: español de Ch
 - Los avisos de escalamiento llegan a Germán con el nombre del cliente en el asunto.
 
 ## App Review de Meta
-Instagram/Messenger: aprobado (2026-10-20). WhatsApp (Tech Provider): pendiente. Mientras la revisión de
-WhatsApp siga abierta, **no renombres los textos y botones del panel que salen en los videos** (`Conectar WhatsApp`,
-`Desconectar`, tarjeta "Conexión con Meta") ni cambies `OAUTH_SCOPES` (`meta-connect.js`) ni las URLs de
-los webhooks sin avisar a Germán.
+Instagram/Messenger: aprobado (2026-10-20). **WhatsApp (`whatsapp_business_messaging`,
+`whatsapp_business_management`): nunca se ha enviado a revisión** (verificado 2026-11-07 con la API de Meta,
+`devtools_app_review` — ver TODOS.md); el número propio responde solo por acceso estándar (admin de la app), no
+alcanza para clientes sin rol en ella. Faltan video, api precheck y data use checkup antes de poder enviarlo.
+Una vez que Germán grabe esos videos, **no renombres los textos y botones del panel que salen ahí**
+(`Conectar WhatsApp`, `Desconectar`, tarjeta "Conexión con Meta") ni cambies `OAUTH_SCOPES` (`meta-connect.js`)
+ni las URLs de los webhooks sin avisar a Germán.
 
 ## Convenciones
 - Commits en español, estilo `tipo(ámbito): qué y por qué` (`fix(instagram): …`, `chore: …`).

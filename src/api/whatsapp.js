@@ -19,8 +19,23 @@ import { verifyMetaSignature } from '../lib/metaSignature.js';
 import { alreadyProcessed } from '../lib/dedup.js';
 import { appendChatMessages, joinReply, replyToMessage } from '../lib/chatSessions.js';
 import { isOwnerActive, markOwnerActive, rememberBotMessage, wasSentByBot } from '../lib/ownerActive.js';
+import { handleStatus } from '../lib/whatsappStatus.js';
 
 import { GRAPH_API_VERSION } from '../lib/graphApi.js';
+
+// Mensajes que el bot todavía no sabe leer. En vez de dejar a la persona sin
+// respuesta, se le pide que lo escriba (ver handleUnsupportedMedia). Stickers,
+// reacciones y demás tipos se siguen ignorando.
+const UNSUPPORTED_MEDIA_LABELS = {
+  audio: (message) => (message.audio?.voice ? 'nota de voz' : 'audio'),
+  image: () => 'imagen',
+  video: () => 'video',
+  document: () => 'documento',
+  location: () => 'ubicación'
+};
+// Una sola respuesta de este tipo por persona cada minuto (si manda cinco
+// fotos seguidas no se le contesta cinco veces).
+const MEDIA_REPLY_COOLDOWN_SECONDS = 60;
 
 // Los IDs de WhatsApp (wa_id) son números de teléfono en formato E.164 sin "+".
 function isSafeWhatsappId(id) {
@@ -95,6 +110,15 @@ async function processEntries(rawBody, context) {
         continue;
       }
 
+      // Estado de los mensajes del bot (entregado, fallido, cobro): ver whatsappStatus.js.
+      for (const status of value.statuses || []) {
+        try {
+          await handleStatus(status, phoneNumberId, context.env);
+        } catch (err) {
+          console.error('WhatsApp status error:', err.message);
+        }
+      }
+
       for (const message of value.messages || []) {
         try {
           await handleMessage(message, phoneNumberId, contactName, context);
@@ -121,8 +145,8 @@ async function handleOwnerEcho(echo, phoneNumberId, { env }) {
 
 async function handleMessage(message, phoneNumberId, contactName, context) {
   const { env } = context;
-  // Solo procesamos mensajes de texto reales; ignoramos otros tipos
-  // (imagen, audio, ubicación, etc.) y notificaciones de estado.
+  // Solo Claude responde a texto; imagen, audio, ubicación, etc. reciben un
+  // aviso fijo (handleUnsupportedMedia) y el resto de los tipos se ignora.
   // Un botón de respuesta rápida llega como interactive.button_reply: su id es
   // el texto completo de la opción (el título puede ir acortado; los botones
   // antiguos tienen id "opt_N" y se usa el título). Una fila de lista
@@ -135,7 +159,12 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
       ? (button && (/^opt_\d+$/.test(button.id || '') ? button.title : button.id || button.title))
         || message.interactive?.list_reply?.id
       : null;
-  if (!userText) return;
+  if (!userText) {
+    if (UNSUPPORTED_MEDIA_LABELS[message.type]) {
+      await handleUnsupportedMedia(message, phoneNumberId, contactName, context);
+    }
+    return;
+  }
 
   const from = message.from;
   if (!isSafeWhatsappId(from) || !phoneNumberId) return;
@@ -177,6 +206,57 @@ async function handleMessage(message, phoneNumberId, contactName, context) {
   } else {
     await respondToWhatsapp(env, job, userText, context);
   }
+}
+
+/**
+ * La persona mandó algo que el bot no lee (nota de voz, imagen, documento…).
+ * Queda anotado en la conversación (para que el dueño lo vea en el panel) y,
+ * si el dueño no está atendiendo, se le pide que lo escriba. El aviso se
+ * identifica como IA y no promete nada que el bot no haga.
+ */
+async function handleUnsupportedMedia(message, phoneNumberId, contactName, context) {
+  const { env } = context;
+  const from = message.from;
+  if (!isSafeWhatsappId(from) || !phoneNumberId) return;
+  if (await alreadyProcessed(message.id, env.RATE_LIMIT_KV)) return;
+  const rlCheck = await limitRequest(env, `whatsapp:${from}`, {
+    kv: { maxRequests: 30, windowSeconds: 60, maxBurstRequests: 5, burstWindowSeconds: 5 }
+  });
+  if (!rlCheck.allowed) return;
+
+  const label = UNSUPPORTED_MEDIA_LABELS[message.type](message);
+  const sessionId = `whatsapp_${phoneNumberId}_${from}`;
+  const fields = { lead_contact: from, ...(contactName ? { sender_name: contactName } : {}) };
+  const placeholder = { role: 'user', content: `[Mensaje no textual: ${label}]`, timestamp: new Date().toISOString() };
+  const save = async (messages) => {
+    try {
+      await appendChatMessages(env, sessionId, messages, fields);
+    } catch (err) {
+      console.error('WhatsApp media: error guardando la conversación:', err.message);
+    }
+  };
+
+  const kv = env.RATE_LIMIT_KV;
+  const coolKey = `wamedia:${phoneNumberId}:${from}`;
+  let reply = null;
+  if (!(await isOwnerActive(kv, phoneNumberId, from))) {
+    let cooling = false;
+    try { cooling = Boolean(kv && await kv.get(coolKey)); } catch { /* KV caído: se responde igual */ }
+    if (!cooling) {
+      const connection = await getConnectionByPhoneNumberId(phoneNumberId, env);
+      const accessToken = connection?.access_token || env.WHATSAPP_ACCESS_TOKEN;
+      if (accessToken) {
+        const text = `Recibí tu ${label}, pero como asistente de IA por ahora solo puedo leer mensajes escritos. ¿Me cuentas por texto en qué te puedo ayudar? 🙏`;
+        if (await postToWhatsapp({ messaging_product: 'whatsapp', to: from, type: 'text', text: { body: text } }, phoneNumberId, accessToken, kv)) {
+          reply = { role: 'assistant', content: text, timestamp: new Date().toISOString() };
+          try { if (kv) await kv.put(coolKey, '1', { expirationTtl: MEDIA_REPLY_COOLDOWN_SECONDS }); } catch { /* sin cooldown */ }
+        }
+      } else {
+        console.error(`WhatsApp: sin token para phone_number_id ${phoneNumberId}, no se avisa del ${label}`);
+      }
+    }
+  }
+  await save(reply ? [placeholder, reply] : [placeholder]);
 }
 
 /**

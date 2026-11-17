@@ -102,9 +102,17 @@ describe('WhatsApp: globos y botones (WHATSAPP_RICH_REPLIES)', () => {
     expect(out.claudeInput).toEqual(['Tengo otro tipo de negocio']);
   });
 
-  it('otros tipos (imagen, audio) se siguen ignorando', async () => {
+  it('imagen y audio no llegan a Claude: se responde con un aviso fijo pidiendo texto (ver whatsapp-media.test.js)', async () => {
     const out = stubNetwork();
     await deliver({ id: 'wamid.r.5', type: 'image', from: '56944440005', image: { id: 'x' } });
+    expect(out.claudeInput).toEqual([]);
+    expect(out.payloads).toHaveLength(1);
+    expect(JSON.stringify(out.payloads[0])).toContain('Recibí tu imagen');
+  });
+
+  it('los stickers se siguen ignorando del todo', async () => {
+    const out = stubNetwork();
+    await deliver({ id: 'wamid.r.6', type: 'sticker', from: '56944440006', sticker: { id: 'x' } });
     expect(out.payloads).toEqual([]);
     expect(out.claudeInput).toEqual([]);
   });
